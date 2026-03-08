@@ -41,22 +41,39 @@
             gap: 12px;
         }
 
-        .logo-icon {
+        /* Logo upload section - MODIFIED */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-image {
             width: 50px;
             height: 50px;
-            background: #ffc107;
             border-radius: 12px;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            color: #0a1e3c;
-            transform: rotate(-5deg);
+            background: #ffc107;
+            cursor: pointer;
             transition: transform 0.3s;
         }
 
-        .logo-icon:hover {
-            transform: rotate(0deg);
+        .logo-image:hover {
+            transform: rotate(-5deg);
+        }
+
+        .logo-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .logo-image i {
+            font-size: 28px;
+            color: #0a1e3c;
         }
 
         .logo-text {
@@ -71,6 +88,10 @@
             font-size: 0.9rem;
             display: block;
             font-weight: 500;
+        }
+
+        .logo-upload-input {
+            display: none;
         }
 
         /* Desktop Menu */
@@ -557,29 +578,33 @@
                 opacity: 1;
                 transform: translateY(0);
             }
-            .log{
+        }
+        
+        .log {
             text-align: center;
             font-size: 15px;
             color: blue;
             margin-left: 50px;
-            }
-        .log:hover{
+        }
+        
+        .log:hover {
             opacity: 0.7;
             transition: 0.7s;
             cursor: pointer;
             color: grey;
             background-color: green;
         }
-        .app{
+        
+        .app {
             color: white;
             text-align: center;
         }
-        .app:hover{
+        
+        .app:hover {
             opacity: 0.7;
             transition: 0.7s;
             cursor: pointer;
             color: red;
-        
         }
     </style>
 </head>
@@ -587,11 +612,16 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="logo">
-            <div class="logo-icon">
-                <i class="fas fa-truck-fast"></i>
-            </div>
-            <div class="logo-text">
-                OnPointOntime <span>fleet management</span>
+            <!-- MODIFIED: Logo container with upload functionality -->
+            <div class="logo-container">
+                <div class="logo-image" id="logoPreview" onclick="document.getElementById('logoUpload').click()">
+                    <i class="fas fa-truck-fast" id="defaultLogoIcon"></i>
+                    <img id="logoImg" src="logo2.png" alt="Company Logo" style="display: none;">
+                </div>
+                <input type="file" id="logoUpload" class="logo-upload-input" accept="image/*" onchange="previewLogo(this)">
+                <div class="logo-text">
+                    OnPointOntime <span>fleet management</span>
+                </div>
             </div>
         </div>
 
@@ -791,6 +821,41 @@
             });
         });
 
+        // MODIFIED: Logo preview function
+        function previewLogo(input) {
+            const defaultIcon = document.getElementById('defaultLogoIcon');
+            const logoImg = document.getElementById('logoImg');
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    // Hide default icon, show uploaded image
+                    defaultIcon.style.display = 'none';
+                    logoImg.src = e.target.result;
+                    logoImg.style.display = 'block';
+                    
+                    // Optionally save to localStorage for persistence
+                    localStorage.setItem('companyLogo', e.target.result);
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // MODIFIED: Load saved logo on page load
+        function loadSavedLogo() {
+            const savedLogo = localStorage.getItem('companyLogo');
+            if (savedLogo) {
+                const defaultIcon = document.getElementById('defaultLogoIcon');
+                const logoImg = document.getElementById('logoImg');
+                
+                defaultIcon.style.display = 'none';
+                logoImg.src = savedLogo;
+                logoImg.style.display = 'block';
+            }
+        }
+
         // Initialize Map
         function initMap() {
             // Coordinates for 71 Pretoria Street, Midrand
@@ -844,8 +909,11 @@
             }).addTo(map);
         }
 
-        // Initialize map when page loads
-        window.onload = initMap;
+        // Initialize when page loads
+        window.onload = function() {
+            initMap();
+            loadSavedLogo(); // MODIFIED: Load saved logo
+        };
 
         // Smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -871,23 +939,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
