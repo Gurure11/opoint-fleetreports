@@ -103,6 +103,24 @@
             letter-spacing: 3px;
         }
 
+        .form-group select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #eef2f6;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: #f8fafc;
+            cursor: pointer;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
         .remember-forgot {
             display: flex;
             justify-content: space-between;
@@ -266,6 +284,21 @@
             color: #667eea;
         }
 
+        .back-to-login {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .back-to-login a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .back-to-login a:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 480px) {
             .login-container {
                 margin: 10px;
@@ -299,14 +332,18 @@
             <div class="success-message" id="successMessage">
                 ✅ Login successful! Redirecting...
             </div>
+            <div class="success-message" id="registerSuccessMessage">
+                ✅ Registration successful! Please login with your credentials.
+            </div>
 
             <!-- Demo credentials for testing -->
             <div class="demo-credentials">
                 <p><strong>🔐 Demo Credentials:</strong></p>
                 <p>Username: <strong>admin@onpoint.co.za</strong> or <strong>driver1</strong></p>
-                </p>
+                <p>Password: <strong>password123</strong></p>
             </div>
 
+            <!-- Login Form -->
             <form id="loginForm">
                 <div class="form-group">
                     <label for="username">Username or Email *</label>
@@ -336,8 +373,8 @@
                 </div>
             </form>
 
-            <!-- Hidden Registration Form (initially hidden) -->
-            <div id="registerForm" style="display: none; margin-top: 30px; border-top: 1px solid #eef2f6; padding-top: 20px;">
+            <!-- Registration Form (initially hidden) -->
+            <div id="registerForm" style="display: none;">
                 <h3 style="color: #333; margin-bottom: 20px; text-align: center;">Create New Account</h3>
                 <form id="registerUserForm">
                     <div class="form-group">
@@ -373,10 +410,10 @@
                         </select>
                     </div>
                     <button type="submit" class="login-btn" style="background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);">
-                        📝 Register
+                        📝 Create Account
                     </button>
-                    <div style="text-align: center; margin-top: 10px;">
-                        <a href="#" onclick="showLogin()" style="color: #667eea;">← Back to Login</a>
+                    <div class="back-to-login">
+                        <a href="#" onclick="showLogin()">← Back to Login</a>
                     </div>
                 </form>
             </div>
@@ -386,7 +423,7 @@
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
-        <div style="color: #333; font-weight: 600;">Authenticating...</div>
+        <div style="color: #333; font-weight: 600;">Processing...</div>
     </div>
 
     <script>
@@ -404,8 +441,17 @@
             SESSION_TIMEOUT: 8 * 60 * 60 * 1000
         };
 
-        // Check if user is already logged in
+        // Store registered users in localStorage (for demo purposes)
+        // In production, this would be handled by your backend
+        let registeredUsers = [];
+
+        // Load registered users from localStorage on page load
         document.addEventListener('DOMContentLoaded', function() {
+            const stored = localStorage.getItem('onpoint_registered_users');
+            if (stored) {
+                registeredUsers = JSON.parse(stored);
+            }
+            
             const session = localStorage.getItem('onpoint_session');
             if (session) {
                 const sessionData = JSON.parse(session);
@@ -449,12 +495,18 @@
         function showRegister() {
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('registerSuccessMessage').style.display = 'none';
         }
 
         // Show login form
         function showLogin() {
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('registerSuccessMessage').style.display = 'none';
         }
 
         // Handle login form submission
@@ -475,39 +527,66 @@
             document.getElementById('loginBtn').disabled = true;
             
             try {
-                // For demo purposes - local validation (remove in production)
-                // This is just for testing - in production, all validation happens in Apps Script
-                if (username === 'admin@onpoint.co.za' && password === 'password123' ||
-                    username === 'driver1' && password === 'password123') {
+                // Check against registered users first (for demo)
+                const registeredUser = registeredUsers.find(u => 
+                    (u.username === username || u.email === username) && u.password === password
+                );
+                
+                // Demo credentials
+                const isDemoUser = (username === 'admin@onpoint.co.za' && password === 'password123') ||
+                                  (username === 'driver1' && password === 'password123');
+                
+                if (registeredUser || isDemoUser) {
                     
-                    // Simulate successful login
-                    setTimeout(() => {
-                        // Create session
-                        const sessionData = {
+                    // Simulate API delay
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    // Determine user info
+                    let userInfo;
+                    if (registeredUser) {
+                        userInfo = {
+                            userId: registeredUser.email,
+                            username: registeredUser.username,
+                            email: registeredUser.email,
+                            fullName: registeredUser.fullName,
+                            role: registeredUser.role
+                        };
+                    } else {
+                        userInfo = {
+                            userId: username,
                             username: username,
                             email: username.includes('@') ? username : username + '@onpoint.co.za',
-                            role: username === 'admin@onpoint.co.za' ? 'admin' : 'driver',
-                            timestamp: new Date().getTime(),
-                            expires: new Date().getTime() + CONFIG.SESSION_TIMEOUT
+                            fullName: username === 'admin@onpoint.co.za' ? 'Admin User' : 'Driver User',
+                            role: username === 'admin@onpoint.co.za' ? 'admin' : 'driver'
                         };
-                        
-                        if (rememberMe) {
-                            localStorage.setItem('onpoint_session', JSON.stringify(sessionData));
-                        } else {
-                            sessionStorage.setItem('onpoint_session', JSON.stringify(sessionData));
-                        }
-                        
-                        // Show success
-                        document.getElementById('successMessage').style.display = 'block';
-                        document.getElementById('errorMessage').style.display = 'none';
-                        
-                        // Redirect to fuel app
-                        setTimeout(() => {
-                            window.location.href = CONFIG.REDIRECT_URL;
-                        }, 1500);
+                    }
+                    
+                    // Create session
+                    const sessionData = {
+                        ...userInfo,
+                        timestamp: new Date().getTime(),
+                        expires: new Date().getTime() + CONFIG.SESSION_TIMEOUT
+                    };
+                    
+                    if (rememberMe) {
+                        localStorage.setItem('onpoint_session', JSON.stringify(sessionData));
+                    } else {
+                        sessionStorage.setItem('onpoint_session', JSON.stringify(sessionData));
+                    }
+                    
+                    // Show success
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('errorMessage').style.display = 'none';
+                    
+                    // Redirect to fuel app
+                    setTimeout(() => {
+                        window.location.href = CONFIG.REDIRECT_URL;
                     }, 1500);
                     
-                    return;
+                } else {
+                    showError('Invalid username or password');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    document.getElementById('loginBtn').disabled = false;
                 }
                 
                 // Production code - uncomment when using with Apps Script
@@ -564,14 +643,13 @@
             } catch (error) {
                 console.error('Login error:', error);
                 showError('Connection error. Please try again.');
-            } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
                 document.getElementById('loginBtn').disabled = false;
             }
         });
 
         // Handle registration form submission
-        document.getElementById('registerUserForm')?.addEventListener('submit', async function(e) {
+        document.getElementById('registerUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const fullName = document.getElementById('regFullName').value.trim();
@@ -598,10 +676,62 @@
                 return;
             }
             
+            // Check if username or email already exists
+            if (registeredUsers.some(u => u.username === username)) {
+                alert('Username already exists. Please choose another one.');
+                return;
+            }
+            
+            if (registeredUsers.some(u => u.email === email)) {
+                alert('Email already registered. Please use another email or login.');
+                return;
+            }
+            
             // Show loading
             document.getElementById('loadingOverlay').style.display = 'flex';
             
             try {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Create new user object
+                const newUser = {
+                    fullName,
+                    email,
+                    username,
+                    password, // In production, this should be hashed
+                    employeeNumber,
+                    role,
+                    registeredAt: new Date().toISOString()
+                };
+                
+                // Add to registered users array
+                registeredUsers.push(newUser);
+                
+                // Save to localStorage (for demo persistence)
+                localStorage.setItem('onpoint_registered_users', JSON.stringify(registeredUsers));
+                
+                // Hide loading
+                document.getElementById('loadingOverlay').style.display = 'none';
+                
+                // Show success message on login form
+                document.getElementById('registerSuccessMessage').style.display = 'block';
+                
+                // Clear registration form
+                document.getElementById('registerUserForm').reset();
+                
+                // Switch to login form
+                showLogin();
+                
+                // Pre-fill login form with registered username
+                document.getElementById('username').value = username;
+                document.getElementById('password').value = '';
+                
+                // Auto-hide success message after 5 seconds
+                setTimeout(() => {
+                    document.getElementById('registerSuccessMessage').style.display = 'none';
+                }, 5000);
+                
                 // Production code - uncomment when using with Apps Script
                 /*
                 const response = await fetch(CONFIG.GAS_URL, {
@@ -625,23 +755,36 @@
                 const result = await response.json();
                 
                 if (result.status === 'success') {
-                    alert('Registration successful! Please login with your credentials.');
-                    showLogin();
+                    // Hide loading
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    
+                    // Show success message on login form
+                    document.getElementById('registerSuccessMessage').style.display = 'block';
+                    
+                    // Clear registration form
                     document.getElementById('registerUserForm').reset();
+                    
+                    // Switch to login form
+                    showLogin();
+                    
+                    // Pre-fill login form with registered username
+                    document.getElementById('username').value = username;
+                    document.getElementById('password').value = '';
+                    
+                    // Auto-hide success message after 5 seconds
+                    setTimeout(() => {
+                        document.getElementById('registerSuccessMessage').style.display = 'none';
+                    }, 5000);
                 } else {
+                    document.getElementById('loadingOverlay').style.display = 'none';
                     alert(result.message || 'Registration failed');
                 }
                 */
                 
-                // Demo success
-                alert('Registration successful! (Demo mode)');
-                showLogin();
-                
             } catch (error) {
                 console.error('Registration error:', error);
-                alert('Connection error. Please try again.');
-            } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
+                alert('Connection error. Please try again.');
             }
         });
 
