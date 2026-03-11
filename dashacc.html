@@ -9,8 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <!-- Chart.js for small analytics (lightweight) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- SheetJS (for possible csv export, optional) -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -24,7 +22,6 @@
             padding: 2rem 1.5rem;
             position: relative;
         }
-        /* floating logout / home button */
         .logout-fab {
             position: fixed;
             top: 25px;
@@ -83,15 +80,12 @@
             color: #1b3e68;
         }
         .connection-status i {
-            color: #0f9d58;
             margin-right: 6px;
         }
-        .connection-status.loading i {
-            color: #f4b836;
-        }
-        .connection-status.error i {
-            color: #d32f2f;
-        }
+        .connection-status.success i { color: #0f9d58; }
+        .connection-status.loading i { color: #f4b836; }
+        .connection-status.error i { color: #d32f2f; }
+        
         .controls-card {
             max-width: 1400px;
             margin: 0 auto 25px auto;
@@ -100,7 +94,6 @@
             padding: 1.5rem 2rem;
             box-shadow: 0 20px 35px -10px rgba(11,43,92,0.2);
             border: 1px solid rgba(255,215,0,0.3);
-            backdrop-filter: blur(4px);
             display: flex;
             flex-wrap: wrap;
             gap: 20px 30px;
@@ -179,7 +172,6 @@
             flex: 1 1 180px;
             box-shadow: 0 10px 18px -10px #afc8e6;
             border: 1px solid #ffffff;
-            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             gap: 18px;
@@ -452,15 +444,10 @@
 
     <script>
         (function() {
-            // ---------- CONFIGURATION ----------
-            // IMPORTANT: Replace with your ACTUAL Google Apps Script Web App URL
+            // =============================================
+            // IMPORTANT: REPLACE WITH YOUR ACTUAL GAS URL
+            // =============================================
             const GAS_URL = 'https://script.google.com/macros/s/AKfycbwCvM7PJSvwjGnYym0zgfaJOssyMrAUJj_Liux6xiZxzMGLS5Y7cP17WW-50X1rQ3hu/exec';
-            
-            // Sheet configuration (hidden from UI)
-            const SHEET_CONFIG = {
-                id: '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI',
-                driveFolderId: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
-            };
             
             // Column indices (0-based) matching your sheet order
             const COL = {
@@ -517,81 +504,6 @@
             // Charts
             let typeChart, deptChart, costChart;
 
-            // ---------- LOAD DATA FROM GOOGLE APPS SCRIPT ----------
-            async function loadIncidents(showLoading = true) {
-                if (isLoading) return;
-                
-                isLoading = true;
-                if (showLoading) loading.style.display = 'flex';
-                
-                updateConnectionStatus('loading', 'fetching data...');
-                
-                try {
-                    // Try to fetch from GAS with timeout
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-                    
-                    const response = await fetch(`${GAS_URL}?mode=getIncidents&t=${Date.now()}`, { 
-                        method: 'GET',
-                        mode: 'cors',
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-                    
-                    const data = await response.json();
-                    
-                    if (Array.isArray(data) && data.length > 0) {
-                        allIncidents = data;
-                        updateConnectionStatus('success', `loaded ${data.length} incidents`);
-                    } else if (Array.isArray(data) && data.length === 0) {
-                        allIncidents = [];
-                        updateConnectionStatus('success', 'no incidents found');
-                    } else {
-                        throw new Error('Invalid data format received');
-                    }
-                    
-                } catch (error) {
-                    console.warn('Error loading from GAS:', error);
-                    
-                    // Try to load from mock data as fallback
-                    try {
-                        const mockResponse = await fetch('mock-incidents.json?t=' + Date.now());
-                        if (mockResponse.ok) {
-                            const mockData = await mockResponse.json();
-                            allIncidents = mockData;
-                            updateConnectionStatus('success', 'using mock data (offline mode)');
-                        } else {
-                            throw new Error('Mock data unavailable');
-                        }
-                    } catch (mockError) {
-                        // Use hardcoded mock data as last resort
-                        allIncidents = getMockIncidents();
-                        updateConnectionStatus('warning', 'using sample data (offline)');
-                    }
-                } finally {
-                    isLoading = false;
-                    if (showLoading) loading.style.display = 'none';
-                    
-                    // Populate filters and render
-                    populateFilters(allIncidents);
-                    filterIncidents();
-                }
-            }
-
-            // Mock data function (same structure as your sheet)
-            function getMockIncidents() {
-                return [
-                    ["2025-02-10T08:30:00Z","2025-02-10","14:30","FLEET-408","71 Pretorius Rd Midrand","Rear-end","Fleet","Onpoint Group HQ","James Keller","+27 72 555 7890","Front bumper crushed, airbags deployed","Honda CR-V","Yes","Officer M. Davis","0825559876","No","PD-2309-452","No","-25.9989","28.1213","https://maps.google.com/?q=-25.9989,28.1213","stamped_accident1.jpg","https://drive.google.com/file/d/1aFy2cAbXoWM8Oy7AzpqCWYXRDHnLm1k3/view"],
-                    ["2025-03-01T10:15:00Z","2025-03-01","10:15","FLEET-512","N1 highway off-ramp","Side-impact","Operations","DI Solutions","Lerato Nkosi","+27 83 123 4567","Side door damaged, mirror broken","Toyota Corolla","Yes","Officer Zuma","0834445566","No","PD-2403-101","Yes","-26.1052","28.0560","https://maps.google.com/?q=-26.1052,28.0560","stamped_side.jpg","https://drive.google.com/file/d/1mock2/view"],
-                    ["2025-03-15T12:45:00Z","2025-03-15","12:45","FLEET-389","Midrand industrial","Single-vehicle","Warehouse","Aqua Telecoms","Thabo Mbeki","+27 71 888 9999","Hit a pole, front bumper damage","None","No","","","No","","No","-25.9850","28.1100","https://maps.google.com/?q=-25.9850,28.1100","",""],
-                    ["2025-04-02T09:00:00Z","2025-04-02","09:00","FLEET-177","Kyalami","Rear-end","Sales","Nkanyezi Projects","Priya Singh","+27 81 555 3333","Bumper scratch, minor damage","BMW X3","Yes","Officer Ndlovu","0825551122","Yes","PD-0452-673","Yes","-26.0200","28.0800","https://maps.google.com/?q=-26.0200,28.0800","stamped_rear.jpg","https://drive.google.com/file/d/1mock3/view"],
-                    ["2025-04-07T16:20:00Z","2025-04-07","16:20","FLEET-666","Centurion","Other","SHEQ","Onpoint Ontime Solutions","Susan Vos","+27 63 987 6543","Minor pedestrian incident, no injuries","Pedestrian","Yes","Capt. Nkosi","0825557788","No","PD-9876-543","No","-25.9100","28.1900","https://maps.google.com/?q=-25.9100,28.1900","stamped_ped.jpg","https://drive.google.com/file/d/1mock4/view"],
-                ];
-            }
-
             // Update connection status UI
             function updateConnectionStatus(type, message) {
                 connectionStatus.className = 'connection-status ' + type;
@@ -606,7 +518,76 @@
                 connectionStatus.innerHTML = icon + ' ' + message;
             }
 
-            // Populate filter dropdowns
+            // =============================================
+            // LOAD REAL DATA FROM GOOGLE SHEETS VIA GAS
+            // =============================================
+            async function loadIncidents(showLoading = true) {
+                if (isLoading) return;
+                
+                isLoading = true;
+                if (showLoading) loading.style.display = 'flex';
+                
+                updateConnectionStatus('loading', 'fetching data from Google Sheets...');
+                
+                try {
+                    // Fetch from GAS with cache busting
+                    const response = await fetch(`${GAS_URL}?mode=getIncidents&t=${Date.now()}`, { 
+                        method: 'GET',
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                    
+                    const data = await response.json();
+                    
+                    // Check if we got valid data
+                    if (data && Array.isArray(data)) {
+                        if (data.length > 0) {
+                            allIncidents = data;
+                            updateConnectionStatus('success', `loaded ${data.length} incidents from Google Sheets`);
+                        } else {
+                            allIncidents = [];
+                            updateConnectionStatus('warning', 'sheet is empty - no incidents found');
+                        }
+                    } else {
+                        console.warn('Unexpected data format:', data);
+                        throw new Error('Invalid data format received from server');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error loading from GAS:', error);
+                    updateConnectionStatus('error', 'failed to load data - check console');
+                    
+                    // Show error in table
+                    tbody.innerHTML = `<tr><td colspan="22" style="text-align:center; padding:40px; color:#d32f2f;">
+                        <i class="fas fa-exclamation-triangle"></i> Error loading data: ${error.message}<br>
+                        <button onclick="location.reload()" style="margin-top:10px; padding:8px 20px; background:#0b2b5c; color:white; border:none; border-radius:40px; cursor:pointer;">
+                            <i class="fas fa-sync-alt"></i> retry
+                        </button>
+                    </td></tr>`;
+                    
+                } finally {
+                    isLoading = false;
+                    if (showLoading) loading.style.display = 'none';
+                    
+                    // Only populate and render if we have data
+                    if (allIncidents.length > 0) {
+                        populateFilters(allIncidents);
+                        filterIncidents();
+                    } else {
+                        // Show empty state
+                        filteredIncidents = [];
+                        renderTable(filteredIncidents);
+                        updateStats(filteredIncidents);
+                        updateCharts(filteredIncidents);
+                    }
+                }
+            }
+
+            // Populate filter dropdowns from actual data
             function populateFilters(data) {
                 const drivers = new Set();
                 const depts = new Set();
@@ -644,6 +625,14 @@
 
             // Filter incidents based on selected criteria
             function filterIncidents() {
+                if (allIncidents.length === 0) {
+                    filteredIncidents = [];
+                    renderTable(filteredIncidents);
+                    updateStats(filteredIncidents);
+                    updateCharts(filteredIncidents);
+                    return;
+                }
+                
                 const fromDate = filterFrom.value ? new Date(filterFrom.value) : null;
                 const toDate = filterTo.value ? new Date(filterTo.value) : null;
                 const driver = filterDriver.value;
@@ -678,7 +667,7 @@
                 updateCharts(filteredIncidents);
             }
 
-            // Render table with image handling
+            // Render table with actual data
             function renderTable(data) {
                 if (data.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="22" style="text-align:center; padding:40px;">no incidents match filters</td></tr>`;
@@ -687,30 +676,25 @@
                 
                 let html = '';
                 data.forEach(row => {
-                    // Handle image link - check both filename and drive URL
+                    // Handle image link
                     const imageFilename = row[COL.IMAGE_FILENAME] || '';
                     const imageDriveUrl = row[COL.IMAGE_DRIVE_URL] || '';
                     
                     let imageCell = '<span class="no-image">no image</span>';
                     
                     if (imageDriveUrl && imageDriveUrl.trim() !== '') {
-                        // Check if it's a valid Google Drive URL
-                        if (imageDriveUrl.includes('drive.google.com') || imageDriveUrl.includes('docs.google.com')) {
-                            // Extract file ID for thumbnail if possible
-                            const fileIdMatch = imageDriveUrl.match(/[-\w]{25,}/);
-                            const fileId = fileIdMatch ? fileIdMatch[0] : '';
-                            
-                            if (fileId) {
-                                imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link" title="${imageFilename}">
-                                    <img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w100-h100" 
-                                         class="image-thumb" 
-                                         alt="incident photo"
-                                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\' viewBox=\\'0 0 40 40\\'%3E%3Crect width=\\'40\\' height=\\'40\\' fill=\\'%23f0f0f0\\'/%3E%3Ctext x=\\'8\\' y=\\'25\\' font-family=\\'Arial\\' font-size=\\'12\\' fill=\\'%23999\\'%3E📷%3C/text%3E%3C/svg%3E';">
-                                    <i class="fas fa-external-link-alt" style="font-size:0.7rem; margin-left:2px;"></i>
-                                </a>`;
-                            } else {
-                                imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> view</a>`;
-                            }
+                        // Try to extract file ID for thumbnail
+                        const fileIdMatch = imageDriveUrl.match(/[-\w]{25,}/);
+                        const fileId = fileIdMatch ? fileIdMatch[0] : '';
+                        
+                        if (fileId) {
+                            imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link" title="${imageFilename}">
+                                <img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w100-h100" 
+                                     class="image-thumb" 
+                                     alt="incident photo"
+                                     onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\' viewBox=\\'0 0 40 40\\'%3E%3Crect width=\\'40\\' height=\\'40\\' fill=\\'%23f0f0f0\\'/%3E%3Ctext x=\\'8\\' y=\\'25\\' font-family=\\'Arial\\' font-size=\\'12\\' fill=\\'%23999\\'%3E📷%3C/text%3E%3C/svg%3E';">
+                                <i class="fas fa-external-link-alt" style="font-size:0.7rem;"></i>
+                            </a>`;
                         } else {
                             imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> view</a>`;
                         }
@@ -753,15 +737,23 @@
                 
                 const drivers = new Set(data.map(r => r[COL.DRIVER]).filter(Boolean));
                 const depts = new Set(data.map(r => r[COL.DEPT]).filter(Boolean));
-                const photos = data.filter(r => r[COL.IMAGE_DRIVE_URL] && r[COL.IMAGE_DRIVE_URL].trim() !== '').length;
+                const photos = data.filter(r => r[COL.IMAGE_DRIVE_URL && r[COL.IMAGE_DRIVE_URL].trim() !== '']).length;
                 
                 uniqueDriversSpan.innerText = drivers.size;
                 uniqueDeptsSpan.innerText = depts.size;
                 totalPhotosSpan.innerText = photos;
             }
 
-            // Update charts
+            // Update charts with real data
             function updateCharts(data) {
+                if (data.length === 0) {
+                    // Clear charts if no data
+                    if (typeChart) typeChart.destroy();
+                    if (deptChart) deptChart.destroy();
+                    if (costChart) costChart.destroy();
+                    return;
+                }
+                
                 // Accident type chart
                 const typeCount = {};
                 data.forEach(r => { 
@@ -860,6 +852,11 @@
 
             // Export to CSV
             function exportCSV() {
+                if (filteredIncidents.length === 0) {
+                    alert('No data to export');
+                    return;
+                }
+                
                 const headers = ['Timestamp', 'Date', 'Time', 'Vehicle Reg', 'Location', 'Accident Type', 'Department', 
                     'Cost Center', 'Driver Name', 'Driver Phone', 'Description', 'Other Parties', 'Reported to Metro', 
                     'Officer Name', 'Officer Phone', 'Drunken Driving', 'Police Report No', 'At Fault', 'Latitude', 
@@ -889,7 +886,9 @@
             refreshBtn.addEventListener('click', () => loadIncidents(true));
             exportBtn.addEventListener('click', exportCSV);
 
-            // Initialize - load data
+            // =============================================
+            // Initialize - load REAL data from Google Sheets
+            // =============================================
             loadIncidents(true);
         })();
     </script>
