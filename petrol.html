@@ -238,6 +238,18 @@
             border-color: #667eea;
         }
 
+        /* Fixed date range styling - prevents overlap */
+        .date-range-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .date-range-container input {
+            flex: 1;
+            min-width: 0; /* Prevents overflow */
+        }
+
         .filter-actions {
             display: flex;
             gap: 10px;
@@ -552,6 +564,11 @@
             .filter-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .date-range-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
     </style>
 </head>
@@ -614,7 +631,7 @@
             <div class="filter-grid">
                 <div class="filter-group">
                     <label><i class="fas fa-calendar"></i> Date Range</label>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="date-range-container">
                         <input type="date" id="startDate">
                         <span>to</span>
                         <input type="date" id="endDate">
@@ -733,7 +750,7 @@
     <script>
         // Configuration - REPLACE WITH YOUR ACTUAL APPS SCRIPT URL
         const CONFIG = {
-            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw7arEFFjU5NApt7px8qzv59P4b__34b1JcsoBCwl3rY6ZO6IF6wpoDudLUtRCvxHHX/exec',
+            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzD-9VmRgfcZKGnwCIbCZF_oybxawyiYXkiF-9iHlQEKpAYucclZ9aWAr_eJRdm7IXN/exec',
             SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
             SHEET_NAME: 'Fuel Entries'
         };
@@ -809,7 +826,7 @@
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
 
-        function updateSyncStatus(status, message) {
+        function updateSyncStatus(status) {
             const syncEl = document.getElementById('syncStatus');
             if (status === 'online') {
                 syncEl.className = 'sync-status online';
@@ -834,11 +851,21 @@
             try {
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
+                const driver = document.getElementById('driverFilter').value;
+                const vehicle = document.getElementById('vehicleFilter').value;
+                const costCenter = document.getElementById('costCenterFilter').value;
+                const department = document.getElementById('departmentFilter').value;
+                const fuelType = document.getElementById('fuelTypeFilter').value;
                 
-                // Build URL with filters
+                // Build URL with all filters
                 let url = `${CONFIG.GOOGLE_SCRIPT_URL}?action=getEntries`;
                 if (startDate) url += `&startDate=${startDate}`;
                 if (endDate) url += `&endDate=${endDate}`;
+                if (driver) url += `&driver=${encodeURIComponent(driver)}`;
+                if (vehicle) url += `&vehicle=${encodeURIComponent(vehicle)}`;
+                if (costCenter && costCenter !== 'all') url += `&costCenter=${encodeURIComponent(costCenter)}`;
+                if (department && department !== 'all') url += `&department=${encodeURIComponent(department)}`;
+                if (fuelType && fuelType !== 'all') url += `&fuelType=${encodeURIComponent(fuelType)}`;
                 
                 const response = await fetch(url);
                 const data = await response.json();
@@ -848,12 +875,8 @@
                     filteredEntries = [...allEntries];
                     document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
                     
-                    // Populate filter dropdowns
                     populateFilters();
-                    
-                    // Update dashboard
                     updateDashboard();
-                    
                     updateSyncStatus('online');
                     showNotification(`Loaded ${allEntries.length} fuel entries`, 'success');
                 } else {
@@ -863,8 +886,6 @@
                 console.error('Error loading fuel entries:', error);
                 showNotification('Error loading data: ' + error.message, 'error');
                 updateSyncStatus('offline');
-                
-                // Clear data
                 allEntries = [];
                 filteredEntries = [];
                 document.getElementById('filterCount').textContent = 'No data available';
@@ -902,31 +923,48 @@
             });
         }
 
-        // Apply filters to data
+        // Apply filters to data - FIXED VERSION with proper driver filtering
         function applyFilters() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
-            const driver = document.getElementById('driverFilter').value.toLowerCase();
-            const vehicle = document.getElementById('vehicleFilter').value.toLowerCase();
+            const driver = document.getElementById('driverFilter').value.toLowerCase().trim();
+            const vehicle = document.getElementById('vehicleFilter').value.toLowerCase().trim();
             const costCenter = document.getElementById('costCenterFilter').value;
             const department = document.getElementById('departmentFilter').value;
             const fuelType = document.getElementById('fuelTypeFilter').value;
             
             filteredEntries = allEntries.filter(entry => {
-                const entryDate = entry.Date;
-                const matchesDate = (!startDate || entryDate >= startDate) && (!endDate || entryDate <= endDate);
-                const matchesDriver = !driver || (entry.Driver && entry.Driver.toLowerCase().includes(driver));
-                const matchesVehicle = !vehicle || (entry.Vehicle && entry.Vehicle.toLowerCase().includes(vehicle));
-                const matchesCost = costCenter === 'all' || entry['Cost Center'] === costCenter;
-                const matchesDept = department === 'all' || entry['Department'] === department;
-                const matchesFuel = fuelType === 'all' || entry['Fuel Type'] === fuelType;
+                // Date filtering
+                let matchesDate = true;
+                if (startDate && endDate) {
+                    const entryDate = entry.Date;
+                    matchesDate = entryDate >= startDate && entryDate <= endDate;
+                }
+                
+                // Driver filtering - FIXED with proper null checking
+                let matchesDriver = true;
+                if (driver) {
+                    const entryDriver = (entry.Driver || '').toLowerCase();
+                    matchesDriver = entryDriver.includes(driver);
+                }
+                
+                // Vehicle filtering
+                let matchesVehicle = true;
+                if (vehicle) {
+                    const entryVehicle = (entry.Vehicle || '').toLowerCase();
+                    matchesVehicle = entryVehicle.includes(vehicle);
+                }
+                
+                const matchesCost = costCenter === 'all' || !costCenter || entry['Cost Center'] === costCenter;
+                const matchesDept = department === 'all' || !department || entry['Department'] === department;
+                const matchesFuel = fuelType === 'all' || !fuelType || entry['Fuel Type'] === fuelType;
                 
                 return matchesDate && matchesDriver && matchesVehicle && matchesCost && matchesDept && matchesFuel;
             });
             
             document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
             updateDashboard();
-            showNotification('Filters applied', 'success');
+            showNotification(`Found ${filteredEntries.length} entries`, 'success');
         }
 
         function resetFilters() {
@@ -1178,7 +1216,7 @@
                 const row = tbody.insertRow();
                 const efficiency = parseFloat(entry['km/Liter']) || 0;
                 
-                if (efficiency < fuelLimits.kmPerLiter) {
+                if (efficiency < fuelLimits.kmPerLiter && efficiency > 0) {
                     row.classList.add('exceed-limit');
                 }
                 
@@ -1194,7 +1232,7 @@
                     <td>${parseFloat(entry['Fuel Volume (L)'] || 0).toFixed(2)} L</td>
                     <td>R ${parseFloat(entry['Fuel Total (R)'] || 0).toFixed(2)}</td>
                     <td class="${efficiency >= fuelLimits.kmPerLiter ? 'fuel-efficient' : 'fuel-inefficient'}">
-                        ${efficiency.toFixed(2)} km/L
+                        ${efficiency > 0 ? efficiency.toFixed(2) : '0.00'} km/L
                     </td>
                     <td>R ${parseFloat(entry['Lube Cost (R)'] || 0).toFixed(2)}</td>
                     <td>R ${parseFloat(entry['Toll Total (R)'] || 0).toFixed(2)}</td>
