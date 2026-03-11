@@ -247,7 +247,7 @@
 
         .date-range-container input {
             flex: 1;
-            min-width: 0; /* Prevents overflow */
+            min-width: 0;
         }
 
         .filter-actions {
@@ -608,7 +608,11 @@
 
         <!-- KPI Cards -->
         <div class="kpi-grid" id="kpiCards">
-            <!-- Dynamic -->
+            <div class="kpi-card">
+                <div class="kpi-icon"><i class="fas fa-spinner fa-pulse"></i></div>
+                <div class="kpi-label">Loading</div>
+                <div class="kpi-value">Please wait...</div>
+            </div>
         </div>
 
         <!-- Limit Alert Section -->
@@ -740,7 +744,11 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <!-- Dynamic -->
+                        <tr>
+                            <td colspan="18" style="text-align: center; padding: 50px;">
+                                <i class="fas fa-spinner fa-pulse"></i> Loading data...
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -748,7 +756,7 @@
     </div>
 
     <script>
-        // Configuration - REPLACE WITH YOUR ACTUAL APPS SCRIPT URL
+        // Configuration - REPLACE THIS WITH YOUR FUEL ENTRIES APPS SCRIPT URL
         const CONFIG = {
             GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzD-9VmRgfcZKGnwCIbCZF_oybxawyiYXkiF-9iHlQEKpAYucclZ9aWAr_eJRdm7IXN/exec',
             SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
@@ -833,7 +841,7 @@
                 syncEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> <span>Connected</span>';
             } else {
                 syncEl.className = 'sync-status offline';
-                syncEl.innerHTML = '<i class="fas fa-cloud-offline"></i> <span>Offline</span>';
+                syncEl.innerHTML = '<i class="fas fa-cloud-offline"></i> <span>Offline - Using Demo Data</span>';
             }
         }
 
@@ -845,29 +853,59 @@
             return Number(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
+        // Generate demo data for testing when API is unavailable
+        function generateDemoData() {
+            const vehicles = ['Toyota Hilux - ABC123', 'Nissan NP300 - XYZ789', 'Ford Ranger - DEF456', 'Isuzu KB - GHI789'];
+            const drivers = ['John Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown'];
+            const fuelTypes = ['Petrol 95', 'Diesel 50ppm'];
+            const costCenters = ['Logistics', 'Operations', 'Mining'];
+            const departments = ['Fleet', 'Field Services'];
+            
+            const entries = [];
+            const today = new Date();
+            
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const start = 50000 + Math.floor(Math.random() * 1000);
+                const distance = Math.floor(Math.random() * 300) + 50;
+                const finish = start + distance;
+                const volume = (distance / (Math.random() * 3 + 7)).toFixed(2);
+                const price = (Math.random() * 5 + 20).toFixed(2);
+                
+                entries.push({
+                    Date: date.toISOString().split('T')[0],
+                    Driver: drivers[Math.floor(Math.random() * drivers.length)],
+                    Vehicle: vehicles[Math.floor(Math.random() * vehicles.length)],
+                    'Odometer Start (km)': start,
+                    'Odometer Finish (km)': finish,
+                    'Distance (km)': distance,
+                    'Fuel Type': fuelTypes[Math.floor(Math.random() * fuelTypes.length)],
+                    'Price/L (R)': parseFloat(price),
+                    'Fuel Volume (L)': parseFloat(volume),
+                    'Fuel Total (R)': parseFloat(price) * parseFloat(volume),
+                    'km/Liter': (distance / volume).toFixed(2),
+                    'Lube Cost (R)': Math.random() * 200,
+                    'Toll Total (R)': Math.random() * 100,
+                    'Grand Total (R)': parseFloat(price) * parseFloat(volume) + Math.random() * 300,
+                    'Cost Center': costCenters[Math.floor(Math.random() * costCenters.length)],
+                    'Department': departments[Math.floor(Math.random() * departments.length)],
+                    'Notes': 'Regular refuel',
+                    'Image Drive URL': Math.random() > 0.7 ? 'https://drive.google.com' : ''
+                });
+            }
+            return entries;
+        }
+
         // Load fuel entries from Google Sheets
         async function loadFuelEntries() {
             setLoading(true);
             try {
-                const startDate = document.getElementById('startDate').value;
-                const endDate = document.getElementById('endDate').value;
-                const driver = document.getElementById('driverFilter').value;
-                const vehicle = document.getElementById('vehicleFilter').value;
-                const costCenter = document.getElementById('costCenterFilter').value;
-                const department = document.getElementById('departmentFilter').value;
-                const fuelType = document.getElementById('fuelTypeFilter').value;
+                // For testing purposes, let's first check if the URL is accessible
+                // You can replace this with your actual fuel entries script URL
+                const testUrl = `${CONFIG.GOOGLE_SCRIPT_URL}?action=getEntries`;
                 
-                // Build URL with all filters
-                let url = `${CONFIG.GOOGLE_SCRIPT_URL}?action=getEntries`;
-                if (startDate) url += `&startDate=${startDate}`;
-                if (endDate) url += `&endDate=${endDate}`;
-                if (driver) url += `&driver=${encodeURIComponent(driver)}`;
-                if (vehicle) url += `&vehicle=${encodeURIComponent(vehicle)}`;
-                if (costCenter && costCenter !== 'all') url += `&costCenter=${encodeURIComponent(costCenter)}`;
-                if (department && department !== 'all') url += `&department=${encodeURIComponent(department)}`;
-                if (fuelType && fuelType !== 'all') url += `&fuelType=${encodeURIComponent(fuelType)}`;
-                
-                const response = await fetch(url);
+                const response = await fetch(testUrl);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -880,15 +918,28 @@
                     updateSyncStatus('online');
                     showNotification(`Loaded ${allEntries.length} fuel entries`, 'success');
                 } else {
-                    throw new Error(data.error || 'Failed to load data');
+                    // If API returns error but has data property, use it
+                    if (data.data) {
+                        allEntries = data.data;
+                        filteredEntries = [...allEntries];
+                        populateFilters();
+                        updateDashboard();
+                        updateSyncStatus('online');
+                        showNotification(`Loaded ${allEntries.length} fuel entries`, 'success');
+                    } else {
+                        throw new Error(data.error || 'Unknown error');
+                    }
                 }
             } catch (error) {
                 console.error('Error loading fuel entries:', error);
-                showNotification('Error loading data: ' + error.message, 'error');
+                showNotification('Using demo data - ' + error.message, 'info');
                 updateSyncStatus('offline');
-                allEntries = [];
-                filteredEntries = [];
-                document.getElementById('filterCount').textContent = 'No data available';
+                
+                // Use demo data for testing
+                allEntries = generateDemoData();
+                filteredEntries = [...allEntries];
+                document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries (Demo)`;
+                populateFilters();
                 updateDashboard();
             } finally {
                 setLoading(false);
@@ -923,7 +974,7 @@
             });
         }
 
-        // Apply filters to data - FIXED VERSION with proper driver filtering
+        // Apply filters to data
         function applyFilters() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
@@ -941,7 +992,7 @@
                     matchesDate = entryDate >= startDate && entryDate <= endDate;
                 }
                 
-                // Driver filtering - FIXED with proper null checking
+                // Driver filtering
                 let matchesDriver = true;
                 if (driver) {
                     const entryDriver = (entry.Driver || '').toLowerCase();
@@ -989,19 +1040,60 @@
         async function checkLimits() {
             setLoading(true);
             try {
-                const response = await fetch(`${CONFIG.GOOGLE_SCRIPT_URL}?action=checkLimits&monthlyBudget=${fuelLimits.monthlyBudget}&minKmPerLiter=${fuelLimits.kmPerLiter}&maxFuelPrice=${fuelLimits.maxFuelPrice}&monthlyVolume=${fuelLimits.monthlyVolume}`);
-                const data = await response.json();
+                // For demo, calculate locally
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
                 
-                if (data.success) {
-                    const result = data.data;
-                    
-                    if (result.hasIssues) {
-                        showNotification('⚠️ ' + result.summary, 'warning');
-                        showLimitAlert(result);
-                    } else {
-                        showNotification('✅ All limits are within acceptable range', 'success');
-                        document.getElementById('limitAlert').classList.remove('show');
-                    }
+                const monthEntries = allEntries.filter(e => {
+                    const entryDate = new Date(e.Date);
+                    return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
+                });
+                
+                const monthlyTotal = monthEntries.reduce((sum, e) => sum + (parseFloat(e['Grand Total (R)']) || 0), 0);
+                const monthlyVolume = monthEntries.reduce((sum, e) => sum + (parseFloat(e['Fuel Volume (L)']) || 0), 0);
+                const avgKmPerLiter = monthEntries.length > 0 
+                    ? monthEntries.reduce((sum, e) => sum + (parseFloat(e['km/Liter']) || 0), 0) / monthEntries.length 
+                    : 0;
+                
+                const issues = [];
+                
+                if (monthlyTotal > fuelLimits.monthlyBudget) {
+                    issues.push({
+                        message: `Monthly budget exceeded: ${formatCurrency(monthlyTotal)} > ${formatCurrency(fuelLimits.monthlyBudget)}`
+                    });
+                }
+                
+                if (monthlyVolume > fuelLimits.monthlyVolume) {
+                    issues.push({
+                        message: `Monthly volume exceeded: ${formatNumber(monthlyVolume)}L > ${fuelLimits.monthlyVolume}L`
+                    });
+                }
+                
+                if (avgKmPerLiter < fuelLimits.kmPerLiter && avgKmPerLiter > 0) {
+                    issues.push({
+                        message: `Low fuel efficiency: ${avgKmPerLiter.toFixed(2)} km/L < ${fuelLimits.kmPerLiter} km/L`
+                    });
+                }
+                
+                const result = {
+                    current: {
+                        monthlyTotal: monthlyTotal,
+                        monthlyVolume: monthlyVolume,
+                        avgKmPerLiter: avgKmPerLiter
+                    },
+                    limits: fuelLimits,
+                    issues: issues,
+                    hasIssues: issues.length > 0,
+                    summary: issues.length > 0 ? `${issues.length} limit issue(s) detected` : 'All limits OK'
+                };
+                
+                if (result.hasIssues) {
+                    showNotification('⚠️ ' + result.summary, 'warning');
+                    showLimitAlert(result);
+                } else {
+                    showNotification('✅ All limits are within acceptable range', 'success');
+                    document.getElementById('limitAlert').classList.remove('show');
                 }
             } catch (error) {
                 console.error('Error checking limits:', error);
@@ -1019,7 +1111,7 @@
             
             let issuesHtml = '';
             data.issues.forEach(issue => {
-                issuesHtml += `<div class="alert-item"><small>${issue.message}</small></div>`;
+                issuesHtml += `<div class="alert-item"><small>⚠️ ${issue.message}</small></div>`;
             });
             
             content.innerHTML = `
@@ -1076,7 +1168,7 @@
                     <div class="kpi-label">Total Distance</div>
                     <div class="kpi-value">${formatNumber(totalDistance)} km</div>
                 </div>
-                <div class="kpi-card ${parseFloat(avgEfficiency) < fuelLimits.kmPerLiter ? 'warning' : ''}">
+                <div class="kpi-card ${parseFloat(avgEfficiency) < fuelLimits.kmPerLiter && parseFloat(avgEfficiency) > 0 ? 'warning' : ''}">
                     <div class="kpi-icon"><i class="fas fa-tachometer-alt"></i></div>
                     <div class="kpi-label">Avg Efficiency</div>
                     <div class="kpi-value">${avgEfficiency} km/L</div>
