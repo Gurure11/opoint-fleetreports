@@ -3,12 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OnPoint Fleet · incident dashboard</title>
-    <!-- Fonts & icons (same style as report) -->
+    <title>OnPoint Fleet · Advanced Analytics Dashboard</title>
+    <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <!-- Chart.js for small analytics (lightweight) -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- DataTables for advanced filtering -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <!-- Moment.js for date handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -16,881 +23,1121 @@
             box-sizing: border-box;
             font-family: 'Inter', sans-serif;
         }
+        
         body {
-            background: #f0f5fb;
+            background: #f4f7fc;
             min-height: 100vh;
-            padding: 2rem 1.5rem;
-            position: relative;
+            padding: 20px;
         }
-        .logout-fab {
-            position: fixed;
-            top: 25px;
-            right: 30px;
+        
+        /* Navigation */
+        .top-nav {
             background: #0b2b5c;
-            color: white;
-            width: 60px;
-            height: 60px;
-            border-radius: 40px;
+            padding: 15px 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.6rem;
-            box-shadow: 0 10px 20px rgba(0,20,50,0.3);
-            border: 2px solid #ffc107;
-            text-decoration: none;
-            z-index: 1000;
-            transition: 0.2s;
-        }
-        .logout-fab:hover {
-            background: #1f4a81;
-            transform: scale(1.05) rotate(-2deg);
-        }
-        .dashboard-header {
-            max-width: 1400px;
-            margin: 0 auto 1.8rem auto;
-            display: flex;
-            align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
+            align-items: center;
+            color: white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .nav-links {
+            display: flex;
             gap: 20px;
         }
-        .title-section h1 {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: #0b1f3b;
-            letter-spacing: -0.02em;
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            transition: 0.3s;
+            font-weight: 500;
         }
-        .title-section .badge {
-            background: #ffd966;
-            padding: 5px 15px;
-            border-radius: 40px;
+        
+        .nav-links a:hover, .nav-links a.active {
+            background: #ffc107;
+            color: #0b2b5c;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 25px;
+            border-radius: 30px;
+            cursor: pointer;
             font-weight: 600;
-            font-size: 0.9rem;
-            color: #0a2d5a;
-            display: inline-block;
-            margin-top: 8px;
+            text-decoration: none;
         }
+        
+        /* Dashboard Header */
+        .dashboard-header {
+            margin-bottom: 25px;
+        }
+        
+        .header-title {
+            font-size: 2rem;
+            color: #0b2b5c;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
         .connection-status {
             background: white;
             padding: 12px 25px;
             border-radius: 50px;
+            display: inline-block;
             font-size: 0.9rem;
-            box-shadow: 0 6px 14px rgba(0,30,70,0.08);
-            border: 1px solid #cedef5;
-            color: #1b3e68;
+            border: 1px solid #ffc107;
         }
-        .connection-status i {
-            margin-right: 6px;
-        }
-        .connection-status.success i { color: #0f9d58; }
-        .connection-status.loading i { color: #f4b836; }
-        .connection-status.error i { color: #d32f2f; }
         
-        .controls-card {
-            max-width: 1400px;
-            margin: 0 auto 25px auto;
+        .status-online { color: #28a745; }
+        .status-offline { color: #dc3545; }
+        
+        /* Filter Bar */
+        .filter-bar {
             background: white;
-            border-radius: 32px;
-            padding: 1.5rem 2rem;
-            box-shadow: 0 20px 35px -10px rgba(11,43,92,0.2);
-            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
             display: flex;
             flex-wrap: wrap;
-            gap: 20px 30px;
+            gap: 15px;
             align-items: flex-end;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
-        .filter-item {
-            display: flex;
-            flex-direction: column;
-            min-width: 160px;
+        
+        .filter-group {
+            flex: 1 1 200px;
         }
-        .filter-item label {
-            font-weight: 600;
+        
+        .filter-group label {
+            display: block;
             font-size: 0.8rem;
-            text-transform: uppercase;
-            color: #2f4b74;
-            letter-spacing: 0.3px;
+            font-weight: 600;
+            color: #666;
             margin-bottom: 5px;
+            text-transform: uppercase;
         }
-        .filter-item input, .filter-item select {
-            background: #f8fcff;
-            border: 1.5px solid #dbe3f0;
-            border-radius: 40px;
-            padding: 12px 18px;
-            font-weight: 500;
-            color: #0b1f3b;
+        
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e7ff;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            transition: 0.3s;
+        }
+        
+        .filter-group input:focus, .filter-group select:focus {
+            border-color: #0b2b5c;
             outline: none;
-            transition: 0.2s;
         }
-        .filter-item input:focus, .filter-item select:focus {
-            border-color: #2d7aff;
-            box-shadow: 0 0 0 4px rgba(45,122,255,0.15);
-        }
+        
         .filter-actions {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
         }
+        
         .btn {
-            background: white;
-            border: 1.5px solid #2d7aff;
-            border-radius: 40px;
-            padding: 12px 32px;
-            font-weight: 700;
-            color: #1e4f8a;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
             cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.95rem;
+            transition: 0.3s;
+            font-size: 0.9rem;
         }
+        
         .btn-primary {
             background: #0b2b5c;
-            border: 1px solid #ffc107;
             color: white;
-            box-shadow: 0 8px 18px -8px #0a1f38;
         }
+        
         .btn-primary:hover {
-            background: #1f4a81;
+            background: #1a3f7a;
             transform: translateY(-2px);
         }
-        .btn-outline:hover {
-            background: #e3edff;
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #0b2b5c;
         }
-        .stats-row {
-            max-width: 1400px;
-            margin: 20px auto 30px auto;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 18px;
+        
+        .btn-warning:hover {
+            background: #ffd133;
         }
-        .stat-card {
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .kpi-card {
             background: white;
-            border-radius: 26px;
-            padding: 1.3rem 2rem;
-            flex: 1 1 180px;
-            box-shadow: 0 10px 18px -10px #afc8e6;
-            border: 1px solid #ffffff;
+            border-radius: 20px;
+            padding: 20px;
             display: flex;
             align-items: center;
-            gap: 18px;
+            gap: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-left: 5px solid #0b2b5c;
         }
-        .stat-icon {
-            background: #eef5ff;
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
+        
+        .kpi-icon {
+            width: 60px;
+            height: 60px;
+            background: #e8f0fe;
+            border-radius: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
+            font-size: 2rem;
             color: #0b2b5c;
         }
-        .stat-content h3 {
+        
+        .kpi-info h3 {
             font-size: 2rem;
-            font-weight: 800;
-            color: #0b1f3b;
-            line-height: 1.2;
+            font-weight: 700;
+            color: #0b2b5c;
         }
-        .stat-content p {
-            color: #3e5f85;
+        
+        .kpi-info p {
+            color: #666;
             font-weight: 500;
         }
-        .chart-container {
-            max-width: 1400px;
-            margin: 25px auto;
-            background: white;
-            border-radius: 32px;
-            padding: 1.8rem;
-            box-shadow: 0 20px 30px -12px rgba(11,43,92,0.2);
-            border: 1px solid #ffe69b;
+        
+        /* Anomaly Alert */
+        .anomaly-alert {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: pulse 2s infinite;
         }
-        .chart-row {
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        }
+        
+        .anomaly-icon {
+            font-size: 2rem;
+            color: #856404;
+        }
+        
+        .anomaly-content {
+            flex: 1;
+        }
+        
+        .anomaly-title {
+            font-weight: 700;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+        
+        .anomaly-list {
+            list-style: none;
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 15px;
         }
-        .chart-box {
-            flex: 1 1 300px;
-            height: 280px;
-        }
-        .table-container {
-            max-width: 1400px;
-            margin: 30px auto 50px auto;
+        
+        .anomaly-item {
             background: white;
-            border-radius: 36px;
-            padding: 1.8rem 1.5rem;
-            box-shadow: 0 25px 40px -16px #102a47;
-            border: 1px solid #ffd966;
-            overflow-x: auto;
+            padding: 8px 15px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            border: 1px solid #ffeeba;
         }
+        
+        .anomaly-item.high {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .anomaly-item.medium {
+            border-left: 4px solid #ffc107;
+        }
+        
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .chart-title {
+            font-weight: 600;
+            color: #0b2b5c;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e7ff;
+        }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        
+        /* Table Section */
+        .table-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+        
         .table-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            gap: 15px;
         }
-        .table-header h2 {
-            color: #0b2b5c;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .export-btn {
-            background: none;
-            border: 1px solid #2d7aff;
-            border-radius: 30px;
-            padding: 10px 20px;
+        
+        .table-title {
+            font-size: 1.3rem;
             font-weight: 600;
-            color: #1e4f8a;
-            cursor: pointer;
-            transition: 0.2s;
+            color: #0b2b5c;
         }
-        .export-btn:hover {
-            background: #2d7aff22;
+        
+        .table-actions {
+            display: flex;
+            gap: 10px;
         }
-        table {
-            width: 100%;
+        
+        /* DataTables Customization */
+        .dataTables_wrapper {
+            padding: 10px 0;
+        }
+        
+        table.dataTable {
             border-collapse: collapse;
-            font-size: 0.9rem;
-            min-width: 1300px;
+            width: 100%;
         }
-        th {
-            text-align: left;
-            padding: 16px 12px;
-            background: #f1f7ff;
-            color: #10345e;
-            font-weight: 700;
-            white-space: nowrap;
+        
+        table.dataTable thead th {
+            background: #f8f9fa;
+            color: #0b2b5c;
+            font-weight: 600;
+            padding: 15px 10px;
+            border-bottom: 2px solid #0b2b5c;
         }
-        td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #dbe3f0;
-            color: #1e3d62;
-            white-space: nowrap;
+        
+        table.dataTable tbody td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e0e7ff;
         }
-        tr:hover td {
-            background: #f6fbff;
+        
+        table.dataTable tbody tr:hover {
+            background: #f8f9fa;
         }
-        .image-link {
-            color: #2d7aff;
-            text-decoration: none;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .image-link:hover {
-            text-decoration: underline;
-        }
+        
         .image-thumb {
             width: 40px;
             height: 40px;
             border-radius: 8px;
             object-fit: cover;
-            border: 2px solid #ffc107;
             cursor: pointer;
-            transition: transform 0.2s;
+            border: 2px solid #ffc107;
+            transition: 0.3s;
         }
+        
         .image-thumb:hover {
-            transform: scale(2.5);
+            transform: scale(2);
             z-index: 100;
             position: relative;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
-        .load-overlay {
+        
+        /* Loading Overlay */
+        .loading-overlay {
             display: none;
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(3px);
-            z-index: 2000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            z-index: 9999;
             justify-content: center;
             align-items: center;
-            font-size: 2rem;
-            color: #0b2b5c;
             flex-direction: column;
         }
-        .load-spinner {
-            border: 6px solid #e5efff;
-            border-top: 6px solid #0b2b5c;
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #0b2b5c;
             border-radius: 50%;
-            width: 60px; height: 60px;
             animation: spin 1s linear infinite;
-            margin-bottom: 15px;
         }
-        @keyframes spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
-        .footer-note {
-            text-align: center;
-            color: #4c6f98;
-            max-width: 1400px;
-            margin: 20px auto 0;
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .cost-center-badge {
-            background: #d4e2fc;
-            border-radius: 40px;
-            padding: 3px 10px;
-            font-size: 0.8rem;
-        }
-        .no-image {
-            color: #999;
-            font-style: italic;
-            font-size: 0.8rem;
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .filter-bar {
+                flex-direction: column;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Logout / Home button linking to index.html -->
-    <a href="index.html" class="logout-fab" title="Back to report form">
-        <i class="fas fa-sign-out-alt"></i>
-    </a>
-
-    <!-- Loading overlay -->
-    <div id="loadingOverlay" class="load-overlay">
-        <div class="load-spinner"></div>
-        <div>loading incident data ...</div>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p style="margin-top: 20px; color: #0b2b5c; font-weight: 600;">Loading dashboard data...</p>
     </div>
 
+    <!-- Navigation -->
+    <div class="top-nav">
+        <div class="nav-links">
+            <a href="#" class="active"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a href="incidents.html"><i class="fas fa-car-crash"></i> Incidents</a>
+            <a href="analytics.html"><i class="fas fa-chart-line"></i> Analytics</a>
+            <a href="reports.html"><i class="fas fa-flag"></i> Anomaly Reports</a>
+        </div>
+        <div>
+            <span style="margin-right: 15px;" id="liveTime"></span>
+            <a href="index.html" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
+
+    <!-- Dashboard Header -->
     <div class="dashboard-header">
-        <div class="title-section">
-            <h1>⚡ OnPoint Fleet • incident analytics</h1>
-            <span class="badge"><i class="fas fa-shield-alt"></i> live from Google Sheets</span>
+        <div class="header-title">
+            <i class="fas fa-chart-pie" style="color: #ffc107; margin-right: 10px;"></i>
+            OnPoint Fleet Incident Analytics Dashboard
         </div>
         <div class="connection-status" id="connectionStatus">
-            <i class="fas fa-sync-alt fa-spin"></i> connecting to data source...
+            <i class="fas fa-circle status-offline"></i> Connecting to data source...
         </div>
     </div>
 
-    <!-- Filter card -->
-    <div class="controls-card">
-        <div class="filter-item">
-            <label><i class="fas fa-calendar-alt"></i> from date</label>
-            <input type="date" id="filterDateFrom">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label><i class="fas fa-calendar"></i> From Date</label>
+            <input type="date" id="filterFromDate">
         </div>
-        <div class="filter-item">
-            <label><i class="fas fa-calendar-alt"></i> to date</label>
-            <input type="date" id="filterDateTo">
+        <div class="filter-group">
+            <label><i class="fas fa-calendar"></i> To Date</label>
+            <input type="date" id="filterToDate">
         </div>
-        <div class="filter-item">
-            <label><i class="fas fa-user"></i> driver</label>
+        <div class="filter-group">
+            <label><i class="fas fa-user"></i> Driver</label>
             <select id="filterDriver">
-                <option value="">all drivers</option>
+                <option value="">All Drivers</option>
             </select>
         </div>
-        <div class="filter-item">
-            <label><i class="fas fa-building"></i> department</label>
+        <div class="filter-group">
+            <label><i class="fas fa-building"></i> Department</label>
             <select id="filterDepartment">
-                <option value="">all departments</option>
+                <option value="">All Departments</option>
             </select>
         </div>
-        <div class="filter-item">
-            <label><i class="fas fa-coins"></i> cost center</label>
+        <div class="filter-group">
+            <label><i class="fas fa-coins"></i> Cost Center</label>
             <select id="filterCostCenter">
-                <option value="">all cost centers</option>
+                <option value="">All Cost Centers</option>
             </select>
         </div>
         <div class="filter-actions">
-            <button class="btn btn-primary" id="applyFilterBtn"><i class="fas fa-filter"></i> apply</button>
-            <button class="btn btn-outline" id="resetFilterBtn"><i class="fas fa-undo-alt"></i> reset</button>
-            <button class="btn btn-outline" id="refreshDataBtn"><i class="fas fa-sync-alt"></i> refresh</button>
+            <button class="btn btn-primary" id="applyFilters"><i class="fas fa-filter"></i> Apply</button>
+            <button class="btn btn-warning" id="resetFilters"><i class="fas fa-undo"></i> Reset</button>
+            <button class="btn btn-success" id="refreshData"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
     </div>
 
-    <!-- KPI stats row -->
-    <div class="stats-row" id="statsRow">
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-car-crash"></i></div><div class="stat-content"><h3 id="totalIncidents">0</h3><p>total incidents</p></div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-content"><h3 id="uniqueDrivers">0</h3><p>drivers involved</p></div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-building"></i></div><div class="stat-content"><h3 id="uniqueDepartments">0</h3><p>departments</p></div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-image"></i></div><div class="stat-content"><h3 id="totalPhotos">0</h3><p>photos attached</p></div></div>
-    </div>
-
-    <!-- mini charts row -->
-    <div class="chart-container">
-        <div class="chart-row">
-            <div class="chart-box"><canvas id="typeChart"></canvas></div>
-            <div class="chart-box"><canvas id="deptChart"></canvas></div>
-            <div class="chart-box"><canvas id="costCenterChart"></canvas></div>
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-car-crash"></i></div>
+            <div class="kpi-info">
+                <h3 id="totalIncidents">0</h3>
+                <p>Total Incidents</p>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-users"></i></div>
+            <div class="kpi-info">
+                <h3 id="uniqueDrivers">0</h3>
+                <p>Drivers Involved</p>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-building"></i></div>
+            <div class="kpi-info">
+                <h3 id="uniqueDepts">0</h3>
+                <p>Departments</p>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-camera"></i></div>
+            <div class="kpi-info">
+                <h3 id="totalPhotos">0</h3>
+                <p>Photos Attached</p>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-gavel"></i></div>
+            <div class="kpi-info">
+                <h3 id="atFaultCount">0</h3>
+                <p>At Fault</p>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-wine-bottle"></i></div>
+            <div class="kpi-info">
+                <h3 id="drunkenCount">0</h3>
+                <p>Drunken Driving</p>
+            </div>
         </div>
     </div>
 
-    <!-- Data table -->
-    <div class="table-container">
+    <!-- Anomaly Alert Section -->
+    <div id="anomalyAlert" class="anomaly-alert" style="display: none;">
+        <div class="anomaly-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="anomaly-content">
+            <div class="anomaly-title">⚠️ Fuel Usage Anomalies Detected</div>
+            <ul class="anomaly-list" id="anomalyList"></ul>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="chart-title"><i class="fas fa-chart-pie"></i> Incidents by Type</div>
+            <div class="chart-container">
+                <canvas id="typeChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title"><i class="fas fa-chart-bar"></i> Incidents by Department</div>
+            <div class="chart-container">
+                <canvas id="deptChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title"><i class="fas fa-chart-pie"></i> Incidents by Cost Center</div>
+            <div class="chart-container">
+                <canvas id="costCenterChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title"><i class="fas fa-chart-line"></i> Incidents Over Time</div>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div class="table-section">
         <div class="table-header">
-            <h2><i class="fas fa-list-ul" style="color:#0b2b5c;"></i> incidents log · filtered view</h2>
-            <button class="export-btn" id="exportCsvBtn"><i class="fas fa-download"></i> export CSV</button>
+            <div class="table-title">
+                <i class="fas fa-list"></i> Incident Details
+            </div>
+            <div class="table-actions">
+                <button class="btn btn-success" id="exportCSV"><i class="fas fa-download"></i> Export CSV</button>
+                <button class="btn btn-primary" id="printTable"><i class="fas fa-print"></i> Print</button>
+            </div>
         </div>
-        <div style="overflow-x: auto;">
-            <table id="incidentTable">
-                <thead>
-                    <tr>
-                        <th>Timestamp</th><th>Date</th><th>Time</th><th>Vehicle</th><th>Location</th><th>Type</th><th>Dept</th>
-                        <th>Cost Center</th><th>Driver</th><th>Phone</th><th>Descr</th><th>Other parties</th><th>Metro</th>
-                        <th>Officer</th><th>Officer phone</th><th>Drunk</th><th>Police #</th><th>At fault</th><th>Lat</th><th>Lon</th>
-                        <th>Geo URL</th><th>Image</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr><td colspan="22" style="text-align:center; padding:40px;">⬆️ click refresh or apply to load data</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="footer-note">
-        <i class="fas fa-robot"></i> dashboard integrates with Google Sheets · realtime filters · logout returns to report form
+        
+        <table id="incidentTable" class="display" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Vehicle</th>
+                    <th>Location</th>
+                    <th>Type</th>
+                    <th>Department</th>
+                    <th>Cost Center</th>
+                    <th>Driver</th>
+                    <th>Phone</th>
+                    <th>Description</th>
+                    <th>Other Parties</th>
+                    <th>Metro</th>
+                    <th>Officer</th>
+                    <th>Officer Phone</th>
+                    <th>Drunk</th>
+                    <th>Police #</th>
+                    <th>At Fault</th>
+                    <th>Lat</th>
+                    <th>Lon</th>
+                    <th>Map</th>
+                    <th>Image</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr>
+                    <td colspan="22" style="text-align: center;">Loading data...</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <script>
-        (function() {
-            // =============================================
-            // IMPORTANT: REPLACE WITH YOUR ACTUAL GAS URL
-            // =============================================
-            const GAS_URL = 'https://script.google.com/macros/s/AKfycbyImMrUKv7ZlNJRpPQMIjBzcpHLS607YFg_x0asXNXVoSq91SgW1njGNfLHv2sb5Vv2/exec';
+        // ==================== CONFIGURATION ====================
+        // IMPORTANT: Replace with your actual Google Apps Script URL
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyISHJG0Z0Y7vJntwwiUUzHbwUgOWL2xtk8eTc2VtqaKGySCz9c5P8vg84mQ5m9AQlL/exec';
+        
+        // Column indices matching your sheet
+        const COL = {
+            TIMESTAMP: 0,
+            DATE: 1,
+            TIME: 2,
+            VEHICLE: 3,
+            LOCATION: 4,
+            TYPE: 5,
+            DEPT: 6,
+            COST_CENTER: 7,
+            DRIVER: 8,
+            PHONE: 9,
+            DESCR: 10,
+            OTHER: 11,
+            METRO: 12,
+            OFFICER: 13,
+            OFFICER_PHONE: 14,
+            DRUNK: 15,
+            POLICE_NO: 16,
+            AT_FAULT: 17,
+            LAT: 18,
+            LON: 19,
+            GEO_URL: 20,
+            IMAGE_FILE: 21,
+            IMAGE_URL: 22
+        };
+
+        // Global variables
+        let allData = [];
+        let filteredData = [];
+        let dataTable = null;
+        let charts = {};
+
+        // ==================== INITIALIZATION ====================
+        $(document).ready(function() {
+            initializeDashboard();
+            setupEventListeners();
+            startLiveTime();
+        });
+
+        function initializeDashboard() {
+            showLoading();
+            loadDashboardData();
+        }
+
+        function setupEventListeners() {
+            $('#applyFilters').click(applyFilters);
+            $('#resetFilters').click(resetFilters);
+            $('#refreshData').click(() => loadDashboardData());
+            $('#exportCSV').click(exportToCSV);
+            $('#printTable').click(printTable);
+        }
+
+        // ==================== DATA LOADING ====================
+        async function loadDashboardData() {
+            updateConnectionStatus('loading', 'Fetching data...');
             
-            // Column indices (0-based) matching your sheet order
-            const COL = {
-                TIMESTAMP: 0, 
-                DATE: 1, 
-                TIME: 2, 
-                VEHICLE: 3, 
-                LOCATION: 4, 
-                TYPE: 5, 
-                DEPT: 6, 
-                COST_CENTER: 7,
-                DRIVER: 8, 
-                DRIVER_PHONE: 9, 
-                DESCR: 10, 
-                OTHER: 11, 
-                METRO: 12, 
-                OFFICER_NAME: 13,
-                OFFICER_PHONE: 14, 
-                DRUNK: 15, 
-                POLICE_NO: 16, 
-                AT_FAULT: 17, 
-                LAT: 18, 
-                LON: 19,
-                GEO_URL: 20, 
-                IMAGE_FILENAME: 21, 
-                IMAGE_DRIVE_URL: 22
+            try {
+                // Build query parameters
+                const params = new URLSearchParams({
+                    mode: 'getDashboardData',
+                    t: Date.now() // Cache busting
+                });
+                
+                // Add filters if they exist
+                if ($('#filterFromDate').val()) params.append('fromDate', $('#filterFromDate').val());
+                if ($('#filterToDate').val()) params.append('toDate', $('#filterToDate').val());
+                if ($('#filterDriver').val()) params.append('driver', $('#filterDriver').val());
+                if ($('#filterDepartment').val()) params.append('department', $('#filterDepartment').val());
+                if ($('#filterCostCenter').val()) params.append('costCenter', $('#filterCostCenter').val());
+                
+                const response = await fetch(`${GAS_URL}?${params.toString()}`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                
+                if (data && data.incidents) {
+                    allData = data.incidents;
+                    filteredData = allData;
+                    
+                    // Update UI with data
+                    updateFilterDropdowns(data);
+                    updateKPIs(data.stats);
+                    updateCharts(data);
+                    updateAnomalyAlert(data.fuelAnomalies);
+                    updateDataTable(filteredData);
+                    
+                    updateConnectionStatus('success', `Loaded ${allData.length} incidents`);
+                } else {
+                    throw new Error('Invalid data format');
+                }
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                updateConnectionStatus('error', 'Failed to load data');
+                showError('Could not load dashboard data. Please check your connection.');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ==================== FILTERS ====================
+        function updateFilterDropdowns(data) {
+            // Update driver dropdown
+            let driverOptions = '<option value="">All Drivers</option>';
+            data.drivers.forEach(driver => {
+                driverOptions += `<option value="${driver}">${driver}</option>`;
+            });
+            $('#filterDriver').html(driverOptions);
+            
+            // Update department dropdown
+            let deptOptions = '<option value="">All Departments</option>';
+            data.departments.forEach(dept => {
+                deptOptions += `<option value="${dept}">${dept}</option>`;
+            });
+            $('#filterDepartment').html(deptOptions);
+            
+            // Update cost center dropdown
+            let costOptions = '<option value="">All Cost Centers</option>';
+            data.costCenters.forEach(cost => {
+                costOptions += `<option value="${cost}">${cost}</option>`;
+            });
+            $('#filterCostCenter').html(costOptions);
+        }
+
+        function applyFilters() {
+            showLoading();
+            
+            // Simple client-side filtering
+            const fromDate = $('#filterFromDate').val() ? new Date($('#filterFromDate').val()) : null;
+            const toDate = $('#filterToDate').val() ? new Date($('#filterToDate').val()) : null;
+            const driver = $('#filterDriver').val();
+            const dept = $('#filterDepartment').val();
+            const cost = $('#filterCostCenter').val();
+            
+            filteredData = allData.filter(row => {
+                // Date filter
+                if (fromDate || toDate) {
+                    const rowDate = new Date(row[COL.DATE]);
+                    if (fromDate && rowDate < fromDate) return false;
+                    if (toDate) {
+                        const toDateEnd = new Date(toDate);
+                        toDateEnd.setDate(toDateEnd.getDate() + 1);
+                        if (rowDate >= toDateEnd) return false;
+                    }
+                }
+                
+                // Other filters
+                if (driver && row[COL.DRIVER] !== driver) return false;
+                if (dept && row[COL.DEPT] !== dept) return false;
+                if (cost && row[COL.COST_CENTER] !== cost) return false;
+                
+                return true;
+            });
+            
+            // Update table and charts with filtered data
+            if (dataTable) {
+                dataTable.clear();
+                dataTable.rows.add(formatTableData(filteredData));
+                dataTable.draw();
+            }
+            
+            // Recalculate stats for filtered data
+            const filteredStats = calculateStats(filteredData);
+            updateKPIs(filteredStats);
+            updateChartsFromFiltered(filteredData);
+            
+            hideLoading();
+            updateConnectionStatus('info', `Showing ${filteredData.length} of ${allData.length} incidents`);
+        }
+
+        function resetFilters() {
+            $('#filterFromDate').val('');
+            $('#filterToDate').val('');
+            $('#filterDriver').val('');
+            $('#filterDepartment').val('');
+            $('#filterCostCenter').val('');
+            
+            filteredData = allData;
+            
+            if (dataTable) {
+                dataTable.clear();
+                dataTable.rows.add(formatTableData(filteredData));
+                dataTable.draw();
+            }
+            
+            updateKPIs(calculateStats(filteredData));
+            updateChartsFromFiltered(filteredData);
+            updateConnectionStatus('success', `Showing all ${allData.length} incidents`);
+        }
+
+        // ==================== KPI UPDATES ====================
+        function updateKPIs(stats) {
+            $('#totalIncidents').text(stats.totalIncidents || 0);
+            $('#uniqueDrivers').text(stats.uniqueDrivers || 0);
+            $('#uniqueDepts').text(stats.uniqueDepartments || 0);
+            $('#totalPhotos').text(stats.photosAttached || 0);
+            $('#atFaultCount').text(stats.atFaultCount || 0);
+            $('#drunkenCount').text(stats.drunkenDriving || 0);
+        }
+
+        function calculateStats(data) {
+            const stats = {
+                totalIncidents: data.length,
+                uniqueDrivers: new Set(data.map(r => r[COL.DRIVER]).filter(Boolean)).size,
+                uniqueDepartments: new Set(data.map(r => r[COL.DEPT]).filter(Boolean)).size,
+                photosAttached: data.filter(r => r[COL.IMAGE_URL] && r[COL.IMAGE_URL] !== '').length,
+                atFaultCount: data.filter(r => r[COL.AT_FAULT] === 'Yes').length,
+                drunkenDriving: data.filter(r => r[COL.DRUNK] === 'Yes').length,
+                byType: {},
+                byDepartment: {},
+                byCostCenter: {},
+                byMonth: {}
             };
-
-            // Global data store
-            let allIncidents = [];
-            let filteredIncidents = [];
-            let isLoading = false;
-
-            // DOM elements
-            const loading = document.getElementById('loadingOverlay');
-            const connectionStatus = document.getElementById('connectionStatus');
-            const tbody = document.getElementById('tableBody');
-            const filterDriver = document.getElementById('filterDriver');
-            const filterDept = document.getElementById('filterDepartment');
-            const filterCost = document.getElementById('filterCostCenter');
-            const filterFrom = document.getElementById('filterDateFrom');
-            const filterTo = document.getElementById('filterDateTo');
-            const applyBtn = document.getElementById('applyFilterBtn');
-            const resetBtn = document.getElementById('resetFilterBtn');
-            const refreshBtn = document.getElementById('refreshDataBtn');
-            const exportBtn = document.getElementById('exportCsvBtn');
-
-            // Stats elements
-            const totalSpan = document.getElementById('totalIncidents');
-            const uniqueDriversSpan = document.getElementById('uniqueDrivers');
-            const uniqueDeptsSpan = document.getElementById('uniqueDepartments');
-            const totalPhotosSpan = document.getElementById('totalPhotos');
-
-            // Charts
-            let typeChart, deptChart, costChart;
-
-            // Update connection status UI
-            function updateConnectionStatus(type, message) {
-                connectionStatus.className = 'connection-status ' + type;
-                let icon = '';
-                switch(type) {
-                    case 'success': icon = '<i class="fas fa-check-circle"></i>'; break;
-                    case 'loading': icon = '<i class="fas fa-sync-alt fa-spin"></i>'; break;
-                    case 'warning': icon = '<i class="fas fa-exclamation-triangle"></i>'; break;
-                    case 'error': icon = '<i class="fas fa-times-circle"></i>'; break;
-                    default: icon = '<i class="fas fa-info-circle"></i>';
+            
+            data.forEach(row => {
+                // Count by type
+                const type = row[COL.TYPE] || 'Unknown';
+                stats.byType[type] = (stats.byType[type] || 0) + 1;
+                
+                // Count by department
+                const dept = row[COL.DEPT] || 'Unknown';
+                stats.byDepartment[dept] = (stats.byDepartment[dept] || 0) + 1;
+                
+                // Count by cost center
+                const cost = row[COL.COST_CENTER] || 'Unknown';
+                stats.byCostCenter[cost] = (stats.byCostCenter[cost] || 0) + 1;
+                
+                // Count by month
+                if (row[COL.DATE]) {
+                    const month = row[COL.DATE].substring(0, 7);
+                    stats.byMonth[month] = (stats.byMonth[month] || 0) + 1;
                 }
-                connectionStatus.innerHTML = icon + ' ' + message;
-            }
+            });
+            
+            return stats;
+        }
 
-            // =============================================
-            // LOAD REAL DATA FROM GOOGLE SHEETS VIA GAS
-            // =============================================
-            async function loadIncidents(showLoading = true) {
-                if (isLoading) return;
-                
-                isLoading = true;
-                if (showLoading) loading.style.display = 'flex';
-                
-                updateConnectionStatus('loading', 'fetching data from Google Sheets...');
-                
-                try {
-                    // Fetch from GAS with cache busting
-                    const response = await fetch(`${GAS_URL}?mode=getIncidents&t=${Date.now()}`, { 
-                        method: 'GET',
-                        mode: 'cors',
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
-                    
-                    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-                    
-                    const data = await response.json();
-                    
-                    // Check if we got valid data
-                    if (data && Array.isArray(data)) {
-                        if (data.length > 0) {
-                            allIncidents = data;
-                            updateConnectionStatus('success', `loaded ${data.length} incidents from Google Sheets`);
-                        } else {
-                            allIncidents = [];
-                            updateConnectionStatus('warning', 'sheet is empty - no incidents found');
-                        }
-                    } else {
-                        console.warn('Unexpected data format:', data);
-                        throw new Error('Invalid data format received from server');
-                    }
-                    
-                } catch (error) {
-                    console.error('Error loading from GAS:', error);
-                    updateConnectionStatus('error', 'failed to load data - check console');
-                    
-                    // Show error in table
-                    tbody.innerHTML = `<tr><td colspan="22" style="text-align:center; padding:40px; color:#d32f2f;">
-                        <i class="fas fa-exclamation-triangle"></i> Error loading data: ${error.message}<br>
-                        <button onclick="location.reload()" style="margin-top:10px; padding:8px 20px; background:#0b2b5c; color:white; border:none; border-radius:40px; cursor:pointer;">
-                            <i class="fas fa-sync-alt"></i> retry
-                        </button>
-                    </td></tr>`;
-                    
-                } finally {
-                    isLoading = false;
-                    if (showLoading) loading.style.display = 'none';
-                    
-                    // Only populate and render if we have data
-                    if (allIncidents.length > 0) {
-                        populateFilters(allIncidents);
-                        filterIncidents();
-                    } else {
-                        // Show empty state
-                        filteredIncidents = [];
-                        renderTable(filteredIncidents);
-                        updateStats(filteredIncidents);
-                        updateCharts(filteredIncidents);
+        // ==================== CHART UPDATES ====================
+        function updateCharts(data) {
+            updateChartsFromFiltered(data.incidents);
+        }
+
+        function updateChartsFromFiltered(data) {
+            const stats = calculateStats(data);
+            
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            
+            // Type Chart (Pie)
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            charts.typeChart = new Chart(typeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(stats.byType),
+                    datasets: [{
+                        data: Object.values(stats.byType),
+                        backgroundColor: ['#0b2b5c', '#ffc107', '#2d7aff', '#48cae4', '#a7c957', '#d32f2f']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
                     }
                 }
-            }
-
-            // Populate filter dropdowns from actual data
-            function populateFilters(data) {
-                const drivers = new Set();
-                const depts = new Set();
-                const costs = new Set();
-                
-                data.forEach(row => {
-                    if (row[COL.DRIVER] && row[COL.DRIVER].toString().trim()) {
-                        drivers.add(row[COL.DRIVER].toString().trim());
+            });
+            
+            // Department Chart (Bar)
+            const deptCtx = document.getElementById('deptChart').getContext('2d');
+            charts.deptChart = new Chart(deptCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(stats.byDepartment),
+                    datasets: [{
+                        label: 'Incidents',
+                        data: Object.values(stats.byDepartment),
+                        backgroundColor: '#1e4f8a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
                     }
-                    if (row[COL.DEPT] && row[COL.DEPT].toString().trim()) {
-                        depts.add(row[COL.DEPT].toString().trim());
-                    }
-                    if (row[COL.COST_CENTER] && row[COL.COST_CENTER].toString().trim()) {
-                        costs.add(row[COL.COST_CENTER].toString().trim());
-                    }
-                });
-                
-                fillSelect(filterDriver, drivers, 'all drivers');
-                fillSelect(filterDept, depts, 'all departments');
-                fillSelect(filterCost, costs, 'all cost centers');
-            }
-
-            function fillSelect(selectElement, values, defaultLabel) {
-                const currentValue = selectElement.value;
-                selectElement.innerHTML = `<option value="">${defaultLabel}</option>`;
-                
-                [...values].sort().forEach(v => {
-                    const option = document.createElement('option');
-                    option.value = v;
-                    option.textContent = v;
-                    if (v === currentValue) option.selected = true;
-                    selectElement.appendChild(option);
-                });
-            }
-
-            // Filter incidents based on selected criteria
-            function filterIncidents() {
-                if (allIncidents.length === 0) {
-                    filteredIncidents = [];
-                    renderTable(filteredIncidents);
-                    updateStats(filteredIncidents);
-                    updateCharts(filteredIncidents);
-                    return;
                 }
-                
-                const fromDate = filterFrom.value ? new Date(filterFrom.value) : null;
-                const toDate = filterTo.value ? new Date(filterTo.value) : null;
-                const driver = filterDriver.value;
-                const dept = filterDept.value;
-                const cost = filterCost.value;
-
-                filteredIncidents = allIncidents.filter(row => {
-                    // Date filter
-                    if (fromDate || toDate) {
-                        const dateStr = row[COL.DATE];
-                        if (!dateStr) return false;
-                        
-                        const rowDate = new Date(dateStr);
-                        if (fromDate && rowDate < fromDate) return false;
-                        if (toDate) {
-                            const toDateEnd = new Date(toDate);
-                            toDateEnd.setDate(toDateEnd.getDate() + 1);
-                            if (rowDate >= toDateEnd) return false;
-                        }
+            });
+            
+            // Cost Center Chart (Pie)
+            const costCtx = document.getElementById('costCenterChart').getContext('2d');
+            charts.costChart = new Chart(costCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(stats.byCostCenter),
+                    datasets: [{
+                        data: Object.values(stats.byCostCenter),
+                        backgroundColor: ['#0f9d58', '#ffb703', '#d32f2f', '#9b59b6', '#3498db', '#e67e22']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
                     }
-                    
-                    // Text filters
-                    if (driver && row[COL.DRIVER] !== driver) return false;
-                    if (dept && row[COL.DEPT] !== dept) return false;
-                    if (cost && row[COL.COST_CENTER] !== cost) return false;
-                    
-                    return true;
-                });
-                
-                renderTable(filteredIncidents);
-                updateStats(filteredIncidents);
-                updateCharts(filteredIncidents);
-            }
-
-            // Render table with actual data
-            function renderTable(data) {
-                if (data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="22" style="text-align:center; padding:40px;">no incidents match filters</td></tr>`;
-                    return;
                 }
-                
-                let html = '';
-                data.forEach(row => {
-                    // Handle image link
-                    const imageFilename = row[COL.IMAGE_FILENAME] || '';
-                    const imageDriveUrl = row[COL.IMAGE_DRIVE_URL] || '';
-                    
-                    let imageCell = '<span class="no-image">no image</span>';
-                    
-                    if (imageDriveUrl && imageDriveUrl.trim() !== '') {
-                        // Try to extract file ID for thumbnail
-                        const fileIdMatch = imageDriveUrl.match(/[-\w]{25,}/);
-                        const fileId = fileIdMatch ? fileIdMatch[0] : '';
-                        
-                        if (fileId) {
-                            imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link" title="${imageFilename}">
-                                <img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w100-h100" 
-                                     class="image-thumb" 
-                                     alt="incident photo"
-                                     onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\' viewBox=\\'0 0 40 40\\'%3E%3Crect width=\\'40\\' height=\\'40\\' fill=\\'%23f0f0f0\\'/%3E%3Ctext x=\\'8\\' y=\\'25\\' font-family=\\'Arial\\' font-size=\\'12\\' fill=\\'%23999\\'%3E📷%3C/text%3E%3C/svg%3E';">
-                                <i class="fas fa-external-link-alt" style="font-size:0.7rem;"></i>
-                            </a>`;
-                        } else {
-                            imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> view</a>`;
-                        }
-                    } else if (imageFilename && imageFilename.trim() !== '') {
-                        imageCell = `<span class="no-image">${imageFilename}</span>`;
+            });
+            
+            // Timeline Chart (Line)
+            const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+            const months = Object.keys(stats.byMonth).sort();
+            charts.timelineChart = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Incidents',
+                        data: months.map(m => stats.byMonth[m]),
+                        borderColor: '#0b2b5c',
+                        backgroundColor: 'rgba(11,43,92,0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
                     }
-                    
-                    html += `<tr>
-                        <td>${row[COL.TIMESTAMP] || ''}</td>
-                        <td>${row[COL.DATE] || ''}</td>
-                        <td>${row[COL.TIME] || ''}</td>
-                        <td>${row[COL.VEHICLE] || ''}</td>
-                        <td>${row[COL.LOCATION] || ''}</td>
-                        <td>${row[COL.TYPE] || ''}</td>
-                        <td>${row[COL.DEPT] || ''}</td>
-                        <td><span class="cost-center-badge">${row[COL.COST_CENTER] || ''}</span></td>
-                        <td>${row[COL.DRIVER] || ''}</td>
-                        <td>${row[COL.DRIVER_PHONE] || ''}</td>
-                        <td>${(row[COL.DESCR] || '').substring(0, 25)}${(row[COL.DESCR] || '').length > 25 ? '...' : ''}</td>
-                        <td>${row[COL.OTHER] || ''}</td>
-                        <td>${row[COL.METRO] || ''}</td>
-                        <td>${row[COL.OFFICER_NAME] || ''}</td>
-                        <td>${row[COL.OFFICER_PHONE] || ''}</td>
-                        <td>${row[COL.DRUNK] || ''}</td>
-                        <td>${row[COL.POLICE_NO] || ''}</td>
-                        <td>${row[COL.AT_FAULT] || ''}</td>
-                        <td>${row[COL.LAT] ? row[COL.LAT].toString().substring(0, 8) : ''}</td>
-                        <td>${row[COL.LON] ? row[COL.LON].toString().substring(0, 8) : ''}</td>
-                        <td>${row[COL.GEO_URL] ? `<a href="${row[COL.GEO_URL]}" target="_blank" class="image-link"><i class="fas fa-map-marker-alt"></i> map</a>` : ''}</td>
-                        <td>${imageCell}</td>
-                    </tr>`;
-                });
-                
-                tbody.innerHTML = html;
-            }
-
-            // Update statistics
-            function updateStats(data) {
-                totalSpan.innerText = data.length;
-                
-                const drivers = new Set(data.map(r => r[COL.DRIVER]).filter(Boolean));
-                const depts = new Set(data.map(r => r[COL.DEPT]).filter(Boolean));
-                const photos = data.filter(r => r[COL.IMAGE_DRIVE_URL && r[COL.IMAGE_DRIVE_URL].trim() !== '']).length;
-                
-                uniqueDriversSpan.innerText = drivers.size;
-                uniqueDeptsSpan.innerText = depts.size;
-                totalPhotosSpan.innerText = photos;
-            }
-
-            // Update charts with real data
-            function updateCharts(data) {
-                if (data.length === 0) {
-                    // Clear charts if no data
-                    if (typeChart) typeChart.destroy();
-                    if (deptChart) deptChart.destroy();
-                    if (costChart) costChart.destroy();
-                    return;
                 }
-                
-                // Accident type chart
-                const typeCount = {};
-                data.forEach(r => { 
-                    const t = r[COL.TYPE] || 'Unknown'; 
-                    typeCount[t] = (typeCount[t] || 0) + 1; 
-                });
-                
-                if (typeChart) typeChart.destroy();
-                const ctx1 = document.getElementById('typeChart').getContext('2d');
-                typeChart = new Chart(ctx1, {
-                    type: 'doughnut',
-                    data: { 
-                        labels: Object.keys(typeCount), 
-                        datasets: [{ 
-                            data: Object.values(typeCount), 
-                            backgroundColor: ['#0b2b5c', '#ffc107', '#2d7aff', '#48cae4', '#a7c957', '#d32f2f'] 
-                        }] 
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { 
-                            legend: { position: 'bottom' },
-                            title: { display: true, text: 'Incidents by Type' }
-                        } 
-                    }
-                });
+            });
+        }
 
-                // Department chart
-                const deptCount = {};
-                data.forEach(r => { 
-                    const d = r[COL.DEPT] || 'Unknown'; 
-                    deptCount[d] = (deptCount[d] || 0) + 1; 
-                });
-                
-                if (deptChart) deptChart.destroy();
-                const ctx2 = document.getElementById('deptChart').getContext('2d');
-                deptChart = new Chart(ctx2, {
-                    type: 'bar',
-                    data: { 
-                        labels: Object.keys(deptCount), 
-                        datasets: [{ 
-                            label: 'incidents', 
-                            data: Object.values(deptCount), 
-                            backgroundColor: '#1e4f8a' 
-                        }] 
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { 
-                            legend: { display: false },
-                            title: { display: true, text: 'Incidents by Department' }
-                        } 
-                    }
-                });
-
-                // Cost center chart
-                const costCount = {};
-                data.forEach(r => { 
-                    const c = r[COL.COST_CENTER] || 'Unknown'; 
-                    costCount[c] = (costCount[c] || 0) + 1; 
-                });
-                
-                if (costChart) costChart.destroy();
-                const ctx3 = document.getElementById('costCenterChart').getContext('2d');
-                costChart = new Chart(ctx3, {
-                    type: 'pie',
-                    data: { 
-                        labels: Object.keys(costCount), 
-                        datasets: [{ 
-                            data: Object.values(costCount), 
-                            backgroundColor: ['#0f9d58', '#ffb703', '#d32f2f', '#9b59b6', '#3498db', '#e67e22'] 
-                        }] 
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false,
-                        plugins: { 
-                            legend: { position: 'bottom' },
-                            title: { display: true, text: 'Incidents by Cost Center' }
-                        } 
-                    }
-                });
+        // ==================== ANOMALY ALERT ====================
+        function updateAnomalyAlert(anomalies) {
+            if (!anomalies || anomalies.length === 0) {
+                $('#anomalyAlert').hide();
+                return;
             }
+            
+            const anomalyList = $('#anomalyList');
+            anomalyList.empty();
+            
+            anomalies.forEach(anomaly => {
+                anomalyList.append(`
+                    <li class="anomaly-item ${anomaly.severity.toLowerCase()}">
+                        <strong>${anomaly.type.replace(/_/g, ' ')}</strong>: ${anomaly.message}
+                    </li>
+                `);
+            });
+            
+            $('#anomalyAlert').show();
+        }
 
-            // Reset filters
-            function resetFilters() {
-                filterFrom.value = '';
-                filterTo.value = '';
-                filterDriver.value = '';
-                filterDept.value = '';
-                filterCost.value = '';
-                filterIncidents();
+        // ==================== DATA TABLE ====================
+        function updateDataTable(data) {
+            if (dataTable) {
+                dataTable.destroy();
             }
+            
+            const tableData = formatTableData(data);
+            
+            dataTable = $('#incidentTable').DataTable({
+                data: tableData,
+                columns: [
+                    { data: 'timestamp' },
+                    { data: 'date' },
+                    { data: 'time' },
+                    { data: 'vehicle' },
+                    { data: 'location' },
+                    { data: 'type' },
+                    { data: 'dept' },
+                    { data: 'costCenter' },
+                    { data: 'driver' },
+                    { data: 'phone' },
+                    { data: 'description' },
+                    { data: 'other' },
+                    { data: 'metro' },
+                    { data: 'officer' },
+                    { data: 'officerPhone' },
+                    { data: 'drunk' },
+                    { data: 'policeNo' },
+                    { data: 'atFault' },
+                    { data: 'lat' },
+                    { data: 'lon' },
+                    { data: 'map' },
+                    { data: 'image' }
+                ],
+                pageLength: 25,
+                order: [[1, 'desc']], // Sort by date descending
+                responsive: true,
+                language: {
+                    search: "<i class='fas fa-search'></i> Search:",
+                    lengthMenu: "Show _MENU_ entries"
+                },
+                columnDefs: [
+                    { targets: [10, 11], visible: false }, // Hide description and other parties by default
+                    { targets: [18, 19], visible: false } // Hide lat/lon by default
+                ]
+            });
+        }
 
-            // Export to CSV
-            function exportCSV() {
-                if (filteredIncidents.length === 0) {
-                    alert('No data to export');
-                    return;
-                }
-                
-                const headers = ['Timestamp', 'Date', 'Time', 'Vehicle Reg', 'Location', 'Accident Type', 'Department', 
-                    'Cost Center', 'Driver Name', 'Driver Phone', 'Description', 'Other Parties', 'Reported to Metro', 
-                    'Officer Name', 'Officer Phone', 'Drunken Driving', 'Police Report No', 'At Fault', 'Latitude', 
-                    'Longitude', 'Geo URL', 'Image Filename', 'Image Drive URL'];
-                
-                let csv = headers.join(',') + '\n';
-                
-                filteredIncidents.forEach(row => {
-                    const escaped = row.map(cell => {
-                        if (cell === null || cell === undefined) return '';
-                        let str = String(cell).replace(/"/g, '""');
-                        return str.includes(',') ? `"${str}"` : str;
-                    }).join(',');
-                    csv += escaped + '\n';
+        function formatTableData(data) {
+            return data.map(row => ({
+                timestamp: row[COL.TIMESTAMP] || '',
+                date: row[COL.DATE] || '',
+                time: row[COL.TIME] || '',
+                vehicle: row[COL.VEHICLE] || '',
+                location: row[COL.LOCATION] || '',
+                type: row[COL.TYPE] || '',
+                dept: row[COL.DEPT] || '',
+                costCenter: row[COL.COST_CENTER] || '',
+                driver: row[COL.DRIVER] || '',
+                phone: row[COL.PHONE] || '',
+                description: (row[COL.DESCR] || '').substring(0, 30) + '...',
+                other: row[COL.OTHER] || '',
+                metro: row[COL.METRO] || '',
+                officer: row[COL.OFFICER] || '',
+                officerPhone: row[COL.OFFICER_PHONE] || '',
+                drunk: row[COL.DRUNK] || '',
+                policeNo: row[COL.POLICE_NO] || '',
+                atFault: row[COL.AT_FAULT] || '',
+                lat: row[COL.LAT] ? row[COL.LAT].toString().substring(0, 8) : '',
+                lon: row[COL.LON] ? row[COL.LON].toString().substring(0, 8) : '',
+                map: row[COL.GEO_URL] ? `<a href="${row[COL.GEO_URL]}" target="_blank"><i class="fas fa-map-marker-alt" style="color:#0b2b5c;"></i></a>` : '',
+                image: row[COL.IMAGE_URL] ? 
+                    `<a href="${row[COL.IMAGE_URL]}" target="_blank">
+                        <img src="https://drive.google.com/thumbnail?id=${extractFileId(row[COL.IMAGE_URL])}&sz=w100-h100" 
+                             class="image-thumb" alt="Photo">
+                    </a>` : 
+                    (row[COL.IMAGE_FILE] || '')
+            }));
+        }
+
+        function extractFileId(url) {
+            const match = url.match(/[-\w]{25,}/);
+            return match ? match[0] : '';
+        }
+
+        // ==================== UTILITIES ====================
+        function showLoading() {
+            $('#loadingOverlay').fadeIn(200);
+        }
+
+        function hideLoading() {
+            $('#loadingOverlay').fadeOut(200);
+        }
+
+        function updateConnectionStatus(status, message) {
+            const statusEl = $('#connectionStatus');
+            const icon = status === 'success' ? 'check-circle' : 
+                        (status === 'error' ? 'exclamation-circle' : 'sync-alt fa-spin');
+            const color = status === 'success' ? 'success' : 
+                         (status === 'error' ? 'error' : 'warning');
+            
+            statusEl.html(`<i class="fas fa-${icon} status-${color}"></i> ${message}`);
+        }
+
+        function showError(message) {
+            // You can enhance this with a toast notification
+            alert(message);
+        }
+
+        function startLiveTime() {
+            function updateTime() {
+                $('#liveTime').html(`<i class="fas fa-clock"></i> ${moment().format('HH:mm:ss')}`);
+            }
+            updateTime();
+            setInterval(updateTime, 1000);
+        }
+
+        function exportToCSV() {
+            if (!filteredData || filteredData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            const headers = ['Timestamp', 'Date', 'Time', 'Vehicle', 'Location', 'Type', 'Department', 
+                'Cost Center', 'Driver', 'Phone', 'Description', 'Other Parties', 'Reported to Metro',
+                'Officer', 'Officer Phone', 'Drunken Driving', 'Police #', 'At Fault', 'Lat', 'Lon',
+                'Geo URL', 'Image File', 'Image URL'];
+            
+            let csv = headers.join(',') + '\n';
+            
+            filteredData.forEach(row => {
+                const csvRow = headers.map((_, idx) => {
+                    let val = row[idx] || '';
+                    if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
+                        val = `"${val.replace(/"/g, '""')}"`;
+                    }
+                    return val;
                 });
-                
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `onpoint_incidents_${new Date().toISOString().slice(0,10)}.csv`;
-                link.click();
-            }
+                csv += csvRow.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `onpoint_incidents_${moment().format('YYYY-MM-DD_HHmmss')}.csv`;
+            a.click();
+        }
 
-            // Event listeners
-            applyBtn.addEventListener('click', filterIncidents);
-            resetBtn.addEventListener('click', resetFilters);
-            refreshBtn.addEventListener('click', () => loadIncidents(true));
-            exportBtn.addEventListener('click', exportCSV);
-
-            // =============================================
-            // Initialize - load REAL data from Google Sheets
-            // =============================================
-            loadIncidents(true);
-        })();
+        function printTable() {
+            window.print();
+        }
     </script>
 </body>
 </html>
