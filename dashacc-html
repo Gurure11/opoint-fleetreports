@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnPoint Fleet · incident dashboard</title>
+    <!-- Fonts & icons (same style as report) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- Chart.js for small analytics (lightweight) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS (for possible csv export, optional) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        body {
+            background: #f0f5fb;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            position: relative;
+        }
+        /* floating logout / home button */
+        .logout-fab {
+            position: fixed;
+            top: 25px;
+            right: 30px;
+            background: #0b2b5c;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            box-shadow: 0 10px 20px rgba(0,20,50,0.3);
+            border: 2px solid #ffc107;
+            text-decoration: none;
+            z-index: 1000;
+            transition: 0.2s;
+        }
+        .logout-fab:hover {
+            background: #1f4a81;
+            transform: scale(1.05) rotate(-2deg);
+        }
+        .dashboard-header {
+            max-width: 1400px;
+            margin: 0 auto 1.8rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .title-section h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #0b1f3b;
+            letter-spacing: -0.02em;
+        }
+        .title-section .badge {
+            background: #ffd966;
+            padding: 5px 15px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #0a2d5a;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        .sheet-id {
+            background: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            box-shadow: 0 6px 14px rgba(0,30,70,0.08);
+            border: 1px solid #cedef5;
+            color: #1b3e68;
+        }
+        .sheet-id i {
+            color: #0f9d58;
+            margin-right: 6px;
+        }
+        .controls-card {
+            max-width: 1400px;
+            margin: 0 auto 25px auto;
+            background: white;
+            border-radius: 32px;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 20px 35px -10px rgba(11,43,92,0.2);
+            border: 1px solid rgba(255,215,0,0.3);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px 30px;
+            align-items: flex-end;
+        }
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            min-width: 160px;
+        }
+        .filter-item label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #2f4b74;
+            letter-spacing: 0.3px;
+            margin-bottom: 5px;
+        }
+        .filter-item input, .filter-item select {
+            background: #f8fcff;
+            border: 1.5px solid #dbe3f0;
+            border-radius: 40px;
+            padding: 12px 18px;
+            font-weight: 500;
+            color: #0b1f3b;
+            outline: none;
+            transition: 0.2s;
+        }
+        .filter-item input:focus, .filter-item select:focus {
+            border-color: #2d7aff;
+            box-shadow: 0 0 0 4px rgba(45,122,255,0.15);
+        }
+        .filter-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: white;
+            border: 1.5px solid #2d7aff;
+            border-radius: 40px;
+            padding: 12px 32px;
+            font-weight: 700;
+            color: #1e4f8a;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        .btn-primary {
+            background: #0b2b5c;
+            border: 1px solid #ffc107;
+            color: white;
+            box-shadow: 0 8px 18px -8px #0a1f38;
+        }
+        .btn-primary:hover {
+            background: #1f4a81;
+            transform: translateY(-2px);
+        }
+        .btn-outline:hover {
+            background: #e3edff;
+        }
+        .stats-row {
+            max-width: 1400px;
+            margin: 20px auto 30px auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 26px;
+            padding: 1.3rem 2rem;
+            flex: 1 1 180px;
+            box-shadow: 0 10px 18px -10px #afc8e6;
+            border: 1px solid #ffffff;
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .stat-icon {
+            background: #eef5ff;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #0b2b5c;
+        }
+        .stat-content h3 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #0b1f3b;
+            line-height: 1.2;
+        }
+        .stat-content p {
+            color: #3e5f85;
+            font-weight: 500;
+        }
+        .chart-container {
+            max-width: 1400px;
+            margin: 25px auto;
+            background: white;
+            border-radius: 32px;
+            padding: 1.8rem;
+            box-shadow: 0 20px 30px -12px rgba(11,43,92,0.2);
+            border: 1px solid #ffe69b;
+        }
+        .chart-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .chart-box {
+            flex: 1 1 300px;
+            height: 280px;
+        }
+        .table-container {
+            max-width: 1400px;
+            margin: 30px auto 50px auto;
+            background: white;
+            border-radius: 36px;
+            padding: 1.8rem 1.5rem;
+            box-shadow: 0 25px 40px -16px #102a47;
+            border: 1px solid #ffd966;
+            overflow-x: auto;
+        }
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .table-header h2 {
+            color: #0b2b5c;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .export-btn {
+            background: none;
+            border: 1px solid #2d7aff;
+            border-radius: 30px;
+            padding: 10px 20px;
+            font-weight: 600;
+            color: #1e4f8a;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .export-btn:hover {
+            background: #2d7aff22;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            min-width: 1300px;
+        }
+        th {
+            text-align: left;
+            padding: 16px 12px;
+            background: #f1f7ff;
+            color: #10345e;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #dbe3f0;
+            color: #1e3d62;
+            white-space: nowrap;
+        }
+        tr:hover td {
+            background: #f6fbff;
+        }
+        .image-link {
+            color: #2d7aff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .image-link:hover {
+            text-decoration: underline;
+        }
+        .load-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(3px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            color: #0b2b5c;
+            flex-direction: column;
+        }
+        .load-spinner {
+            border: 6px solid #e5efff;
+            border-top: 6px solid #0b2b5c;
+            border-radius: 50%;
+            width: 60px; height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+        .footer-note {
+            text-align: center;
+            color: #4c6f98;
+            max-width: 1400px;
+            margin: 20px auto 0;
+        }
+        .cost-center-badge {
+            background: #d4e2fc;
+            border-radius: 40px;
+            padding: 3px 10px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Logout / Home button linking to index.html -->
+    <a href="index.html" class="logout-fab" title="Back to report form (index.html)">
+        <i class="fas fa-sign-out-alt"></i>
+    </a>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="load-overlay">
+        <div class="load-spinner"></div>
+        <div>loading incident data ...</div>
+    </div>
+
+    <div class="dashboard-header">
+        <div class="title-section">
+            <h1>⚡ OnPoint Fleet • incident analytics</h1>
+            <span class="badge"><i class="fas fa-shield-alt"></i> live from Google Sheet: Onpoint Incident Fleet Report</span>
+        </div>
+        <div class="sheet-id">
+            <i class="fas fa-link"></i> Sheet ID: 1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI
+        </div>
+    </div>
+
+    <!-- Filter card -->
+    <div class="controls-card">
+        <div class="filter-item">
+            <label><i class="fas fa-calendar-alt"></i> from date</label>
+            <input type="date" id="filterDateFrom">
+        </div>
+        <div class="filter-item">
+            <label><i class="fas fa-calendar-alt"></i> to date</label>
+            <input type="date" id="filterDateTo">
+        </div>
+        <div class="filter-item">
+            <label><i class="fas fa-user"></i> driver</label>
+            <select id="filterDriver">
+                <option value="">all drivers</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label><i class="fas fa-building"></i> department</label>
+            <select id="filterDepartment">
+                <option value="">all departments</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label><i class="fas fa-coins"></i> cost center</label>
+            <select id="filterCostCenter">
+                <option value="">all cost centers</option>
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="btn btn-primary" id="applyFilterBtn"><i class="fas fa-filter"></i> apply</button>
+            <button class="btn btn-outline" id="resetFilterBtn"><i class="fas fa-undo-alt"></i> reset</button>
+        </div>
+    </div>
+
+    <!-- KPI stats row -->
+    <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-car-crash"></i></div><div class="stat-content"><h3 id="totalIncidents">0</h3><p>total incidents</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-content"><h3 id="uniqueDrivers">0</h3><p>drivers involved</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-building"></i></div><div class="stat-content"><h3 id="uniqueDepartments">0</h3><p>departments</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-image"></i></div><div class="stat-content"><h3 id="totalPhotos">0</h3><p>photos attached</p></div></div>
+    </div>
+
+    <!-- mini charts row -->
+    <div class="chart-container">
+        <div class="chart-row">
+            <div class="chart-box"><canvas id="typeChart"></canvas></div>
+            <div class="chart-box"><canvas id="deptChart"></canvas></div>
+            <div class="chart-box"><canvas id="costCenterChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="table-container">
+        <div class="table-header">
+            <h2><i class="fas fa-list-ul" style="color:#0b2b5c;"></i> incidents log · filtered view</h2>
+            <button class="export-btn" id="exportCsvBtn"><i class="fas fa-download"></i> export CSV</button>
+        </div>
+        <div style="overflow-x: auto;">
+            <table id="incidentTable">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th><th>Date</th><th>Time</th><th>Vehicle</th><th>Location</th><th>Type</th><th>Dept</th>
+                        <th>Cost Center</th><th>Driver</th><th>Phone</th><th>Descr</th><th>Other parties</th><th>Metro</th>
+                        <th>Officer</th><th>Officer phone</th><th>Drunk</th><th>Police #</th><th>At fault</th><th>Lat</th><th>Lon</th>
+                        <th>Geo URL</th><th>Image file</th><th>Image Drive link</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="23" style="text-align:center; padding:40px;">⬆️ use filters to load data (click apply)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="footer-note">
+        <i class="fas fa-robot"></i> dashboard integrates with Google Sheet ID · realtime filters · logout button returns to index.html
+    </div>
+
+    <script>
+        (function() {
+            // ---------- CONFIG ----------
+            // IMPORTANT: deploy your Google Apps Script web app that returns JSON from sheet.
+            // For demo, we use a sample dataset that matches YOUR sheet structure.
+            // Replace this URL with your deployed GAS URL (doGet that returns json)
+            const GAS_DATA_URL = 'https://script.google.com/macros/s/AKfycbwCvM7PJSvwjGnYym0zgfaJOssyMrAUJj_Liux6xiZxzMGLS5Y7cP17WW-50X1rQ3hu/exec';  // <-- change
+
+            // fallback/mock data in case endpoint not ready – reflects your columns.
+            const MOCK_INCIDENTS = [
+                ["2025-02-10T08:30:00Z","2025-02-10","14:30","FLEET-408","71 Pretorius Rd Midrand","Rear-end","Fleet","Onpoint Group HQ","James Keller","+27 72 555 7890","Front bumper crushed","Honda CR-V","Yes","Officer M. Davis","0825559876","No","PD-2309-452","No","-25.9989","28.1213","http://maps.google.com/?q=-25.9989,28.1213","stamped_accident1.jpg","https://drive.google.com/file/d/1aFy2cAbXoWM8Oy7AzpqCWYXRDHnLm1k3/view"],
+                ["2025-03-01T10:15:00Z","2025-03-01","10:15","FLEET-512","N1 highway off-ramp","Side-impact","Operations","DI Solutions","Lerato Nkosi","+27 83 123 4567","Side door damaged","Toyota Corolla","Yes","Officer Zuma","0834445566","No","PD-2403-101","Yes","-26.1052","28.0560","http://maps.google.com/?q=-26.1052,28.0560","stamped_side.jpg","https://drive.google.com/file/d/1mock2"],
+                ["2025-03-15T12:45:00Z","2025-03-15","12:45","FLEET-389","Midrand industrial","Single-vehicle","Warehouse","Aqua Telecoms","Thabo Mbeki","+27 71 888 9999","Hit a pole","None","No","","","No","","No","-25.9850","28.1100","http://maps.google.com/?q=-25.9850,28.1100","",""],
+                ["2025-04-02T09:00:00Z","2025-04-02","09:00","FLEET-177","Kyalami","Rear-end","Sales","Nkanyezi Projects","Priya Singh","+27 81 555 3333","Bumper scratch","BMW","Yes","Officer Ndlovu","0825551122","Yes","PD-0452-673","Yes","-26.0200","28.0800","http://maps.google.com/?q=-26.0200,28.0800","stamped_rear.jpg","https://drive.google.com/file/d/1mock3"],
+                ["2025-04-07T16:20:00Z","2025-04-07","16:20","FLEET-666","Centurion","Other","SHEQ","Onpoint Ontime Solutions","Susan Vos","+27 63 987 6543","Minor pedestrian","Pedestrian","Yes","Capt. Nkosi","0825557788","No","PD-9876-543","No","-25.9100","28.1900","http://maps.google.com/?q=-25.9100,28.1900","stamped_ped.jpg","https://drive.google.com/file/d/1mock4"],
+            ];
+            
+            // column indices (0-based) matching sheet order
+            const COL = {
+                TIMESTAMP:0, DATE:1, TIME:2, VEHICLE:3, LOCATION:4, TYPE:5, DEPT:6, COST_CENTER:7,
+                DRIVER:8, DRIVER_PHONE:9, DESCR:10, OTHER:11, METRO:12, OFFICER_NAME:13,
+                OFFICER_PHONE:14, DRUNK:15, POLICE_NO:16, AT_FAULT:17, LAT:18, LON:19,
+                GEO_URL:20, IMAGE_FILENAME:21, IMAGE_DRIVE_URL:22
+            };
+
+            // Global data store
+            let allIncidents = [];          // array of arrays (raw from sheet)
+            let filteredIncidents = [];
+
+            // DOM elements
+            const loading = document.getElementById('loadingOverlay');
+            const tbody = document.getElementById('tableBody');
+            const filterDriver = document.getElementById('filterDriver');
+            const filterDept = document.getElementById('filterDepartment');
+            const filterCost = document.getElementById('filterCostCenter');
+            const filterFrom = document.getElementById('filterDateFrom');
+            const filterTo = document.getElementById('filterDateTo');
+            const applyBtn = document.getElementById('applyFilterBtn');
+            const resetBtn = document.getElementById('resetFilterBtn');
+            const exportBtn = document.getElementById('exportCsvBtn');
+
+            // Stats elements
+            const totalSpan = document.getElementById('totalIncidents');
+            const uniqueDriversSpan = document.getElementById('uniqueDrivers');
+            const uniqueDeptsSpan = document.getElementById('uniqueDepartments');
+            const totalPhotosSpan = document.getElementById('totalPhotos');
+
+            // Charts
+            let typeChart, deptChart, costChart;
+
+            // ---------- load data from GAS or mock ----------
+            async function loadIncidents() {
+                loading.style.display = 'flex';
+                try {
+                    // attempt real endpoint, fallback to mock
+                    let response = await fetch(GAS_DATA_URL, { method: 'GET', mode: 'cors' });
+                    if (!response.ok) throw new Error('network');
+                    let data = await response.json();
+                    // expecting array of arrays
+                    if (Array.isArray(data)) allIncidents = data;
+                    else allIncidents = MOCK_INCIDENTS;
+                } catch (e) {
+                    console.warn('Using mock data (GAS endpoint not ready)', e);
+                    allIncidents = MOCK_INCIDENTS;
+                }
+                // populate filter dropdowns
+                populateFilters(allIncidents);
+                // apply no filters (show all)
+                filterIncidents();
+                loading.style.display = 'none';
+            }
+
+            // populate unique values for driver, department, cost center
+            function populateFilters(data) {
+                const drivers = new Set();
+                const depts = new Set();
+                const costs = new Set();
+                data.forEach(row => {
+                    if (row[COL.DRIVER]) drivers.add(row[COL.DRIVER]);
+                    if (row[COL.DEPT]) depts.add(row[COL.DEPT]);
+                    if (row[COL.COST_CENTER]) costs.add(row[COL.COST_CENTER]);
+                });
+                // sort and fill selects
+                fillSelect('filterDriver', drivers, 'all drivers');
+                fillSelect('filterDepartment', depts, 'all departments');
+                fillSelect('filterCostCenter', costs, 'all cost centers');
+            }
+
+            function fillSelect(id, values, defaultLabel) {
+                const sel = document.getElementById(id);
+                const selectedVal = sel.dataset.current || '';
+                sel.innerHTML = `<option value="">${defaultLabel}</option>`;
+                [...values].sort().forEach(v => {
+                    let opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = v;
+                    if (v === selectedVal) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            }
+
+            // filter logic
+            function filterIncidents() {
+                const from = filterFrom.value ? new Date(filterFrom.value) : null;
+                const to = filterTo.value ? new Date(filterTo.value) : null;
+                const driver = filterDriver.value;
+                const dept = filterDept.value;
+                const cost = filterCost.value;
+
+                filteredIncidents = allIncidents.filter(row => {
+                    const dateStr = row[COL.DATE]; // YYYY-MM-DD
+                    if (from || to) {
+                        if (!dateStr) return false;
+                        const d = new Date(dateStr);
+                        if (from && d < from) return false;
+                        if (to) {
+                            const toPlus = new Date(to); toPlus.setDate(toPlus.getDate()+1);
+                            if (d >= toPlus) return false;
+                        }
+                    }
+                    if (driver && row[COL.DRIVER] !== driver) return false;
+                    if (dept && row[COL.DEPT] !== dept) return false;
+                    if (cost && row[COL.COST_CENTER] !== cost) return false;
+                    return true;
+                });
+                renderTable(filteredIncidents);
+                updateStats(filteredIncidents);
+                updateCharts(filteredIncidents);
+            }
+
+            function renderTable(data) {
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="23" style="text-align:center; padding:30px;">no incidents match filters</td></tr>`;
+                    return;
+                }
+                let html = '';
+                data.forEach(row => {
+                    html += `<tr>
+                        <td>${row[COL.TIMESTAMP] || ''}</td><td>${row[COL.DATE] || ''}</td><td>${row[COL.TIME] || ''}</td>
+                        <td>${row[COL.VEHICLE] || ''}</td><td>${row[COL.LOCATION] || ''}</td><td>${row[COL.TYPE] || ''}</td>
+                        <td>${row[COL.DEPT] || ''}</td><td><span class="cost-center-badge">${row[COL.COST_CENTER] || ''}</span></td>
+                        <td>${row[COL.DRIVER] || ''}</td><td>${row[COL.DRIVER_PHONE] || ''}</td><td>${(row[COL.DESCR] || '').substring(0,20)}...</td>
+                        <td>${row[COL.OTHER] || ''}</td><td>${row[COL.METRO] || ''}</td><td>${row[COL.OFFICER_NAME] || ''}</td>
+                        <td>${row[COL.OFFICER_PHONE] || ''}</td><td>${row[COL.DRUNK] || ''}</td><td>${row[COL.POLICE_NO] || ''}</td>
+                        <td>${row[COL.AT_FAULT] || ''}</td><td>${row[COL.LAT] || ''}</td><td>${row[COL.LON] || ''}</td>
+                        <td><a href="${row[COL.GEO_URL] || '#'}" target="_blank" class="image-link">map</a></td>
+                        <td>${row[COL.IMAGE_FILENAME] || ''}</td>
+                        <td>${row[COL.IMAGE_DRIVE_URL] ? '<a href="'+row[COL.IMAGE_DRIVE_URL]+'" target="_blank" class="image-link"><i class="fas fa-external-link-alt"></i> view</a>' : ''}</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+
+            function updateStats(data) {
+                totalSpan.innerText = data.length;
+                const drivers = new Set(data.map(r => r[COL.DRIVER]).filter(Boolean));
+                const depts = new Set(data.map(r => r[COL.DEPT]).filter(Boolean));
+                const photos = data.filter(r => r[COL.IMAGE_DRIVE_URL] && r[COL.IMAGE_DRIVE_URL] !== '').length;
+                uniqueDriversSpan.innerText = drivers.size;
+                uniqueDeptsSpan.innerText = depts.size;
+                totalPhotosSpan.innerText = photos;
+            }
+
+            function updateCharts(data) {
+                // Accident type pie
+                const typeCount = {};
+                data.forEach(r => { let t = r[COL.TYPE] || 'unknown'; typeCount[t] = (typeCount[t] || 0) + 1; });
+                if (typeChart) typeChart.destroy();
+                const ctx1 = document.getElementById('typeChart').getContext('2d');
+                typeChart = new Chart(ctx1, {
+                    type: 'doughnut',
+                    data: { labels: Object.keys(typeCount), datasets: [{ data: Object.values(typeCount), backgroundColor: ['#0b2b5c','#ffc107','#2d7aff','#48cae4','#a7c957'] }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+
+                // department bar
+                const deptCount = {};
+                data.forEach(r => { let d = r[COL.DEPT] || 'unknown'; deptCount[d] = (deptCount[d] || 0) + 1; });
+                if (deptChart) deptChart.destroy();
+                const ctx2 = document.getElementById('deptChart').getContext('2d');
+                deptChart = new Chart(ctx2, {
+                    type: 'bar',
+                    data: { labels: Object.keys(deptCount), datasets: [{ label: 'incidents', data: Object.values(deptCount), backgroundColor: '#1e4f8a' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+
+                // cost center
+                const costCount = {};
+                data.forEach(r => { let c = r[COL.COST_CENTER] || 'unknown'; costCount[c] = (costCount[c] || 0) + 1; });
+                if (costChart) costChart.destroy();
+                const ctx3 = document.getElementById('costCenterChart').getContext('2d');
+                costChart = new Chart(ctx3, {
+                    type: 'pie',
+                    data: { labels: Object.keys(costCount), datasets: [{ data: Object.values(costCount), backgroundColor: ['#0f9d58','#ffb703','#d32f2f','#9b59b6','#3498db'] }] },
+                    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            // Reset filters
+            function resetFilters() {
+                filterFrom.value = '';
+                filterTo.value = '';
+                filterDriver.value = '';
+                filterDept.value = '';
+                filterCost.value = '';
+                filterIncidents();
+            }
+
+            // Export CSV
+            function exportCSV() {
+                const headers = ['Timestamp','Date','Time','Vehicle Reg','Location','Accident Type','Department','Cost Center','Driver Name',
+                    'Driver Phone','Description','Other Parties','Reported to Metro','Officer Name','Officer Phone','Drunken Driving',
+                    'Police Report No','At Fault','Latitude','Longitude','Geo URL','Image Filename','Image Drive URL'];
+                let csv = headers.join(',') + '\n';
+                filteredIncidents.forEach(row => {
+                    const escaped = row.map(cell => {
+                        if (cell === null || cell === undefined) return '';
+                        let str = String(cell).replace(/"/g, '""');
+                        return str.includes(',') ? `"${str}"` : str;
+                    }).join(',');
+                    csv += escaped + '\n';
+                });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'onpoint_incidents_filtered.csv';
+                link.click();
+            }
+
+            // Event listeners
+            applyBtn.addEventListener('click', filterIncidents);
+            resetBtn.addEventListener('click', resetFilters);
+            exportBtn.addEventListener('click', exportCSV);
+
+            // Initial load
+            loadIncidents();
+
+            // attach current filter selections to dataset (optional)
+        })();
+    </script>
+    <!-- Apps Script note: 
+         you need to publish a Google Apps Script web app with doGet(e) that returns 
+         the sheet data as JSON array of arrays. Example code in comment below.
+    -->
+    <!--
+    // Google Apps Script (doGet) example for this dashboard:
+    function doGet(e) {
+      var sheet = SpreadsheetApp.openById('1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI').getSheetByName('Sheet1'); // adjust name
+      var data = sheet.getDataRange().getValues();
+      data.shift(); // remove headers if needed
+      return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+    }
+    // Deploy as web app "execute as me" "who has access: anyone" 
+    // and replace GAS_DATA_URL with the deployed URL + ?mode=getIncidents (or no param)
+    -->
+</body>
+</html>
