@@ -73,7 +73,7 @@
             display: inline-block;
             margin-top: 8px;
         }
-        .sheet-id {
+        .connection-status {
             background: white;
             padding: 12px 25px;
             border-radius: 50px;
@@ -82,9 +82,15 @@
             border: 1px solid #cedef5;
             color: #1b3e68;
         }
-        .sheet-id i {
+        .connection-status i {
             color: #0f9d58;
             margin-right: 6px;
+        }
+        .connection-status.loading i {
+            color: #f4b836;
+        }
+        .connection-status.error i {
+            color: #d32f2f;
         }
         .controls-card {
             max-width: 1400px;
@@ -281,9 +287,27 @@
             color: #2d7aff;
             text-decoration: none;
             font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
         .image-link:hover {
             text-decoration: underline;
+        }
+        .image-thumb {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid #ffc107;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .image-thumb:hover {
+            transform: scale(2.5);
+            z-index: 100;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         .load-overlay {
             display: none;
@@ -319,11 +343,16 @@
             padding: 3px 10px;
             font-size: 0.8rem;
         }
+        .no-image {
+            color: #999;
+            font-style: italic;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
     <!-- Logout / Home button linking to index.html -->
-    <a href="index.html" class="logout-fab" title="Back to report form (index.html)">
+    <a href="index.html" class="logout-fab" title="Back to report form">
         <i class="fas fa-sign-out-alt"></i>
     </a>
 
@@ -336,10 +365,10 @@
     <div class="dashboard-header">
         <div class="title-section">
             <h1>⚡ OnPoint Fleet • incident analytics</h1>
-            <span class="badge"><i class="fas fa-shield-alt"></i> live from Google Sheet: Onpoint Incident Fleet Report</span>
+            <span class="badge"><i class="fas fa-shield-alt"></i> live from Google Sheets</span>
         </div>
-        <div class="sheet-id">
-            <i class="fas fa-link"></i> Sheet ID: 1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI
+        <div class="connection-status" id="connectionStatus">
+            <i class="fas fa-sync-alt fa-spin"></i> connecting to data source...
         </div>
     </div>
 
@@ -374,6 +403,7 @@
         <div class="filter-actions">
             <button class="btn btn-primary" id="applyFilterBtn"><i class="fas fa-filter"></i> apply</button>
             <button class="btn btn-outline" id="resetFilterBtn"><i class="fas fa-undo-alt"></i> reset</button>
+            <button class="btn btn-outline" id="refreshDataBtn"><i class="fas fa-sync-alt"></i> refresh</button>
         </div>
     </div>
 
@@ -407,50 +437,66 @@
                         <th>Timestamp</th><th>Date</th><th>Time</th><th>Vehicle</th><th>Location</th><th>Type</th><th>Dept</th>
                         <th>Cost Center</th><th>Driver</th><th>Phone</th><th>Descr</th><th>Other parties</th><th>Metro</th>
                         <th>Officer</th><th>Officer phone</th><th>Drunk</th><th>Police #</th><th>At fault</th><th>Lat</th><th>Lon</th>
-                        <th>Geo URL</th><th>Image file</th><th>Image Drive link</th>
+                        <th>Geo URL</th><th>Image</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="23" style="text-align:center; padding:40px;">⬆️ use filters to load data (click apply)</td></tr>
+                    <tr><td colspan="22" style="text-align:center; padding:40px;">⬆️ click refresh or apply to load data</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
     <div class="footer-note">
-        <i class="fas fa-robot"></i> dashboard integrates with Google Sheet ID · realtime filters · logout button returns to index.html
+        <i class="fas fa-robot"></i> dashboard integrates with Google Sheets · realtime filters · logout returns to report form
     </div>
 
     <script>
         (function() {
-            // ---------- CONFIG ----------
-            // IMPORTANT: deploy your Google Apps Script web app that returns JSON from sheet.
-            // For demo, we use a sample dataset that matches YOUR sheet structure.
-            // Replace this URL with your deployed GAS URL (doGet that returns json)
-            const GAS_DATA_URL = 'https://script.google.com/macros/s/AKfycbwCvM7PJSvwjGnYym0zgfaJOssyMrAUJj_Liux6xiZxzMGLS5Y7cP17WW-50X1rQ3hu/exec';  // <-- change
-
-            // fallback/mock data in case endpoint not ready – reflects your columns.
-            const MOCK_INCIDENTS = [
-                ["2025-02-10T08:30:00Z","2025-02-10","14:30","FLEET-408","71 Pretorius Rd Midrand","Rear-end","Fleet","Onpoint Group HQ","James Keller","+27 72 555 7890","Front bumper crushed","Honda CR-V","Yes","Officer M. Davis","0825559876","No","PD-2309-452","No","-25.9989","28.1213","http://maps.google.com/?q=-25.9989,28.1213","stamped_accident1.jpg","https://drive.google.com/file/d/1aFy2cAbXoWM8Oy7AzpqCWYXRDHnLm1k3/view"],
-                ["2025-03-01T10:15:00Z","2025-03-01","10:15","FLEET-512","N1 highway off-ramp","Side-impact","Operations","DI Solutions","Lerato Nkosi","+27 83 123 4567","Side door damaged","Toyota Corolla","Yes","Officer Zuma","0834445566","No","PD-2403-101","Yes","-26.1052","28.0560","http://maps.google.com/?q=-26.1052,28.0560","stamped_side.jpg","https://drive.google.com/file/d/1mock2"],
-                ["2025-03-15T12:45:00Z","2025-03-15","12:45","FLEET-389","Midrand industrial","Single-vehicle","Warehouse","Aqua Telecoms","Thabo Mbeki","+27 71 888 9999","Hit a pole","None","No","","","No","","No","-25.9850","28.1100","http://maps.google.com/?q=-25.9850,28.1100","",""],
-                ["2025-04-02T09:00:00Z","2025-04-02","09:00","FLEET-177","Kyalami","Rear-end","Sales","Nkanyezi Projects","Priya Singh","+27 81 555 3333","Bumper scratch","BMW","Yes","Officer Ndlovu","0825551122","Yes","PD-0452-673","Yes","-26.0200","28.0800","http://maps.google.com/?q=-26.0200,28.0800","stamped_rear.jpg","https://drive.google.com/file/d/1mock3"],
-                ["2025-04-07T16:20:00Z","2025-04-07","16:20","FLEET-666","Centurion","Other","SHEQ","Onpoint Ontime Solutions","Susan Vos","+27 63 987 6543","Minor pedestrian","Pedestrian","Yes","Capt. Nkosi","0825557788","No","PD-9876-543","No","-25.9100","28.1900","http://maps.google.com/?q=-25.9100,28.1900","stamped_ped.jpg","https://drive.google.com/file/d/1mock4"],
-            ];
+            // ---------- CONFIGURATION ----------
+            // IMPORTANT: Replace with your ACTUAL Google Apps Script Web App URL
+            const GAS_URL = 'https://script.google.com/macros/s/AKfycbz1tH13Rj66_T1F1uesDzia1dbn8eIuB9fnyn6XP9-y56WFaW8M2cXQky8NiiULqkk3/exec';
             
-            // column indices (0-based) matching sheet order
+            // Sheet configuration (hidden from UI)
+            const SHEET_CONFIG = {
+                id: '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI',
+                driveFolderId: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
+            };
+            
+            // Column indices (0-based) matching your sheet order
             const COL = {
-                TIMESTAMP:0, DATE:1, TIME:2, VEHICLE:3, LOCATION:4, TYPE:5, DEPT:6, COST_CENTER:7,
-                DRIVER:8, DRIVER_PHONE:9, DESCR:10, OTHER:11, METRO:12, OFFICER_NAME:13,
-                OFFICER_PHONE:14, DRUNK:15, POLICE_NO:16, AT_FAULT:17, LAT:18, LON:19,
-                GEO_URL:20, IMAGE_FILENAME:21, IMAGE_DRIVE_URL:22
+                TIMESTAMP: 0, 
+                DATE: 1, 
+                TIME: 2, 
+                VEHICLE: 3, 
+                LOCATION: 4, 
+                TYPE: 5, 
+                DEPT: 6, 
+                COST_CENTER: 7,
+                DRIVER: 8, 
+                DRIVER_PHONE: 9, 
+                DESCR: 10, 
+                OTHER: 11, 
+                METRO: 12, 
+                OFFICER_NAME: 13,
+                OFFICER_PHONE: 14, 
+                DRUNK: 15, 
+                POLICE_NO: 16, 
+                AT_FAULT: 17, 
+                LAT: 18, 
+                LON: 19,
+                GEO_URL: 20, 
+                IMAGE_FILENAME: 21, 
+                IMAGE_DRIVE_URL: 22
             };
 
             // Global data store
-            let allIncidents = [];          // array of arrays (raw from sheet)
+            let allIncidents = [];
             let filteredIncidents = [];
+            let isLoading = false;
 
             // DOM elements
             const loading = document.getElementById('loadingOverlay');
+            const connectionStatus = document.getElementById('connectionStatus');
             const tbody = document.getElementById('tableBody');
             const filterDriver = document.getElementById('filterDriver');
             const filterDept = document.getElementById('filterDepartment');
@@ -459,6 +505,7 @@
             const filterTo = document.getElementById('filterDateTo');
             const applyBtn = document.getElementById('applyFilterBtn');
             const resetBtn = document.getElementById('resetFilterBtn');
+            const refreshBtn = document.getElementById('refreshDataBtn');
             const exportBtn = document.getElementById('exportCsvBtn');
 
             // Stats elements
@@ -470,151 +517,334 @@
             // Charts
             let typeChart, deptChart, costChart;
 
-            // ---------- load data from GAS or mock ----------
-            async function loadIncidents() {
-                loading.style.display = 'flex';
+            // ---------- LOAD DATA FROM GOOGLE APPS SCRIPT ----------
+            async function loadIncidents(showLoading = true) {
+                if (isLoading) return;
+                
+                isLoading = true;
+                if (showLoading) loading.style.display = 'flex';
+                
+                updateConnectionStatus('loading', 'fetching data...');
+                
                 try {
-                    // attempt real endpoint, fallback to mock
-                    let response = await fetch(GAS_DATA_URL, { method: 'GET', mode: 'cors' });
-                    if (!response.ok) throw new Error('network');
-                    let data = await response.json();
-                    // expecting array of arrays
-                    if (Array.isArray(data)) allIncidents = data;
-                    else allIncidents = MOCK_INCIDENTS;
-                } catch (e) {
-                    console.warn('Using mock data (GAS endpoint not ready)', e);
-                    allIncidents = MOCK_INCIDENTS;
+                    // Try to fetch from GAS with timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                    
+                    const response = await fetch(`${GAS_URL}?mode=getIncidents&t=${Date.now()}`, { 
+                        method: 'GET',
+                        mode: 'cors',
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                    
+                    const data = await response.json();
+                    
+                    if (Array.isArray(data) && data.length > 0) {
+                        allIncidents = data;
+                        updateConnectionStatus('success', `loaded ${data.length} incidents`);
+                    } else if (Array.isArray(data) && data.length === 0) {
+                        allIncidents = [];
+                        updateConnectionStatus('success', 'no incidents found');
+                    } else {
+                        throw new Error('Invalid data format received');
+                    }
+                    
+                } catch (error) {
+                    console.warn('Error loading from GAS:', error);
+                    
+                    // Try to load from mock data as fallback
+                    try {
+                        const mockResponse = await fetch('mock-incidents.json?t=' + Date.now());
+                        if (mockResponse.ok) {
+                            const mockData = await mockResponse.json();
+                            allIncidents = mockData;
+                            updateConnectionStatus('success', 'using mock data (offline mode)');
+                        } else {
+                            throw new Error('Mock data unavailable');
+                        }
+                    } catch (mockError) {
+                        // Use hardcoded mock data as last resort
+                        allIncidents = getMockIncidents();
+                        updateConnectionStatus('warning', 'using sample data (offline)');
+                    }
+                } finally {
+                    isLoading = false;
+                    if (showLoading) loading.style.display = 'none';
+                    
+                    // Populate filters and render
+                    populateFilters(allIncidents);
+                    filterIncidents();
                 }
-                // populate filter dropdowns
-                populateFilters(allIncidents);
-                // apply no filters (show all)
-                filterIncidents();
-                loading.style.display = 'none';
             }
 
-            // populate unique values for driver, department, cost center
+            // Mock data function (same structure as your sheet)
+            function getMockIncidents() {
+                return [
+                    ["2025-02-10T08:30:00Z","2025-02-10","14:30","FLEET-408","71 Pretorius Rd Midrand","Rear-end","Fleet","Onpoint Group HQ","James Keller","+27 72 555 7890","Front bumper crushed, airbags deployed","Honda CR-V","Yes","Officer M. Davis","0825559876","No","PD-2309-452","No","-25.9989","28.1213","https://maps.google.com/?q=-25.9989,28.1213","stamped_accident1.jpg","https://drive.google.com/file/d/1aFy2cAbXoWM8Oy7AzpqCWYXRDHnLm1k3/view"],
+                    ["2025-03-01T10:15:00Z","2025-03-01","10:15","FLEET-512","N1 highway off-ramp","Side-impact","Operations","DI Solutions","Lerato Nkosi","+27 83 123 4567","Side door damaged, mirror broken","Toyota Corolla","Yes","Officer Zuma","0834445566","No","PD-2403-101","Yes","-26.1052","28.0560","https://maps.google.com/?q=-26.1052,28.0560","stamped_side.jpg","https://drive.google.com/file/d/1mock2/view"],
+                    ["2025-03-15T12:45:00Z","2025-03-15","12:45","FLEET-389","Midrand industrial","Single-vehicle","Warehouse","Aqua Telecoms","Thabo Mbeki","+27 71 888 9999","Hit a pole, front bumper damage","None","No","","","No","","No","-25.9850","28.1100","https://maps.google.com/?q=-25.9850,28.1100","",""],
+                    ["2025-04-02T09:00:00Z","2025-04-02","09:00","FLEET-177","Kyalami","Rear-end","Sales","Nkanyezi Projects","Priya Singh","+27 81 555 3333","Bumper scratch, minor damage","BMW X3","Yes","Officer Ndlovu","0825551122","Yes","PD-0452-673","Yes","-26.0200","28.0800","https://maps.google.com/?q=-26.0200,28.0800","stamped_rear.jpg","https://drive.google.com/file/d/1mock3/view"],
+                    ["2025-04-07T16:20:00Z","2025-04-07","16:20","FLEET-666","Centurion","Other","SHEQ","Onpoint Ontime Solutions","Susan Vos","+27 63 987 6543","Minor pedestrian incident, no injuries","Pedestrian","Yes","Capt. Nkosi","0825557788","No","PD-9876-543","No","-25.9100","28.1900","https://maps.google.com/?q=-25.9100,28.1900","stamped_ped.jpg","https://drive.google.com/file/d/1mock4/view"],
+                ];
+            }
+
+            // Update connection status UI
+            function updateConnectionStatus(type, message) {
+                connectionStatus.className = 'connection-status ' + type;
+                let icon = '';
+                switch(type) {
+                    case 'success': icon = '<i class="fas fa-check-circle"></i>'; break;
+                    case 'loading': icon = '<i class="fas fa-sync-alt fa-spin"></i>'; break;
+                    case 'warning': icon = '<i class="fas fa-exclamation-triangle"></i>'; break;
+                    case 'error': icon = '<i class="fas fa-times-circle"></i>'; break;
+                    default: icon = '<i class="fas fa-info-circle"></i>';
+                }
+                connectionStatus.innerHTML = icon + ' ' + message;
+            }
+
+            // Populate filter dropdowns
             function populateFilters(data) {
                 const drivers = new Set();
                 const depts = new Set();
                 const costs = new Set();
+                
                 data.forEach(row => {
-                    if (row[COL.DRIVER]) drivers.add(row[COL.DRIVER]);
-                    if (row[COL.DEPT]) depts.add(row[COL.DEPT]);
-                    if (row[COL.COST_CENTER]) costs.add(row[COL.COST_CENTER]);
+                    if (row[COL.DRIVER] && row[COL.DRIVER].toString().trim()) {
+                        drivers.add(row[COL.DRIVER].toString().trim());
+                    }
+                    if (row[COL.DEPT] && row[COL.DEPT].toString().trim()) {
+                        depts.add(row[COL.DEPT].toString().trim());
+                    }
+                    if (row[COL.COST_CENTER] && row[COL.COST_CENTER].toString().trim()) {
+                        costs.add(row[COL.COST_CENTER].toString().trim());
+                    }
                 });
-                // sort and fill selects
-                fillSelect('filterDriver', drivers, 'all drivers');
-                fillSelect('filterDepartment', depts, 'all departments');
-                fillSelect('filterCostCenter', costs, 'all cost centers');
+                
+                fillSelect(filterDriver, drivers, 'all drivers');
+                fillSelect(filterDept, depts, 'all departments');
+                fillSelect(filterCost, costs, 'all cost centers');
             }
 
-            function fillSelect(id, values, defaultLabel) {
-                const sel = document.getElementById(id);
-                const selectedVal = sel.dataset.current || '';
-                sel.innerHTML = `<option value="">${defaultLabel}</option>`;
+            function fillSelect(selectElement, values, defaultLabel) {
+                const currentValue = selectElement.value;
+                selectElement.innerHTML = `<option value="">${defaultLabel}</option>`;
+                
                 [...values].sort().forEach(v => {
-                    let opt = document.createElement('option');
-                    opt.value = v;
-                    opt.textContent = v;
-                    if (v === selectedVal) opt.selected = true;
-                    sel.appendChild(opt);
+                    const option = document.createElement('option');
+                    option.value = v;
+                    option.textContent = v;
+                    if (v === currentValue) option.selected = true;
+                    selectElement.appendChild(option);
                 });
             }
 
-            // filter logic
+            // Filter incidents based on selected criteria
             function filterIncidents() {
-                const from = filterFrom.value ? new Date(filterFrom.value) : null;
-                const to = filterTo.value ? new Date(filterTo.value) : null;
+                const fromDate = filterFrom.value ? new Date(filterFrom.value) : null;
+                const toDate = filterTo.value ? new Date(filterTo.value) : null;
                 const driver = filterDriver.value;
                 const dept = filterDept.value;
                 const cost = filterCost.value;
 
                 filteredIncidents = allIncidents.filter(row => {
-                    const dateStr = row[COL.DATE]; // YYYY-MM-DD
-                    if (from || to) {
+                    // Date filter
+                    if (fromDate || toDate) {
+                        const dateStr = row[COL.DATE];
                         if (!dateStr) return false;
-                        const d = new Date(dateStr);
-                        if (from && d < from) return false;
-                        if (to) {
-                            const toPlus = new Date(to); toPlus.setDate(toPlus.getDate()+1);
-                            if (d >= toPlus) return false;
+                        
+                        const rowDate = new Date(dateStr);
+                        if (fromDate && rowDate < fromDate) return false;
+                        if (toDate) {
+                            const toDateEnd = new Date(toDate);
+                            toDateEnd.setDate(toDateEnd.getDate() + 1);
+                            if (rowDate >= toDateEnd) return false;
                         }
                     }
+                    
+                    // Text filters
                     if (driver && row[COL.DRIVER] !== driver) return false;
                     if (dept && row[COL.DEPT] !== dept) return false;
                     if (cost && row[COL.COST_CENTER] !== cost) return false;
+                    
                     return true;
                 });
+                
                 renderTable(filteredIncidents);
                 updateStats(filteredIncidents);
                 updateCharts(filteredIncidents);
             }
 
+            // Render table with image handling
             function renderTable(data) {
                 if (data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="23" style="text-align:center; padding:30px;">no incidents match filters</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="22" style="text-align:center; padding:40px;">no incidents match filters</td></tr>`;
                     return;
                 }
+                
                 let html = '';
                 data.forEach(row => {
+                    // Handle image link - check both filename and drive URL
+                    const imageFilename = row[COL.IMAGE_FILENAME] || '';
+                    const imageDriveUrl = row[COL.IMAGE_DRIVE_URL] || '';
+                    
+                    let imageCell = '<span class="no-image">no image</span>';
+                    
+                    if (imageDriveUrl && imageDriveUrl.trim() !== '') {
+                        // Check if it's a valid Google Drive URL
+                        if (imageDriveUrl.includes('drive.google.com') || imageDriveUrl.includes('docs.google.com')) {
+                            // Extract file ID for thumbnail if possible
+                            const fileIdMatch = imageDriveUrl.match(/[-\w]{25,}/);
+                            const fileId = fileIdMatch ? fileIdMatch[0] : '';
+                            
+                            if (fileId) {
+                                imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link" title="${imageFilename}">
+                                    <img src="https://drive.google.com/thumbnail?id=${fileId}&sz=w100-h100" 
+                                         class="image-thumb" 
+                                         alt="incident photo"
+                                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\' viewBox=\\'0 0 40 40\\'%3E%3Crect width=\\'40\\' height=\\'40\\' fill=\\'%23f0f0f0\\'/%3E%3Ctext x=\\'8\\' y=\\'25\\' font-family=\\'Arial\\' font-size=\\'12\\' fill=\\'%23999\\'%3E📷%3C/text%3E%3C/svg%3E';">
+                                    <i class="fas fa-external-link-alt" style="font-size:0.7rem; margin-left:2px;"></i>
+                                </a>`;
+                            } else {
+                                imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> view</a>`;
+                            }
+                        } else {
+                            imageCell = `<a href="${imageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> view</a>`;
+                        }
+                    } else if (imageFilename && imageFilename.trim() !== '') {
+                        imageCell = `<span class="no-image">${imageFilename}</span>`;
+                    }
+                    
                     html += `<tr>
-                        <td>${row[COL.TIMESTAMP] || ''}</td><td>${row[COL.DATE] || ''}</td><td>${row[COL.TIME] || ''}</td>
-                        <td>${row[COL.VEHICLE] || ''}</td><td>${row[COL.LOCATION] || ''}</td><td>${row[COL.TYPE] || ''}</td>
-                        <td>${row[COL.DEPT] || ''}</td><td><span class="cost-center-badge">${row[COL.COST_CENTER] || ''}</span></td>
-                        <td>${row[COL.DRIVER] || ''}</td><td>${row[COL.DRIVER_PHONE] || ''}</td><td>${(row[COL.DESCR] || '').substring(0,20)}...</td>
-                        <td>${row[COL.OTHER] || ''}</td><td>${row[COL.METRO] || ''}</td><td>${row[COL.OFFICER_NAME] || ''}</td>
-                        <td>${row[COL.OFFICER_PHONE] || ''}</td><td>${row[COL.DRUNK] || ''}</td><td>${row[COL.POLICE_NO] || ''}</td>
-                        <td>${row[COL.AT_FAULT] || ''}</td><td>${row[COL.LAT] || ''}</td><td>${row[COL.LON] || ''}</td>
-                        <td><a href="${row[COL.GEO_URL] || '#'}" target="_blank" class="image-link">map</a></td>
-                        <td>${row[COL.IMAGE_FILENAME] || ''}</td>
-                        <td>${row[COL.IMAGE_DRIVE_URL] ? '<a href="'+row[COL.IMAGE_DRIVE_URL]+'" target="_blank" class="image-link"><i class="fas fa-external-link-alt"></i> view</a>' : ''}</td>
+                        <td>${row[COL.TIMESTAMP] || ''}</td>
+                        <td>${row[COL.DATE] || ''}</td>
+                        <td>${row[COL.TIME] || ''}</td>
+                        <td>${row[COL.VEHICLE] || ''}</td>
+                        <td>${row[COL.LOCATION] || ''}</td>
+                        <td>${row[COL.TYPE] || ''}</td>
+                        <td>${row[COL.DEPT] || ''}</td>
+                        <td><span class="cost-center-badge">${row[COL.COST_CENTER] || ''}</span></td>
+                        <td>${row[COL.DRIVER] || ''}</td>
+                        <td>${row[COL.DRIVER_PHONE] || ''}</td>
+                        <td>${(row[COL.DESCR] || '').substring(0, 25)}${(row[COL.DESCR] || '').length > 25 ? '...' : ''}</td>
+                        <td>${row[COL.OTHER] || ''}</td>
+                        <td>${row[COL.METRO] || ''}</td>
+                        <td>${row[COL.OFFICER_NAME] || ''}</td>
+                        <td>${row[COL.OFFICER_PHONE] || ''}</td>
+                        <td>${row[COL.DRUNK] || ''}</td>
+                        <td>${row[COL.POLICE_NO] || ''}</td>
+                        <td>${row[COL.AT_FAULT] || ''}</td>
+                        <td>${row[COL.LAT] ? row[COL.LAT].toString().substring(0, 8) : ''}</td>
+                        <td>${row[COL.LON] ? row[COL.LON].toString().substring(0, 8) : ''}</td>
+                        <td>${row[COL.GEO_URL] ? `<a href="${row[COL.GEO_URL]}" target="_blank" class="image-link"><i class="fas fa-map-marker-alt"></i> map</a>` : ''}</td>
+                        <td>${imageCell}</td>
                     </tr>`;
                 });
+                
                 tbody.innerHTML = html;
             }
 
+            // Update statistics
             function updateStats(data) {
                 totalSpan.innerText = data.length;
+                
                 const drivers = new Set(data.map(r => r[COL.DRIVER]).filter(Boolean));
                 const depts = new Set(data.map(r => r[COL.DEPT]).filter(Boolean));
-                const photos = data.filter(r => r[COL.IMAGE_DRIVE_URL] && r[COL.IMAGE_DRIVE_URL] !== '').length;
+                const photos = data.filter(r => r[COL.IMAGE_DRIVE_URL] && r[COL.IMAGE_DRIVE_URL].trim() !== '').length;
+                
                 uniqueDriversSpan.innerText = drivers.size;
                 uniqueDeptsSpan.innerText = depts.size;
                 totalPhotosSpan.innerText = photos;
             }
 
+            // Update charts
             function updateCharts(data) {
-                // Accident type pie
+                // Accident type chart
                 const typeCount = {};
-                data.forEach(r => { let t = r[COL.TYPE] || 'unknown'; typeCount[t] = (typeCount[t] || 0) + 1; });
+                data.forEach(r => { 
+                    const t = r[COL.TYPE] || 'Unknown'; 
+                    typeCount[t] = (typeCount[t] || 0) + 1; 
+                });
+                
                 if (typeChart) typeChart.destroy();
                 const ctx1 = document.getElementById('typeChart').getContext('2d');
                 typeChart = new Chart(ctx1, {
                     type: 'doughnut',
-                    data: { labels: Object.keys(typeCount), datasets: [{ data: Object.values(typeCount), backgroundColor: ['#0b2b5c','#ffc107','#2d7aff','#48cae4','#a7c957'] }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                    data: { 
+                        labels: Object.keys(typeCount), 
+                        datasets: [{ 
+                            data: Object.values(typeCount), 
+                            backgroundColor: ['#0b2b5c', '#ffc107', '#2d7aff', '#48cae4', '#a7c957', '#d32f2f'] 
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { 
+                            legend: { position: 'bottom' },
+                            title: { display: true, text: 'Incidents by Type' }
+                        } 
+                    }
                 });
 
-                // department bar
+                // Department chart
                 const deptCount = {};
-                data.forEach(r => { let d = r[COL.DEPT] || 'unknown'; deptCount[d] = (deptCount[d] || 0) + 1; });
+                data.forEach(r => { 
+                    const d = r[COL.DEPT] || 'Unknown'; 
+                    deptCount[d] = (deptCount[d] || 0) + 1; 
+                });
+                
                 if (deptChart) deptChart.destroy();
                 const ctx2 = document.getElementById('deptChart').getContext('2d');
                 deptChart = new Chart(ctx2, {
                     type: 'bar',
-                    data: { labels: Object.keys(deptCount), datasets: [{ label: 'incidents', data: Object.values(deptCount), backgroundColor: '#1e4f8a' }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                    data: { 
+                        labels: Object.keys(deptCount), 
+                        datasets: [{ 
+                            label: 'incidents', 
+                            data: Object.values(deptCount), 
+                            backgroundColor: '#1e4f8a' 
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { 
+                            legend: { display: false },
+                            title: { display: true, text: 'Incidents by Department' }
+                        } 
+                    }
                 });
 
-                // cost center
+                // Cost center chart
                 const costCount = {};
-                data.forEach(r => { let c = r[COL.COST_CENTER] || 'unknown'; costCount[c] = (costCount[c] || 0) + 1; });
+                data.forEach(r => { 
+                    const c = r[COL.COST_CENTER] || 'Unknown'; 
+                    costCount[c] = (costCount[c] || 0) + 1; 
+                });
+                
                 if (costChart) costChart.destroy();
                 const ctx3 = document.getElementById('costCenterChart').getContext('2d');
                 costChart = new Chart(ctx3, {
                     type: 'pie',
-                    data: { labels: Object.keys(costCount), datasets: [{ data: Object.values(costCount), backgroundColor: ['#0f9d58','#ffb703','#d32f2f','#9b59b6','#3498db'] }] },
-                    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                    data: { 
+                        labels: Object.keys(costCount), 
+                        datasets: [{ 
+                            data: Object.values(costCount), 
+                            backgroundColor: ['#0f9d58', '#ffb703', '#d32f2f', '#9b59b6', '#3498db', '#e67e22'] 
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { position: 'bottom' },
+                            title: { display: true, text: 'Incidents by Cost Center' }
+                        } 
+                    }
                 });
             }
 
@@ -628,12 +858,15 @@
                 filterIncidents();
             }
 
-            // Export CSV
+            // Export to CSV
             function exportCSV() {
-                const headers = ['Timestamp','Date','Time','Vehicle Reg','Location','Accident Type','Department','Cost Center','Driver Name',
-                    'Driver Phone','Description','Other Parties','Reported to Metro','Officer Name','Officer Phone','Drunken Driving',
-                    'Police Report No','At Fault','Latitude','Longitude','Geo URL','Image Filename','Image Drive URL'];
+                const headers = ['Timestamp', 'Date', 'Time', 'Vehicle Reg', 'Location', 'Accident Type', 'Department', 
+                    'Cost Center', 'Driver Name', 'Driver Phone', 'Description', 'Other Parties', 'Reported to Metro', 
+                    'Officer Name', 'Officer Phone', 'Drunken Driving', 'Police Report No', 'At Fault', 'Latitude', 
+                    'Longitude', 'Geo URL', 'Image Filename', 'Image Drive URL'];
+                
                 let csv = headers.join(',') + '\n';
+                
                 filteredIncidents.forEach(row => {
                     const escaped = row.map(cell => {
                         if (cell === null || cell === undefined) return '';
@@ -642,38 +875,23 @@
                     }).join(',');
                     csv += escaped + '\n';
                 });
+                
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'onpoint_incidents_filtered.csv';
+                link.download = `onpoint_incidents_${new Date().toISOString().slice(0,10)}.csv`;
                 link.click();
             }
 
             // Event listeners
             applyBtn.addEventListener('click', filterIncidents);
             resetBtn.addEventListener('click', resetFilters);
+            refreshBtn.addEventListener('click', () => loadIncidents(true));
             exportBtn.addEventListener('click', exportCSV);
 
-            // Initial load
-            loadIncidents();
-
-            // attach current filter selections to dataset (optional)
+            // Initialize - load data
+            loadIncidents(true);
         })();
     </script>
-    <!-- Apps Script note: 
-         you need to publish a Google Apps Script web app with doGet(e) that returns 
-         the sheet data as JSON array of arrays. Example code in comment below.
-    -->
-    <!--
-    // Google Apps Script (doGet) example for this dashboard:
-    function doGet(e) {
-      var sheet = SpreadsheetApp.openById('1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI').getSheetByName('Sheet1'); // adjust name
-      var data = sheet.getDataRange().getValues();
-      data.shift(); // remove headers if needed
-      return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-    }
-    // Deploy as web app "execute as me" "who has access: anyone" 
-    // and replace GAS_DATA_URL with the deployed URL + ?mode=getIncidents (or no param)
-    -->
 </body>
 </html>
