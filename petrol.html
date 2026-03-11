@@ -106,6 +106,26 @@
             box-shadow: 0 5px 15px rgba(238, 82, 83, 0.3);
         }
 
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .sync-status.online {
+            background: #43e97b20;
+            color: #43e97b;
+        }
+
+        .sync-status.offline {
+            background: #fa709a20;
+            color: #fa709a;
+        }
+
         /* KPI Cards */
         .kpi-grid {
             display: grid;
@@ -249,6 +269,11 @@
 
         .btn-warning {
             background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-success {
+            background: #43e97b;
             color: white;
         }
 
@@ -550,6 +575,10 @@
                 <h1><i class="fas fa-gas-pump"></i> Fuel Management Dashboard</h1>
             </div>
             <div class="user-section">
+                <div class="sync-status online" id="syncStatus">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Connected</span>
+                </div>
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">U</div>
                     <span id="userNameDisplay">Loading...</span>
@@ -580,7 +609,7 @@
         <div class="filters-section">
             <div class="filters-header">
                 <h3><i class="fas fa-filter"></i> Search & Filter Entries</h3>
-                <span class="filter-badge" id="filterCount">Showing all entries</span>
+                <span class="filter-badge" id="filterCount">Loading entries...</span>
             </div>
             <div class="filter-grid">
                 <div class="filter-group">
@@ -627,6 +656,9 @@
                 </button>
                 <button class="btn btn-warning" onclick="checkLimits()">
                     <i class="fas fa-exclamation-triangle"></i> Check Limits
+                </button>
+                <button class="btn btn-success" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
                 </button>
             </div>
         </div>
@@ -699,12 +731,11 @@
     </div>
 
     <script>
-        // Configuration
+        // Configuration - REPLACE WITH YOUR ACTUAL APPS SCRIPT URL
         const CONFIG = {
-            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxLdCe3VKc3-rgyRkkXz9Gn07sYACPz2T0umsQqNlcohq1_O7pBn3f5376maykTmy0s/exec',
+            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzD-9VmRgfcZKGnwCIbCZF_oybxawyiYXkiF-9iHlQEKpAYucclZ9aWAr_eJRdm7IXN/exec',
             SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
-            SHEET_NAME: 'Fuel Entries',
-            DRIVE_FOLDER_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ'
+            SHEET_NAME: 'Fuel Entries'
         };
 
         // Global variables
@@ -712,18 +743,17 @@
         let filteredEntries = [];
         let fuelTrendChart, fuelCostChart;
         let fuelLimits = {
-            monthlyBudget: 50000, // Default monthly budget
-            kmPerLiter: 8, // Minimum acceptable km/L
-            maxFuelPrice: 25, // Maximum fuel price per liter
-            monthlyVolume: 2000 // Maximum monthly volume in liters
+            monthlyBudget: 50000,
+            kmPerLiter: 8,
+            maxFuelPrice: 25,
+            monthlyVolume: 2000
         };
 
         // Initialize
         window.onload = function() {
             checkAuth();
-            loadFuelEntries();
-            populateFilters();
             setDefaultDates();
+            loadFuelEntries();
         };
 
         function checkAuth() {
@@ -779,6 +809,17 @@
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
 
+        function updateSyncStatus(status, message) {
+            const syncEl = document.getElementById('syncStatus');
+            if (status === 'online') {
+                syncEl.className = 'sync-status online';
+                syncEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> <span>Connected</span>';
+            } else {
+                syncEl.className = 'sync-status offline';
+                syncEl.innerHTML = '<i class="fas fa-cloud-offline"></i> <span>Offline</span>';
+            }
+        }
+
         function formatCurrency(amount) {
             return 'R ' + Number(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
@@ -787,104 +828,81 @@
             return Number(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
+        // Load fuel entries from Google Sheets
         async function loadFuelEntries() {
             setLoading(true);
             try {
-                // Simulate data for demo - replace with actual API call
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
                 
-                // Sample data
-                allEntries = generateSampleData();
-                filteredEntries = [...allEntries];
-                updateDashboard();
-                showNotification('Data loaded successfully', 'success');
+                // Build URL with filters
+                let url = `${CONFIG.GOOGLE_SCRIPT_URL}?action=getEntries`;
+                if (startDate) url += `&startDate=${startDate}`;
+                if (endDate) url += `&endDate=${endDate}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    allEntries = data.data || [];
+                    filteredEntries = [...allEntries];
+                    document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
+                    
+                    // Populate filter dropdowns
+                    populateFilters();
+                    
+                    // Update dashboard
+                    updateDashboard();
+                    
+                    updateSyncStatus('online');
+                    showNotification(`Loaded ${allEntries.length} fuel entries`, 'success');
+                } else {
+                    throw new Error(data.error || 'Failed to load data');
+                }
             } catch (error) {
-                console.error('Error loading data:', error);
+                console.error('Error loading fuel entries:', error);
                 showNotification('Error loading data: ' + error.message, 'error');
-                allEntries = generateSampleData();
-                filteredEntries = [...allEntries];
+                updateSyncStatus('offline');
+                
+                // Clear data
+                allEntries = [];
+                filteredEntries = [];
+                document.getElementById('filterCount').textContent = 'No data available';
                 updateDashboard();
             } finally {
                 setLoading(false);
             }
         }
 
-        function generateSampleData() {
-            const vehicles = ['Toyota Hilux - ABC123', 'Nissan NP300 - XYZ789', 'Ford Ranger - DEF456', 'Isuzu KB - GHI789', 'VW Amarok - JKL012'];
-            const drivers = ['John Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown', 'Peter Jones'];
-            const fuelTypes = ['Petrol 95', 'Petrol 93', 'Diesel 50ppm', 'Diesel 500ppm'];
-            const costCenters = ['Logistics', 'Operations', 'Mining', 'Construction', 'Transport'];
-            const departments = ['Fleet Management', 'Field Services', 'Delivery', 'Maintenance'];
-            
-            const entries = [];
-            for (let i = 0; i < 50; i++) {
-                const date = new Date(2024, 0, Math.floor(Math.random() * 30) + 1);
-                const start = 50000 + Math.floor(Math.random() * 10000);
-                const distance = Math.floor(Math.random() * 500) + 50;
-                const finish = start + distance;
-                const volume = (distance / (Math.random() * 5 + 5)).toFixed(2);
-                const pricePerLiter = (Math.random() * 5 + 20).toFixed(2);
-                const fuelTotal = volume * pricePerLiter;
-                const lubeCost = Math.random() * 500;
-                const tollTotal = Math.random() * 200;
-                
-                entries.push({
-                    Timestamp: date.toISOString(),
-                    Date: date.toISOString().split('T')[0],
-                    Driver: drivers[Math.floor(Math.random() * drivers.length)],
-                    Vehicle: vehicles[Math.floor(Math.random() * vehicles.length)],
-                    'Odometer Start (km)': start,
-                    'Odometer Finish (km)': finish,
-                    'Distance (km)': distance,
-                    'Fuel Type': fuelTypes[Math.floor(Math.random() * fuelTypes.length)],
-                    'Price/L (R)': parseFloat(pricePerLiter),
-                    'Fuel Volume (L)': parseFloat(volume),
-                    'Fuel Total (R)': fuelTotal,
-                    'km/Liter': (distance / volume).toFixed(2),
-                    'Lubrication Details': `Lube service at ${start + 5000}`,
-                    'Lube Cost (R)': lubeCost,
-                    'Toll Details': `Tolls on N${Math.floor(Math.random() * 3) + 1}`,
-                    'Toll Total (R)': tollTotal,
-                    'Grand Total (R)': fuelTotal + lubeCost + tollTotal,
-                    'Cost Center': costCenters[Math.floor(Math.random() * costCenters.length)],
-                    'Department': departments[Math.floor(Math.random() * departments.length)],
-                    'Notes': Math.random() > 0.7 ? 'Full tank refill' : 'Regular refuel',
-                    'Submission ID': `SUB-${Math.floor(Math.random() * 10000)}`,
-                    'Image Filename': `fuel_${i}.jpg`,
-                    'Image Drive URL': '#'
-                });
-            }
-            return entries;
-        }
-
+        // Populate filter dropdowns from actual data
         function populateFilters() {
-            const costCenters = [...new Set(allEntries.map(e => e['Cost Center']))];
-            const departments = [...new Set(allEntries.map(e => e['Department']))];
-            const fuelTypes = [...new Set(allEntries.map(e => e['Fuel Type']))];
+            const costCenters = [...new Set(allEntries.map(e => e['Cost Center']).filter(cc => cc))];
+            const departments = [...new Set(allEntries.map(e => e['Department']).filter(d => d))];
+            const fuelTypes = [...new Set(allEntries.map(e => e['Fuel Type']).filter(f => f))];
             
             const costFilter = document.getElementById('costCenterFilter');
             const deptFilter = document.getElementById('departmentFilter');
             const fuelFilter = document.getElementById('fuelTypeFilter');
             
+            // Clear existing options except 'all'
+            costFilter.innerHTML = '<option value="all">All Cost Centers</option>';
+            deptFilter.innerHTML = '<option value="all">All Departments</option>';
+            fuelFilter.innerHTML = '<option value="all">All Types</option>';
+            
             costCenters.forEach(cc => {
-                if (cc) {
-                    costFilter.innerHTML += `<option value="${cc}">${cc}</option>`;
-                }
+                costFilter.innerHTML += `<option value="${cc}">${cc}</option>`;
             });
             
             departments.forEach(d => {
-                if (d) {
-                    deptFilter.innerHTML += `<option value="${d}">${d}</option>`;
-                }
+                deptFilter.innerHTML += `<option value="${d}">${d}</option>`;
             });
             
             fuelTypes.forEach(f => {
-                if (f) {
-                    fuelFilter.innerHTML += `<option value="${f}">${f}</option>`;
-                }
+                fuelFilter.innerHTML += `<option value="${f}">${f}</option>`;
             });
         }
 
+        // Apply filters to data
         function applyFilters() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
@@ -912,83 +930,77 @@
         }
 
         function resetFilters() {
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
+            setDefaultDates();
             document.getElementById('driverFilter').value = '';
             document.getElementById('vehicleFilter').value = '';
             document.getElementById('costCenterFilter').value = 'all';
             document.getElementById('departmentFilter').value = 'all';
             document.getElementById('fuelTypeFilter').value = 'all';
             
-            setDefaultDates();
             filteredEntries = [...allEntries];
             document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
             updateDashboard();
             showNotification('Filters reset', 'info');
         }
 
-        function checkLimits() {
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
-            
-            const monthEntries = allEntries.filter(e => {
-                const date = new Date(e.Date);
-                return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-            });
-            
-            const monthlyTotal = monthEntries.reduce((sum, e) => sum + (e['Grand Total (R)'] || 0), 0);
-            const monthlyVolume = monthEntries.reduce((sum, e) => sum + (e['Fuel Volume (L)'] || 0), 0);
-            const avgKmPerLiter = monthEntries.reduce((sum, e) => sum + (parseFloat(e['km/Liter']) || 0), 0) / monthEntries.length || 0;
-            
-            const limitsExceeded = [];
-            if (monthlyTotal > fuelLimits.monthlyBudget) {
-                limitsExceeded.push(`Monthly budget exceeded: ${formatCurrency(monthlyTotal)} > ${formatCurrency(fuelLimits.monthlyBudget)}`);
-            }
-            if (monthlyVolume > fuelLimits.monthlyVolume) {
-                limitsExceeded.push(`Monthly volume exceeded: ${formatNumber(monthlyVolume)}L > ${fuelLimits.monthlyVolume}L`);
-            }
-            if (avgKmPerLiter < fuelLimits.kmPerLiter) {
-                limitsExceeded.push(`Fuel efficiency low: ${avgKmPerLiter.toFixed(2)} km/L < ${fuelLimits.kmPerLiter} km/L`);
-            }
-            
-            if (limitsExceeded.length > 0) {
-                showNotification('⚠️ ' + limitsExceeded.join(' • '), 'warning');
-                showLimitAlert(limitsExceeded, monthlyTotal, monthlyVolume, avgKmPerLiter);
-            } else {
-                showNotification('✅ All limits are within acceptable range', 'success');
-                document.getElementById('limitAlert').classList.remove('show');
+        function refreshData() {
+            loadFuelEntries();
+        }
+
+        // Check limits against actual data
+        async function checkLimits() {
+            setLoading(true);
+            try {
+                const response = await fetch(`${CONFIG.GOOGLE_SCRIPT_URL}?action=checkLimits&monthlyBudget=${fuelLimits.monthlyBudget}&minKmPerLiter=${fuelLimits.kmPerLiter}&maxFuelPrice=${fuelLimits.maxFuelPrice}&monthlyVolume=${fuelLimits.monthlyVolume}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const result = data.data;
+                    
+                    if (result.hasIssues) {
+                        showNotification('⚠️ ' + result.summary, 'warning');
+                        showLimitAlert(result);
+                    } else {
+                        showNotification('✅ All limits are within acceptable range', 'success');
+                        document.getElementById('limitAlert').classList.remove('show');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking limits:', error);
+                showNotification('Error checking limits: ' + error.message, 'error');
+            } finally {
+                setLoading(false);
             }
         }
 
-        function showLimitAlert(issues, total, volume, efficiency) {
+        function showLimitAlert(data) {
             const alert = document.getElementById('limitAlert');
             const content = document.getElementById('alertContent');
             
-            const percentOfBudget = (total / fuelLimits.monthlyBudget) * 100;
+            const percentOfBudget = (data.current.monthlyTotal / data.limits.monthlyBudget) * 100;
+            
+            let issuesHtml = '';
+            data.issues.forEach(issue => {
+                issuesHtml += `<div class="alert-item"><small>${issue.message}</small></div>`;
+            });
             
             content.innerHTML = `
                 <div class="alert-item">
                     <div class="alert-label">Monthly Spend</div>
-                    <div class="alert-value">${formatCurrency(total)} / ${formatCurrency(fuelLimits.monthlyBudget)}</div>
+                    <div class="alert-value">${formatCurrency(data.current.monthlyTotal)} / ${formatCurrency(data.limits.monthlyBudget)}</div>
                     <div class="alert-progress">
                         <div class="alert-progress-bar" style="width: ${Math.min(percentOfBudget, 100)}%"></div>
                     </div>
                 </div>
                 <div class="alert-item">
                     <div class="alert-label">Volume Used</div>
-                    <div class="alert-value">${formatNumber(volume)}L / ${fuelLimits.monthlyVolume}L</div>
+                    <div class="alert-value">${formatNumber(data.current.monthlyVolume)}L / ${data.limits.monthlyVolume}L</div>
                 </div>
                 <div class="alert-item">
                     <div class="alert-label">Efficiency</div>
-                    <div class="alert-value">${efficiency.toFixed(2)} km/L</div>
-                    <div class="alert-progress">
-                        <div class="alert-progress-bar" style="width: ${(efficiency / fuelLimits.kmPerLiter) * 100}%; background: #43e97b;"></div>
-                    </div>
+                    <div class="alert-value">${data.current.avgKmPerLiter.toFixed(2)} km/L</div>
                 </div>
-                <div class="alert-item">
-                    <div class="alert-label">Issues Detected</div>
-                    <div class="alert-value">${issues.length}</div>
-                </div>
+                ${issuesHtml}
             `;
             
             alert.classList.add('show');
@@ -1001,12 +1013,12 @@
         }
 
         function updateKPIs() {
-            const totalFuel = filteredEntries.reduce((sum, e) => sum + (e['Fuel Total (R)'] || 0), 0);
-            const totalLube = filteredEntries.reduce((sum, e) => sum + (e['Lube Cost (R)'] || 0), 0);
-            const totalToll = filteredEntries.reduce((sum, e) => sum + (e['Toll Total (R)'] || 0), 0);
-            const totalGrand = filteredEntries.reduce((sum, e) => sum + (e['Grand Total (R)'] || 0), 0);
-            const totalVolume = filteredEntries.reduce((sum, e) => sum + (e['Fuel Volume (L)'] || 0), 0);
-            const totalDistance = filteredEntries.reduce((sum, e) => sum + (e['Distance (km)'] || 0), 0);
+            const totalFuel = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Fuel Total (R)']) || 0), 0);
+            const totalLube = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Lube Cost (R)']) || 0), 0);
+            const totalToll = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Toll Total (R)']) || 0), 0);
+            const totalGrand = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Grand Total (R)']) || 0), 0);
+            const totalVolume = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Fuel Volume (L)']) || 0), 0);
+            const totalDistance = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Distance (km)']) || 0), 0);
             const avgEfficiency = totalVolume > 0 ? (totalDistance / totalVolume).toFixed(2) : 0;
             
             document.getElementById('kpiCards').innerHTML = `
@@ -1026,7 +1038,7 @@
                     <div class="kpi-label">Total Distance</div>
                     <div class="kpi-value">${formatNumber(totalDistance)} km</div>
                 </div>
-                <div class="kpi-card ${avgEfficiency < fuelLimits.kmPerLiter ? 'warning' : ''}">
+                <div class="kpi-card ${parseFloat(avgEfficiency) < fuelLimits.kmPerLiter ? 'warning' : ''}">
                     <div class="kpi-icon"><i class="fas fa-tachometer-alt"></i></div>
                     <div class="kpi-label">Avg Efficiency</div>
                     <div class="kpi-value">${avgEfficiency} km/L</div>
@@ -1050,9 +1062,13 @@
             const ctx1 = document.getElementById('fuelTrendChart').getContext('2d');
             if (fuelTrendChart) fuelTrendChart.destroy();
             
-            const dates = filteredEntries.slice(0, 10).map(e => e.Date).reverse();
-            const fuelTotals = filteredEntries.slice(0, 10).map(e => e['Fuel Total (R)'] || 0).reverse();
-            const volumes = filteredEntries.slice(0, 10).map(e => e['Fuel Volume (L)'] || 0).reverse();
+            // Get last 30 days of data or all if less
+            const sorted = [...filteredEntries].sort((a, b) => new Date(a.Date) - new Date(b.Date));
+            const recent = sorted.slice(-30);
+            
+            const dates = recent.map(e => e.Date);
+            const fuelTotals = recent.map(e => parseFloat(e['Fuel Total (R)']) || 0);
+            const volumes = recent.map(e => parseFloat(e['Fuel Volume (L)']) || 0);
 
             fuelTrendChart = new Chart(ctx1, {
                 type: 'line',
@@ -1115,7 +1131,7 @@
             const vehicles = {};
             filteredEntries.forEach(e => {
                 const vehicle = e.Vehicle || 'Unknown';
-                vehicles[vehicle] = (vehicles[vehicle] || 0) + (e['Fuel Total (R)'] || 0);
+                vehicles[vehicle] = (vehicles[vehicle] || 0) + (parseFloat(e['Fuel Total (R)']) || 0);
             });
             
             const vehicleLabels = Object.keys(vehicles).slice(0, 8);
@@ -1153,6 +1169,11 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
+            if (filteredEntries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="18" style="text-align: center; padding: 50px;">No fuel entries found</td></tr>';
+                return;
+            }
+            
             filteredEntries.slice(0, 100).forEach(entry => {
                 const row = tbody.insertRow();
                 const efficiency = parseFloat(entry['km/Liter']) || 0;
@@ -1169,15 +1190,15 @@
                     <td>${entry['Odometer Finish (km)'] || ''}</td>
                     <td>${entry['Distance (km)'] || ''}</td>
                     <td>${entry['Fuel Type'] || ''}</td>
-                    <td>R ${entry['Price/L (R)'] || ''}</td>
-                    <td>${entry['Fuel Volume (L)'] || ''} L</td>
-                    <td>R ${(entry['Fuel Total (R)'] || 0).toFixed(2)}</td>
+                    <td>R ${parseFloat(entry['Price/L (R)'] || 0).toFixed(2)}</td>
+                    <td>${parseFloat(entry['Fuel Volume (L)'] || 0).toFixed(2)} L</td>
+                    <td>R ${parseFloat(entry['Fuel Total (R)'] || 0).toFixed(2)}</td>
                     <td class="${efficiency >= fuelLimits.kmPerLiter ? 'fuel-efficient' : 'fuel-inefficient'}">
                         ${efficiency.toFixed(2)} km/L
                     </td>
-                    <td>R ${(entry['Lube Cost (R)'] || 0).toFixed(2)}</td>
-                    <td>R ${(entry['Toll Total (R)'] || 0).toFixed(2)}</td>
-                    <td><strong>R ${(entry['Grand Total (R)'] || 0).toFixed(2)}</strong></td>
+                    <td>R ${parseFloat(entry['Lube Cost (R)'] || 0).toFixed(2)}</td>
+                    <td>R ${parseFloat(entry['Toll Total (R)'] || 0).toFixed(2)}</td>
+                    <td><strong>R ${parseFloat(entry['Grand Total (R)'] || 0).toFixed(2)}</strong></td>
                     <td>${entry['Cost Center'] || ''}</td>
                     <td>${entry['Department'] || ''}</td>
                     <td>${entry['Notes'] || ''}</td>
@@ -1200,6 +1221,11 @@
         }
 
         function exportToExcel() {
+            if (filteredEntries.length === 0) {
+                showNotification('No data to export', 'error');
+                return;
+            }
+            
             const headers = ['Date', 'Driver', 'Vehicle', 'Odometer Start', 'Odometer Finish', 'Distance', 'Fuel Type', 'Price/L', 'Volume', 'Fuel Total', 'km/L', 'Lube Cost', 'Toll Total', 'Grand Total', 'Cost Center', 'Department', 'Notes'];
             const rows = filteredEntries.map(e => [
                 e.Date,
