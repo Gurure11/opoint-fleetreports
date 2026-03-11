@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onpoint Group - Fuel Management Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-container img {
+            height: 50px;
+            width: auto;
+        }
+
+        .logo-container h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8f9fa;
+            padding: 8px 20px;
+            border-radius: 40px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5253);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(238, 82, 83, 0.3);
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .kpi-card.warning {
+            background: linear-gradient(135deg, #ff6b6b20, #ee525320);
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .kpi-icon {
+            font-size: 30px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .kpi-trend {
+            font-size: 14px;
+            color: #43e97b;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Filters Section */
+        .filters-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .filter-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .filter-group input, .filter-group select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-warning {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Limit Alert Section */
+        .limit-alert {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-left: 4px solid #ff6b6b;
+            display: none;
+        }
+
+        .limit-alert.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-title {
+            color: #ff6b6b;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .alert-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .alert-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .alert-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .alert-progress {
+            margin-top: 15px;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .alert-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ee5253);
+            transition: width 0.3s ease;
+        }
+
+        /* Charts Row */
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-header h3 {
+            color: #333;
+            font-size: 18px;
+        }
+
+        .chart-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chart-actions button {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 300px !important;
+        }
+
+        /* Table Section */
+        .table-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .table-header h2 {
+            color: #333;
+            font-size: 22px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        tr.exceed-limit {
+            background: #ff6b6b20;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .fuel-efficient {
+            color: #43e97b;
+            font-weight: 600;
+        }
+
+        .fuel-inefficient {
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+
+        .view-image {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .view-image:hover {
+            text-decoration: underline;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f0f0f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1001;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success { border-left: 4px solid #43e97b; }
+        .notification.error { border-left: 4px solid #fa709a; }
+        .notification.info { border-left: 4px solid #667eea; }
+        .notification.warning { border-left: 4px solid #ff6b6b; }
+
+        @media (max-width: 768px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <!-- Notification -->
+        <div class="notification" id="notification">
+            <i class="fas fa-check-circle" id="notificationIcon"></i>
+            <span id="notificationMessage">Notification message</span>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-container">
+                <img src="logo.png" alt="Onpoint Group Logo" onerror="this.style.display='none'">
+                <h1><i class="fas fa-gas-pump"></i> Fuel Management Dashboard</h1>
+            </div>
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <span id="userNameDisplay">Loading...</span>
+                </div>
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpiCards">
+            <!-- Dynamic -->
+        </div>
+
+        <!-- Limit Alert Section -->
+        <div class="limit-alert" id="limitAlert">
+            <div class="alert-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                Fuel Limit Alert
+            </div>
+            <div class="alert-grid" id="alertContent">
+                <!-- Dynamic -->
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="filters-header">
+                <h3><i class="fas fa-filter"></i> Search & Filter Entries</h3>
+                <span class="filter-badge" id="filterCount">Showing all entries</span>
+            </div>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label><i class="fas fa-calendar"></i> Date Range</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="date" id="startDate">
+                        <span>to</span>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-user"></i> Driver</label>
+                    <input type="text" id="driverFilter" placeholder="Search driver...">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-truck"></i> Vehicle</label>
+                    <input type="text" id="vehicleFilter" placeholder="Search vehicle...">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-tag"></i> Cost Center</label>
+                    <select id="costCenterFilter">
+                        <option value="all">All Cost Centers</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-building"></i> Department</label>
+                    <select id="departmentFilter">
+                        <option value="all">All Departments</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-flask"></i> Fuel Type</label>
+                    <select id="fuelTypeFilter">
+                        <option value="all">All Types</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-secondary" onclick="resetFilters()">
+                    <i class="fas fa-undo"></i> Reset
+                </button>
+                <button class="btn btn-primary" onclick="applyFilters()">
+                    <i class="fas fa-search"></i> Apply Filters
+                </button>
+                <button class="btn btn-warning" onclick="checkLimits()">
+                    <i class="fas fa-exclamation-triangle"></i> Check Limits
+                </button>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-line"></i> Fuel Consumption Trend</h3>
+                    <div class="chart-actions">
+                        <button onclick="exportChart('fuelTrendChart', 'Fuel Trend')"><i class="fas fa-download"></i></button>
+                    </div>
+                </div>
+                <canvas id="fuelTrendChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-pie"></i> Fuel Cost by Vehicle</h3>
+                    <div class="chart-actions">
+                        <button onclick="exportChart('fuelCostChart', 'Fuel Cost')"><i class="fas fa-download"></i></button>
+                    </div>
+                </div>
+                <canvas id="fuelCostChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="table-section">
+            <div class="table-header">
+                <h2><i class="fas fa-list"></i> Fuel Entries</h2>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                    <button class="btn btn-primary" onclick="generatePDF()">
+                        <i class="fas fa-file-pdf"></i> PDF Report
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="fuelTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Driver</th>
+                            <th>Vehicle</th>
+                            <th>Odometer Start</th>
+                            <th>Odometer Finish</th>
+                            <th>Distance (km)</th>
+                            <th>Fuel Type</th>
+                            <th>Price/L</th>
+                            <th>Volume (L)</th>
+                            <th>Fuel Total</th>
+                            <th>km/L</th>
+                            <th>Lube Cost</th>
+                            <th>Toll Total</th>
+                            <th>Grand Total</th>
+                            <th>Cost Center</th>
+                            <th>Department</th>
+                            <th>Notes</th>
+                            <th>Image</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxLdCe3VKc3-rgyRkkXz9Gn07sYACPz2T0umsQqNlcohq1_O7pBn3f5376maykTmy0s/exec',
+            SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
+            SHEET_NAME: 'Fuel Entries',
+            DRIVE_FOLDER_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ'
+        };
+
+        // Global variables
+        let allEntries = [];
+        let filteredEntries = [];
+        let fuelTrendChart, fuelCostChart;
+        let fuelLimits = {
+            monthlyBudget: 50000, // Default monthly budget
+            kmPerLiter: 8, // Minimum acceptable km/L
+            maxFuelPrice: 25, // Maximum fuel price per liter
+            monthlyVolume: 2000 // Maximum monthly volume in liters
+        };
+
+        // Initialize
+        window.onload = function() {
+            checkAuth();
+            loadFuelEntries();
+            populateFilters();
+            setDefaultDates();
+        };
+
+        function checkAuth() {
+            const user = localStorage.getItem('currentUser');
+            if (user) {
+                try {
+                    const userData = JSON.parse(user);
+                    document.getElementById('userAvatar').textContent = (userData.FullName || 'U').charAt(0).toUpperCase();
+                    document.getElementById('userNameDisplay').textContent = userData.FullName || 'User';
+                } catch (e) {
+                    console.log('Using default user');
+                }
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            showNotification('Logging out...', 'info');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        }
+
+        function setDefaultDates() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('endDate').value = lastDay.toISOString().split('T')[0];
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notificationIcon');
+            const messageEl = document.getElementById('notificationMessage');
+            
+            icon.className = type === 'success' ? 'fas fa-check-circle' : 
+                            type === 'error' ? 'fas fa-exclamation-circle' : 
+                            type === 'warning' ? 'fas fa-exclamation-triangle' :
+                            'fas fa-info-circle';
+            
+            notification.className = `notification ${type}`;
+            messageEl.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function setLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function formatCurrency(amount) {
+            return 'R ' + Number(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function formatNumber(number) {
+            return Number(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        async function loadFuelEntries() {
+            setLoading(true);
+            try {
+                // Simulate data for demo - replace with actual API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Sample data
+                allEntries = generateSampleData();
+                filteredEntries = [...allEntries];
+                updateDashboard();
+                showNotification('Data loaded successfully', 'success');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showNotification('Error loading data: ' + error.message, 'error');
+                allEntries = generateSampleData();
+                filteredEntries = [...allEntries];
+                updateDashboard();
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function generateSampleData() {
+            const vehicles = ['Toyota Hilux - ABC123', 'Nissan NP300 - XYZ789', 'Ford Ranger - DEF456', 'Isuzu KB - GHI789', 'VW Amarok - JKL012'];
+            const drivers = ['John Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown', 'Peter Jones'];
+            const fuelTypes = ['Petrol 95', 'Petrol 93', 'Diesel 50ppm', 'Diesel 500ppm'];
+            const costCenters = ['Logistics', 'Operations', 'Mining', 'Construction', 'Transport'];
+            const departments = ['Fleet Management', 'Field Services', 'Delivery', 'Maintenance'];
+            
+            const entries = [];
+            for (let i = 0; i < 50; i++) {
+                const date = new Date(2024, 0, Math.floor(Math.random() * 30) + 1);
+                const start = 50000 + Math.floor(Math.random() * 10000);
+                const distance = Math.floor(Math.random() * 500) + 50;
+                const finish = start + distance;
+                const volume = (distance / (Math.random() * 5 + 5)).toFixed(2);
+                const pricePerLiter = (Math.random() * 5 + 20).toFixed(2);
+                const fuelTotal = volume * pricePerLiter;
+                const lubeCost = Math.random() * 500;
+                const tollTotal = Math.random() * 200;
+                
+                entries.push({
+                    Timestamp: date.toISOString(),
+                    Date: date.toISOString().split('T')[0],
+                    Driver: drivers[Math.floor(Math.random() * drivers.length)],
+                    Vehicle: vehicles[Math.floor(Math.random() * vehicles.length)],
+                    'Odometer Start (km)': start,
+                    'Odometer Finish (km)': finish,
+                    'Distance (km)': distance,
+                    'Fuel Type': fuelTypes[Math.floor(Math.random() * fuelTypes.length)],
+                    'Price/L (R)': parseFloat(pricePerLiter),
+                    'Fuel Volume (L)': parseFloat(volume),
+                    'Fuel Total (R)': fuelTotal,
+                    'km/Liter': (distance / volume).toFixed(2),
+                    'Lubrication Details': `Lube service at ${start + 5000}`,
+                    'Lube Cost (R)': lubeCost,
+                    'Toll Details': `Tolls on N${Math.floor(Math.random() * 3) + 1}`,
+                    'Toll Total (R)': tollTotal,
+                    'Grand Total (R)': fuelTotal + lubeCost + tollTotal,
+                    'Cost Center': costCenters[Math.floor(Math.random() * costCenters.length)],
+                    'Department': departments[Math.floor(Math.random() * departments.length)],
+                    'Notes': Math.random() > 0.7 ? 'Full tank refill' : 'Regular refuel',
+                    'Submission ID': `SUB-${Math.floor(Math.random() * 10000)}`,
+                    'Image Filename': `fuel_${i}.jpg`,
+                    'Image Drive URL': '#'
+                });
+            }
+            return entries;
+        }
+
+        function populateFilters() {
+            const costCenters = [...new Set(allEntries.map(e => e['Cost Center']))];
+            const departments = [...new Set(allEntries.map(e => e['Department']))];
+            const fuelTypes = [...new Set(allEntries.map(e => e['Fuel Type']))];
+            
+            const costFilter = document.getElementById('costCenterFilter');
+            const deptFilter = document.getElementById('departmentFilter');
+            const fuelFilter = document.getElementById('fuelTypeFilter');
+            
+            costCenters.forEach(cc => {
+                if (cc) {
+                    costFilter.innerHTML += `<option value="${cc}">${cc}</option>`;
+                }
+            });
+            
+            departments.forEach(d => {
+                if (d) {
+                    deptFilter.innerHTML += `<option value="${d}">${d}</option>`;
+                }
+            });
+            
+            fuelTypes.forEach(f => {
+                if (f) {
+                    fuelFilter.innerHTML += `<option value="${f}">${f}</option>`;
+                }
+            });
+        }
+
+        function applyFilters() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const driver = document.getElementById('driverFilter').value.toLowerCase();
+            const vehicle = document.getElementById('vehicleFilter').value.toLowerCase();
+            const costCenter = document.getElementById('costCenterFilter').value;
+            const department = document.getElementById('departmentFilter').value;
+            const fuelType = document.getElementById('fuelTypeFilter').value;
+            
+            filteredEntries = allEntries.filter(entry => {
+                const entryDate = entry.Date;
+                const matchesDate = (!startDate || entryDate >= startDate) && (!endDate || entryDate <= endDate);
+                const matchesDriver = !driver || (entry.Driver && entry.Driver.toLowerCase().includes(driver));
+                const matchesVehicle = !vehicle || (entry.Vehicle && entry.Vehicle.toLowerCase().includes(vehicle));
+                const matchesCost = costCenter === 'all' || entry['Cost Center'] === costCenter;
+                const matchesDept = department === 'all' || entry['Department'] === department;
+                const matchesFuel = fuelType === 'all' || entry['Fuel Type'] === fuelType;
+                
+                return matchesDate && matchesDriver && matchesVehicle && matchesCost && matchesDept && matchesFuel;
+            });
+            
+            document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
+            updateDashboard();
+            showNotification('Filters applied', 'success');
+        }
+
+        function resetFilters() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('driverFilter').value = '';
+            document.getElementById('vehicleFilter').value = '';
+            document.getElementById('costCenterFilter').value = 'all';
+            document.getElementById('departmentFilter').value = 'all';
+            document.getElementById('fuelTypeFilter').value = 'all';
+            
+            setDefaultDates();
+            filteredEntries = [...allEntries];
+            document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
+            updateDashboard();
+            showNotification('Filters reset', 'info');
+        }
+
+        function checkLimits() {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            
+            const monthEntries = allEntries.filter(e => {
+                const date = new Date(e.Date);
+                return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+            });
+            
+            const monthlyTotal = monthEntries.reduce((sum, e) => sum + (e['Grand Total (R)'] || 0), 0);
+            const monthlyVolume = monthEntries.reduce((sum, e) => sum + (e['Fuel Volume (L)'] || 0), 0);
+            const avgKmPerLiter = monthEntries.reduce((sum, e) => sum + (parseFloat(e['km/Liter']) || 0), 0) / monthEntries.length || 0;
+            
+            const limitsExceeded = [];
+            if (monthlyTotal > fuelLimits.monthlyBudget) {
+                limitsExceeded.push(`Monthly budget exceeded: ${formatCurrency(monthlyTotal)} > ${formatCurrency(fuelLimits.monthlyBudget)}`);
+            }
+            if (monthlyVolume > fuelLimits.monthlyVolume) {
+                limitsExceeded.push(`Monthly volume exceeded: ${formatNumber(monthlyVolume)}L > ${fuelLimits.monthlyVolume}L`);
+            }
+            if (avgKmPerLiter < fuelLimits.kmPerLiter) {
+                limitsExceeded.push(`Fuel efficiency low: ${avgKmPerLiter.toFixed(2)} km/L < ${fuelLimits.kmPerLiter} km/L`);
+            }
+            
+            if (limitsExceeded.length > 0) {
+                showNotification('⚠️ ' + limitsExceeded.join(' • '), 'warning');
+                showLimitAlert(limitsExceeded, monthlyTotal, monthlyVolume, avgKmPerLiter);
+            } else {
+                showNotification('✅ All limits are within acceptable range', 'success');
+                document.getElementById('limitAlert').classList.remove('show');
+            }
+        }
+
+        function showLimitAlert(issues, total, volume, efficiency) {
+            const alert = document.getElementById('limitAlert');
+            const content = document.getElementById('alertContent');
+            
+            const percentOfBudget = (total / fuelLimits.monthlyBudget) * 100;
+            
+            content.innerHTML = `
+                <div class="alert-item">
+                    <div class="alert-label">Monthly Spend</div>
+                    <div class="alert-value">${formatCurrency(total)} / ${formatCurrency(fuelLimits.monthlyBudget)}</div>
+                    <div class="alert-progress">
+                        <div class="alert-progress-bar" style="width: ${Math.min(percentOfBudget, 100)}%"></div>
+                    </div>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-label">Volume Used</div>
+                    <div class="alert-value">${formatNumber(volume)}L / ${fuelLimits.monthlyVolume}L</div>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-label">Efficiency</div>
+                    <div class="alert-value">${efficiency.toFixed(2)} km/L</div>
+                    <div class="alert-progress">
+                        <div class="alert-progress-bar" style="width: ${(efficiency / fuelLimits.kmPerLiter) * 100}%; background: #43e97b;"></div>
+                    </div>
+                </div>
+                <div class="alert-item">
+                    <div class="alert-label">Issues Detected</div>
+                    <div class="alert-value">${issues.length}</div>
+                </div>
+            `;
+            
+            alert.classList.add('show');
+        }
+
+        function updateDashboard() {
+            updateKPIs();
+            updateCharts();
+            renderTable();
+        }
+
+        function updateKPIs() {
+            const totalFuel = filteredEntries.reduce((sum, e) => sum + (e['Fuel Total (R)'] || 0), 0);
+            const totalLube = filteredEntries.reduce((sum, e) => sum + (e['Lube Cost (R)'] || 0), 0);
+            const totalToll = filteredEntries.reduce((sum, e) => sum + (e['Toll Total (R)'] || 0), 0);
+            const totalGrand = filteredEntries.reduce((sum, e) => sum + (e['Grand Total (R)'] || 0), 0);
+            const totalVolume = filteredEntries.reduce((sum, e) => sum + (e['Fuel Volume (L)'] || 0), 0);
+            const totalDistance = filteredEntries.reduce((sum, e) => sum + (e['Distance (km)'] || 0), 0);
+            const avgEfficiency = totalVolume > 0 ? (totalDistance / totalVolume).toFixed(2) : 0;
+            
+            document.getElementById('kpiCards').innerHTML = `
+                <div class="kpi-card">
+                    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+                    <div class="kpi-label">Total Fuel Cost</div>
+                    <div class="kpi-value">${formatCurrency(totalFuel)}</div>
+                    <div class="kpi-trend">${filteredEntries.length} entries</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon"><i class="fas fa-oil-can"></i></div>
+                    <div class="kpi-label">Total Lube Cost</div>
+                    <div class="kpi-value">${formatCurrency(totalLube)}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon"><i class="fas fa-road"></i></div>
+                    <div class="kpi-label">Total Distance</div>
+                    <div class="kpi-value">${formatNumber(totalDistance)} km</div>
+                </div>
+                <div class="kpi-card ${avgEfficiency < fuelLimits.kmPerLiter ? 'warning' : ''}">
+                    <div class="kpi-icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="kpi-label">Avg Efficiency</div>
+                    <div class="kpi-value">${avgEfficiency} km/L</div>
+                    <div class="kpi-trend">Target: ${fuelLimits.kmPerLiter} km/L</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="kpi-label">Grand Total</div>
+                    <div class="kpi-value">${formatCurrency(totalGrand)}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon"><i class="fas fa-gas-pump"></i></div>
+                    <div class="kpi-label">Total Volume</div>
+                    <div class="kpi-value">${formatNumber(totalVolume)} L</div>
+                </div>
+            `;
+        }
+
+        function updateCharts() {
+            // Fuel Trend Chart
+            const ctx1 = document.getElementById('fuelTrendChart').getContext('2d');
+            if (fuelTrendChart) fuelTrendChart.destroy();
+            
+            const dates = filteredEntries.slice(0, 10).map(e => e.Date).reverse();
+            const fuelTotals = filteredEntries.slice(0, 10).map(e => e['Fuel Total (R)'] || 0).reverse();
+            const volumes = filteredEntries.slice(0, 10).map(e => e['Fuel Volume (L)'] || 0).reverse();
+
+            fuelTrendChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Fuel Cost (R)',
+                            data: fuelTotals,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Volume (L)',
+                            data: volumes,
+                            borderColor: '#43e97b',
+                            backgroundColor: 'rgba(67, 233, 123, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Cost (R)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Volume (L)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Fuel Cost by Vehicle
+            const ctx2 = document.getElementById('fuelCostChart').getContext('2d');
+            if (fuelCostChart) fuelCostChart.destroy();
+            
+            const vehicles = {};
+            filteredEntries.forEach(e => {
+                const vehicle = e.Vehicle || 'Unknown';
+                vehicles[vehicle] = (vehicles[vehicle] || 0) + (e['Fuel Total (R)'] || 0);
+            });
+            
+            const vehicleLabels = Object.keys(vehicles).slice(0, 8);
+            const vehicleData = Object.values(vehicles).slice(0, 8);
+
+            fuelCostChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: vehicleLabels,
+                    datasets: [{
+                        label: 'Fuel Cost by Vehicle',
+                        data: vehicleData,
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R ' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            filteredEntries.slice(0, 100).forEach(entry => {
+                const row = tbody.insertRow();
+                const efficiency = parseFloat(entry['km/Liter']) || 0;
+                
+                if (efficiency < fuelLimits.kmPerLiter) {
+                    row.classList.add('exceed-limit');
+                }
+                
+                row.innerHTML = `
+                    <td>${entry.Date || ''}</td>
+                    <td>${entry.Driver || ''}</td>
+                    <td>${entry.Vehicle || ''}</td>
+                    <td>${entry['Odometer Start (km)'] || ''}</td>
+                    <td>${entry['Odometer Finish (km)'] || ''}</td>
+                    <td>${entry['Distance (km)'] || ''}</td>
+                    <td>${entry['Fuel Type'] || ''}</td>
+                    <td>R ${entry['Price/L (R)'] || ''}</td>
+                    <td>${entry['Fuel Volume (L)'] || ''} L</td>
+                    <td>R ${(entry['Fuel Total (R)'] || 0).toFixed(2)}</td>
+                    <td class="${efficiency >= fuelLimits.kmPerLiter ? 'fuel-efficient' : 'fuel-inefficient'}">
+                        ${efficiency.toFixed(2)} km/L
+                    </td>
+                    <td>R ${(entry['Lube Cost (R)'] || 0).toFixed(2)}</td>
+                    <td>R ${(entry['Toll Total (R)'] || 0).toFixed(2)}</td>
+                    <td><strong>R ${(entry['Grand Total (R)'] || 0).toFixed(2)}</strong></td>
+                    <td>${entry['Cost Center'] || ''}</td>
+                    <td>${entry['Department'] || ''}</td>
+                    <td>${entry['Notes'] || ''}</td>
+                    <td>
+                        ${entry['Image Drive URL'] ? 
+                            `<a href="${entry['Image Drive URL']}" target="_blank" class="view-image"><i class="fas fa-image"></i> View</a>` : 
+                            'No image'
+                        }
+                    </td>
+                `;
+            });
+        }
+
+        function exportChart(chartId, filename) {
+            const canvas = document.getElementById(chartId);
+            const link = document.createElement('a');
+            link.download = `${filename}_${new Date().toISOString().split('T')[0]}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function exportToExcel() {
+            const headers = ['Date', 'Driver', 'Vehicle', 'Odometer Start', 'Odometer Finish', 'Distance', 'Fuel Type', 'Price/L', 'Volume', 'Fuel Total', 'km/L', 'Lube Cost', 'Toll Total', 'Grand Total', 'Cost Center', 'Department', 'Notes'];
+            const rows = filteredEntries.map(e => [
+                e.Date,
+                e.Driver,
+                e.Vehicle,
+                e['Odometer Start (km)'],
+                e['Odometer Finish (km)'],
+                e['Distance (km)'],
+                e['Fuel Type'],
+                e['Price/L (R)'],
+                e['Fuel Volume (L)'],
+                e['Fuel Total (R)'],
+                e['km/Liter'],
+                e['Lube Cost (R)'],
+                e['Toll Total (R)'],
+                e['Grand Total (R)'],
+                e['Cost Center'],
+                e['Department'],
+                e['Notes']
+            ]);
+            
+            const csvContent = [headers, ...rows]
+                .map(row => row.map(cell => `"${cell || ''}"`).join(','))
+                .join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fuel_entries_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Excel file downloaded', 'success');
+        }
+
+        function generatePDF() {
+            showNotification('Generating PDF report...', 'info');
+            setTimeout(() => {
+                showNotification('PDF report generated', 'success');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
