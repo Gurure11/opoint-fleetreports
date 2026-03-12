@@ -20,7 +20,6 @@
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
     
     <style>
-        /* All your existing CSS remains exactly the same */
         * {
             margin: 0;
             padding: 0;
@@ -403,68 +402,372 @@
             height: 250px !important;
         }
 
+        /* Enhanced Table Styles */
         .table-section {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
             border-radius: 25px;
             padding: 25px;
             border: 1px solid rgba(255,255,255,0.5);
             margin-bottom: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
         }
 
         .table-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             flex-wrap: wrap;
             gap: 15px;
+            padding: 0 10px;
         }
 
         .table-header h2 {
-            font-size: 20px;
+            font-size: 22px;
             color: #333;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-weight: 700;
+        }
+
+        .table-header h2 i {
+            color: #667eea;
+            font-size: 24px;
         }
 
         .table-actions {
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
 
-        .dataTables_wrapper {
-            padding: 20px 0;
+        .table-actions .btn {
+            padding: 10px 20px;
+            font-size: 13px;
         }
 
-        table.dataTable {
+        /* Modern Table Design */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #edf2f7;
+            background: white;
+            max-height: 600px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #e2e8f0;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+
+        #handoverTable {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 0 10px;
+            border-spacing: 0;
+            font-size: 13px;
+            min-width: 1600px;
         }
 
-        table.dataTable thead th {
+        #handoverTable thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        #handoverTable thead tr {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #handoverTable thead th {
             color: white;
-            padding: 15px;
+            padding: 16px 12px;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            text-align: left;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.2);
         }
 
-        table.dataTable tbody td {
-            padding: 15px;
+        #handoverTable thead th:last-child {
+            border-right: none;
+        }
+
+        #handoverTable tbody tr {
             background: white;
-            border-bottom: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #edf2f7;
         }
 
-        table.dataTable tbody tr:hover td {
-            background: #f8fafc;
+        #handoverTable tbody tr:hover {
+            background: #f7fafc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            position: relative;
+            z-index: 5;
         }
 
+        #handoverTable tbody td {
+            padding: 14px 12px;
+            color: #2d3748;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+            line-height: 1.5;
+        }
+
+        /* Cell-specific styling */
+        #handoverTable tbody td:first-child {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        #handoverTable tbody td:nth-child(2),
+        #handoverTable tbody td:nth-child(3) {
+            font-weight: 600;
+            color: #2d3748;
+            white-space: nowrap;
+        }
+
+        #handoverTable tbody td:nth-child(4) {
+            font-weight: 600;
+            color: #1a202c;
+        }
+
+        #handoverTable tbody td:nth-child(5),
+        #handoverTable tbody td:nth-child(6) {
+            color: #4a5568;
+            font-size: 12px;
+        }
+
+        /* Badge styles */
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .badge-handover {
+            background: linear-gradient(135deg, #667eea20, #764ba220);
+            color: #667eea;
+            border: 1px solid #667eea40;
+        }
+
+        .badge-takeover {
+            background: linear-gradient(135deg, #10b98120, #05966920);
+            color: #059669;
+            border: 1px solid #10b98140;
+        }
+
+        /* Vehicle reg badge */
+        .vehicle-badge {
+            background: #f7fafc;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+            color: #2d3748;
+            border: 1px solid #e2e8f0;
+            display: inline-block;
+            font-size: 12px;
+        }
+
+        /* Image gallery styles */
+        .image-gallery {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .image-thumb {
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .image-thumb:hover {
+            transform: scale(2.5);
+            z-index: 100;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            border-color: #667eea;
+        }
+
+        .image-thumb-error {
+            background: #f7fafc;
+            border: 1px dashed #cbd5e0;
+        }
+
+        /* Image link button */
+        .image-link-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            border: 1px solid white;
+        }
+
+        .image-link-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .image-link-btn i {
+            font-size: 12px;
+        }
+
+        .image-link-btn.drive {
+            background: #4285F4;
+        }
+
+        .image-link-btn.drive:hover {
+            background: #3367D6;
+        }
+
+        .image-link-btn img {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .no-image {
+            color: #a0aec0;
+            font-size: 11px;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: #f7fafc;
+            border-radius: 20px;
+        }
+
+        /* Tooltip */
+        [data-tooltip] {
+            position: relative;
+            cursor: help;
+        }
+
+        [data-tooltip]:before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 12px;
+            background: #2d3748;
+            color: white;
+            font-size: 11px;
+            border-radius: 6px;
+            white-space: nowrap;
+            display: none;
+            z-index: 1000;
+        }
+
+        [data-tooltip]:hover:before {
+            display: block;
+        }
+
+        /* Damage indicator */
+        .damage-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .damage-yes {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .damage-no {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        /* Data highlights */
+        .highlight {
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .text-muted {
+            color: #718096;
+            font-size: 11px;
+        }
+
+        /* Loading state */
+        .table-loading {
+            text-align: center;
+            padding: 60px !important;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .table-loading i {
+            font-size: 30px;
+            color: #667eea;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        /* Empty state */
+        .table-empty {
+            text-align: center;
+            padding: 60px !important;
+            color: #a0aec0;
+        }
+
+        .table-empty i {
+            font-size: 40px;
+            color: #cbd5e0;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -473,28 +776,23 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.9);
+            background-color: rgba(0,0,0,0.95);
             justify-content: center;
             align-items: center;
         }
 
         .modal-content {
             max-width: 90%;
-            max-height: 90%;
-            position: relative;
-        }
-
-        .modal-image {
-            max-width: 100%;
-            max-height: 90vh;
+            max-height: 80vh;
             border-radius: 10px;
             border: 3px solid white;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
 
         .close-modal {
             position: absolute;
-            top: -40px;
-            right: 0;
+            top: 20px;
+            right: 30px;
             color: white;
             font-size: 40px;
             font-weight: bold;
@@ -506,8 +804,47 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.3s;
+            z-index: 2001;
         }
 
+        .close-modal:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.1);
+        }
+
+        .modal-actions {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+            display: flex;
+            gap: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .modal-actions a {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 15px;
+            border-radius: 30px;
+            transition: all 0.3s;
+        }
+
+        .modal-actions a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Loading Overlay */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -538,44 +875,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        .image-gallery {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-
-        .image-thumb {
-            width: 50px;
-            height: 50px;
-            border-radius: 8px;
-            object-fit: cover;
-            cursor: pointer;
-            border: 2px solid #eef2f6;
-            transition: all 0.3s;
-        }
-
-        .image-thumb:hover {
-            transform: scale(1.1);
-            border-color: #667eea;
-        }
-
-        .badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge-handover {
-            background: #667eea;
-            color: white;
-        }
-
-        .badge-takeover {
-            background: #10b981;
-            color: white;
-        }
-
+        /* Notification */
         .notification {
             position: fixed;
             top: 20px;
@@ -630,6 +930,16 @@
                 width: 100%;
                 flex-direction: column;
             }
+            
+            .modal-actions {
+                flex-direction: column;
+                gap: 10px;
+                bottom: 20px;
+            }
+            
+            .image-thumb:hover {
+                transform: scale(1.5);
+            }
         }
     </style>
 </head>
@@ -649,7 +959,15 @@
     <!-- Image Modal -->
     <div id="imageModal" class="modal" onclick="closeModal()">
         <span class="close-modal" onclick="closeModal()">&times;</span>
-        <img class="modal-content" id="modalImage" onclick="event.stopPropagation()">
+        <img class="modal-content" id="modalImage" onclick="event.stopPropagation()" alt="Vehicle damage image">
+        <div class="modal-actions" id="modalActions">
+            <a href="#" id="modalDownloadLink" target="_blank">
+                <i class="fas fa-download"></i> Download
+            </a>
+            <a href="#" id="modalOpenLink" target="_blank">
+                <i class="fas fa-external-link-alt"></i> Open in Drive
+            </a>
+        </div>
     </div>
 
     <div class="dashboard-container">
@@ -800,37 +1118,40 @@
                 </div>
             </div>
             
-            <table id="handoverTable" class="display responsive nowrap" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>Submission ID</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Employee Name</th>
-                        <th>Employee #</th>
-                        <th>ID Number</th>
-                        <th>Department</th>
-                        <th>Vehicle Reg</th>
-                        <th>Model</th>
-                        <th>Mileage</th>
-                        <th>Service Due</th>
-                        <th>Type</th>
-                        <th>Fuel Level</th>
-                        <th>Checklist</th>
-                        <th>Damage Desc</th>
-                        <th>Damage Location</th>
-                        <th>Additional Notes</th>
-                        <th>Photos</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr>
-                        <td colspan="18" style="text-align: center; padding: 50px;">
-                            <i class="fas fa-spinner fa-pulse"></i> Loading data...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table id="handoverTable">
+                    <thead>
+                        <tr>
+                            <th>Submission ID</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Employee Name</th>
+                            <th>Employee #</th>
+                            <th>ID Number</th>
+                            <th>Department</th>
+                            <th>Vehicle Reg</th>
+                            <th>Model</th>
+                            <th>Mileage</th>
+                            <th>Service Due</th>
+                            <th>Type</th>
+                            <th>Fuel Level</th>
+                            <th>Checklist</th>
+                            <th>Damage Desc</th>
+                            <th>Damage Location</th>
+                            <th>Additional Notes</th>
+                            <th>Photos</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="18" class="table-loading">
+                                <i class="fas fa-spinner fa-pulse"></i>
+                                <div>Loading data...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -840,7 +1161,7 @@
         // ============================================
         const CONFIG = {
             // IMPORTANT: Replace this URL with your actual deployed Google Apps Script URL
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbyRXoAK7wUYBSdGTz1bzxUdOj2NsBLkTRv1TPTeyrAVStm_l-T2Quxygqg0hN8qFD8ZHg/exec',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbwGSp3jRxYQSHJ_8nF2dLwz2y_8pV5rX9mK4tW6nL8p/exec',
             SHEET_ID: '1vBDeyPBy3LLYg0EM2OFgceI3deVFhXL2Nr-IpdveZoU',
             SHEET_NAME: 'Vehicle Handovers',
             DRIVE_FOLDER_ID: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
@@ -918,7 +1239,6 @@
             debugEl.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Testing connection...';
             
             try {
-                // Add cache-busting parameter
                 const testUrl = `${CONFIG.GAS_URL}?action=test&_=${Date.now()}`;
                 console.log('Testing connection to:', testUrl);
                 
@@ -1023,7 +1343,7 @@
                     damageDescription: i % 3 === 0 ? 'Small scratch on front bumper' : '',
                     damageLocation: i % 3 === 0 ? 'Front Bumper' : '',
                     additionalNotes: i % 4 === 0 ? 'Please check tire pressure' : '',
-                    photoLinks: '',
+                    photoLinks: i % 3 === 0 ? 'https://drive.google.com/file/d/1234567890/view' : '',
                     folderId: CONFIG.DRIVE_FOLDER_ID
                 });
             }
@@ -1254,47 +1574,108 @@
             });
         }
 
+        // FIXED: updateTable function with improved image handling
         function updateTable() {
             const tbody = document.getElementById('tableBody');
             
             if (filteredHandovers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="18" style="text-align: center; padding: 50px;">No handover records found</td></tr>';
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="18" class="table-empty">
+                            <i class="fas fa-folder-open"></i>
+                            <div>No handover records found</div>
+                            <small style="color: #a0aec0; margin-top: 10px; display: block;">Try adjusting your filters</small>
+                        </td>
+                    </tr>`;
                 return;
             }
             
             let html = '';
-            filteredHandovers.slice(0, 100).forEach(h => {
-                const photoLinks = h.photoLinks ? h.photoLinks.split(',').filter(p => p) : [];
+            filteredHandovers.slice(0, 100).forEach((h, index) => {
+                // Parse photo links
+                let photoHtml = '<div class="image-gallery">';
+                
+                if (h.photoLinks && h.photoLinks.trim() !== '') {
+                    const photoUrls = h.photoLinks.split(',').map(url => url.trim()).filter(url => url);
+                    
+                    if (photoUrls.length > 0) {
+                        photoUrls.forEach((url, idx) => {
+                            // Extract Google Drive file ID if it's a Drive URL
+                            let displayUrl = url;
+                            let isDriveUrl = url.includes('drive.google.com') || url.includes('drive.google');
+                            
+                            if (isDriveUrl) {
+                                const fileIdMatch = url.match(/[-\w]{25,}/);
+                                if (fileIdMatch) {
+                                    const fileId = fileIdMatch[0];
+                                    displayUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400-h400`;
+                                }
+                            }
+                            
+                            photoHtml += `
+                                <div style="position: relative; display: inline-block;">
+                                    <img src="${displayUrl}" 
+                                         class="image-thumb" 
+                                         onclick="showImage('${url}')" 
+                                         title="Photo ${idx + 1}"
+                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/45x45/667eea/ffffff?text=Photo'; this.classList.add('image-thumb-error');">
+                                    <a href="${url}" target="_blank" class="image-link-btn drive" title="Open in Google Drive" style="position: absolute; bottom: -5px; right: -5px; padding: 3px; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; justify-content: center;">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                </div>`;
+                        });
+                    } else {
+                        photoHtml += '<span class="no-image"><i class="fas fa-times-circle"></i> No images</span>';
+                    }
+                } else {
+                    photoHtml += '<span class="no-image"><i class="fas fa-times-circle"></i> No images</span>';
+                }
+                
+                photoHtml += '</div>';
+                
+                // Format mileage with commas
+                const mileage = h.mileage ? Number(h.mileage).toLocaleString() : '';
+                
+                // Determine damage status
+                const hasDamage = h.damageDescription && h.damageDescription !== '' && h.damageDescription !== 'None' && h.damageDescription !== 'N/A';
+                const damageClass = hasDamage ? 'damage-yes' : 'damage-no';
+                const damageText = hasDamage ? 'Yes' : 'No';
+                
+                // Truncate long text
+                const checklist = h.checklistItems || '';
+                const checklistDisplay = checklist.length > 25 ? checklist.substring(0, 25) + '…' : checklist;
+                
+                const damageDesc = h.damageDescription || '';
+                const damageDisplay = damageDesc.length > 20 ? damageDesc.substring(0, 20) + '…' : damageDesc;
+                
+                const notes = h.additionalNotes || '';
+                const notesDisplay = notes.length > 20 ? notes.substring(0, 20) + '…' : notes;
                 
                 html += `
                     <tr>
-                        <td><small>${h.submissionId || 'N/A'}</small></td>
-                        <td>${h.date || ''}</td>
+                        <td><span class="text-muted" data-tooltip="${h.submissionId || 'N/A'}">${(h.submissionId || 'N/A').substring(0, 12)}${h.submissionId && h.submissionId.length > 12 ? '…' : ''}</span></td>
+                        <td><span class="highlight">${h.date || ''}</span></td>
                         <td>${h.time || ''}</td>
                         <td><strong>${h.employeeName || ''}</strong></td>
-                        <td>${h.employeeNumber || ''}</td>
-                        <td><small>${h.idNumber || ''}</small></td>
-                        <td>${h.department || ''}</td>
-                        <td><span class="badge" style="background: #667eea20; color: #667eea;">${h.vehicleReg || ''}</span></td>
+                        <td><span class="text-muted">${h.employeeNumber || ''}</span></td>
+                        <td><span class="text-muted">${h.idNumber ? h.idNumber.substring(0, 8) + '…' : ''}</span></td>
+                        <td><span class="badge" style="background: #f7fafc; color: #2d3748;">${h.department || ''}</span></td>
+                        <td><span class="vehicle-badge">${h.vehicleReg || ''}</span></td>
                         <td>${h.vehicleModel || ''}</td>
-                        <td>${h.mileage ? Number(h.mileage).toLocaleString() : ''}</td>
-                        <td>${h.serviceDue || ''}</td>
+                        <td><strong>${mileage}</strong></td>
+                        <td><span class="text-muted">${h.serviceDue || ''}</span></td>
                         <td><span class="badge ${h.handoverType === 'Handover' ? 'badge-handover' : 'badge-takeover'}">${h.handoverType || ''}</span></td>
-                        <td>${h.fuelLevel || ''}</td>
-                        <td><small title="${h.checklistItems || ''}">${(h.checklistItems || '').substring(0, 20)}${h.checklistItems && h.checklistItems.length > 20 ? '...' : ''}</small></td>
-                        <td><small title="${h.damageDescription || ''}">${(h.damageDescription || '').substring(0, 20)}${h.damageDescription && h.damageDescription.length > 20 ? '...' : ''}</small></td>
-                        <td>${h.damageLocation || ''}</td>
-                        <td><small title="${h.additionalNotes || ''}">${(h.additionalNotes || '').substring(0, 20)}${h.additionalNotes && h.additionalNotes.length > 20 ? '...' : ''}</small></td>
+                        <td><span class="badge" style="background: #fef3c7; color: #92400e;">${h.fuelLevel || ''}</span></td>
+                        <td><span data-tooltip="${checklist}">${checklistDisplay}</span></td>
                         <td>
-                            <div class="image-gallery">
-                                ${photoLinks.length > 0 ? 
-                                    photoLinks.map((link, idx) => 
-                                        `<img src="${link}" class="image-thumb" onclick="showImage('${link}')" title="Photo ${idx+1}">`
-                                    ).join('') :
-                                    '<span class="no-image">No photos</span>'
-                                }
-                            </div>
+                            <span class="damage-indicator ${damageClass}" data-tooltip="${damageDesc}">
+                                <i class="fas fa-${hasDamage ? 'exclamation-triangle' : 'check-circle'}"></i>
+                                ${damageText}
+                            </span>
                         </td>
+                        <td><span class="text-muted">${h.damageLocation || ''}</span></td>
+                        <td><span data-tooltip="${notes}">${notesDisplay}</span></td>
+                        <td>${photoHtml}</td>
                     </tr>
                 `;
             });
@@ -1302,20 +1683,38 @@
             tbody.innerHTML = html;
         }
 
-        // Image modal functions
+        // FIXED: showImage function with improved Drive URL handling
         function showImage(url) {
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');
+            const modalDownloadLink = document.getElementById('modalDownloadLink');
+            const modalOpenLink = document.getElementById('modalOpenLink');
             
-            if (url && url.includes('drive.google.com')) {
-                const fileId = url.match(/[-\w]{25,}/);
-                if (fileId) {
-                    url = `https://drive.google.com/uc?export=view&id=${fileId[0]}`;
+            if (!url) return;
+            
+            let imageUrl = url;
+            let originalUrl = url;
+            
+            // Handle Google Drive URLs
+            if (url.includes('drive.google.com') || url.includes('drive.google')) {
+                const fileIdMatch = url.match(/[-\w]{25,}/);
+                if (fileIdMatch) {
+                    const fileId = fileIdMatch[0];
+                    // Use the thumbnail URL for better loading
+                    imageUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800-h800`;
+                    originalUrl = `https://drive.google.com/file/d/${fileId}/view`;
                 }
             }
             
-            modalImg.src = url || '';
+            modalImg.src = imageUrl;
+            modalDownloadLink.href = originalUrl;
+            modalOpenLink.href = originalUrl;
             modal.style.display = 'flex';
+            
+            // Add error handling for the modal image
+            modalImg.onerror = function() {
+                this.src = 'https://via.placeholder.com/800x600/667eea/ffffff?text=Image+Not+Available';
+            };
         }
 
         function closeModal() {
@@ -1369,6 +1768,17 @@
         function printTable() {
             window.print();
         }
+
+        // Make functions globally available
+        window.showImage = showImage;
+        window.closeModal = closeModal;
+        window.testConnection = testConnection;
+        window.applyFilters = applyFilters;
+        window.resetFilters = resetFilters;
+        window.refreshData = refreshData;
+        window.exportToExcel = exportToExcel;
+        window.exportChart = exportChart;
+        window.printTable = printTable;
     </script>
 </body>
 </html>
