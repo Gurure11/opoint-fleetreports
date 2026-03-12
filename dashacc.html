@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OnPoint Fleet · Incident Dashboard</title>
-    <!-- Font Awesome & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <!-- Chart.js for analytics -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* All your existing CSS remains the same */
         * {
             margin: 0;
             padding: 0;
@@ -28,7 +27,6 @@
             margin: 0 auto;
         }
 
-        /* Header */
         .dashboard-header {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -41,7 +39,6 @@
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 20px;
-            border: 1px solid rgba(255,255,255,0.5);
         }
 
         .logo-area {
@@ -60,7 +57,6 @@
             justify-content: center;
             color: #ffc107;
             font-size: 24px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
         .header-title h1 {
@@ -93,6 +89,11 @@
             gap: 8px;
         }
 
+        .sync-status.offline {
+            background: #ffebee;
+            color: #c62828;
+        }
+
         .logout-btn {
             background: #dc3545;
             color: white;
@@ -104,18 +105,48 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            transition: all 0.3s ease;
             text-decoration: none;
             font-size: 14px;
+            transition: all 0.3s ease;
         }
 
         .logout-btn:hover {
             background: #c82333;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(220,53,69,0.3);
         }
 
-        /* KPI Cards */
+        .debug-bar {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .debug-info {
+            color: #0b2b5c;
+            font-family: monospace;
+        }
+
+        .test-btn {
+            background: #0b2b5c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -129,11 +160,6 @@
             padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             border-left: 5px solid #ffc107;
-            transition: transform 0.3s ease;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-5px);
         }
 
         .kpi-header {
@@ -161,13 +187,6 @@
             color: #0b2b5c;
         }
 
-        .kpi-trend {
-            font-size: 13px;
-            color: #28a745;
-            margin-top: 5px;
-        }
-
-        /* Filters Section */
         .filters-section {
             background: white;
             border-radius: 25px;
@@ -218,7 +237,6 @@
             font-weight: 600;
             font-size: 13px;
             color: #495057;
-            text-transform: uppercase;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -235,12 +253,10 @@
             border-radius: 15px;
             font-size: 14px;
             outline: none;
-            transition: all 0.2s;
         }
 
         .filter-group input:focus, .filter-group select:focus {
             border-color: #0b2b5c;
-            box-shadow: 0 0 0 3px rgba(11,43,92,0.1);
         }
 
         .filter-actions {
@@ -272,7 +288,6 @@
         .btn-primary:hover {
             background: #123f6e;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(11,43,92,0.3);
         }
 
         .btn-secondary {
@@ -280,29 +295,11 @@
             color: #495057;
         }
 
-        .btn-secondary:hover {
-            background: #dee2e6;
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-        }
-
         .btn-warning {
             background: #ffc107;
             color: #0b2b5c;
         }
 
-        .btn-warning:hover {
-            background: #e0a800;
-        }
-
-        /* Charts Row */
         .charts-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
@@ -332,25 +329,11 @@
             gap: 8px;
         }
 
-        .chart-actions button {
-            background: none;
-            border: none;
-            color: #6c757d;
-            cursor: pointer;
-            font-size: 16px;
-            transition: color 0.2s;
-        }
-
-        .chart-actions button:hover {
-            color: #0b2b5c;
-        }
-
         canvas {
             width: 100% !important;
             height: 250px !important;
         }
 
-        /* Table Section */
         .table-section {
             background: white;
             border-radius: 25px;
@@ -372,11 +355,6 @@
             font-size: 20px;
             display: flex;
             align-items: center;
-            gap: 10px;
-        }
-
-        .export-buttons {
-            display: flex;
             gap: 10px;
         }
 
@@ -403,7 +381,6 @@
             top: 0;
             z-index: 10;
             white-space: nowrap;
-            font-weight: 600;
         }
 
         td {
@@ -426,33 +403,22 @@
             padding: 5px 10px;
             background: #e9ecef;
             border-radius: 20px;
-            transition: all 0.2s;
-        }
-
-        .image-link:hover {
-            background: #0b2b5c;
-            color: white;
-        }
-
-        .image-link i {
-            font-size: 14px;
-        }
-
-        .at-fault-badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 12px;
         }
 
         .badge-yes {
             background: #dc3545;
             color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
         }
 
         .badge-no {
             background: #28a745;
             color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
         }
 
         .loading-overlay {
@@ -503,82 +469,18 @@
 
         .notification.success { border-left: 4px solid #28a745; }
         .notification.error { border-left: 4px solid #dc3545; }
-        .notification.info { border-left: 4px solid #0b2b5c; }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.9);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            border: 3px solid white;
-            border-radius: 10px;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 40px;
-            color: white;
-            font-size: 40px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        @media (max-width: 768px) {
-            .charts-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .filter-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .dashboard-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .header-actions {
-                width: 100%;
-                flex-direction: column;
-            }
-            
-            .logout-btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
+        .notification.warning { border-left: 4px solid #ffc107; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Loading Overlay -->
         <div class="loading-overlay" id="loadingOverlay">
             <div class="loading-spinner"></div>
         </div>
 
-        <!-- Notification -->
         <div class="notification" id="notification">
             <i class="fas fa-check-circle" id="notificationIcon"></i>
             <span id="notificationMessage">Notification</span>
-        </div>
-
-        <!-- Image Modal -->
-        <div id="imageModal" class="modal">
-            <span class="close-modal" onclick="closeImageModal()">&times;</span>
-            <img class="modal-content" id="modalImage">
         </div>
 
         <!-- Header -->
@@ -595,7 +497,7 @@
             <div class="header-actions">
                 <div class="sync-status" id="syncStatus">
                     <i class="fas fa-cloud-upload-alt"></i>
-                    <span>Connected</span>
+                    <span>Checking connection...</span>
                 </div>
                 <a href="index.html" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> Logout
@@ -603,15 +505,32 @@
             </div>
         </div>
 
-        <!-- KPI Cards -->
-        <div class="kpi-grid" id="kpiGrid">
-            <!-- Dynamically populated -->
+        <!-- Debug Bar -->
+        <div class="debug-bar" id="debugBar">
+            <div class="debug-info" id="debugInfo">
+                <i class="fas fa-info-circle"></i> 
+                <span id="debugMessage">Initializing...</span>
+            </div>
+            <button class="test-btn" onclick="testApiConnection()">
+                <i class="fas fa-vial"></i> Test Connection
+            </button>
         </div>
 
-        <!-- Filters Section -->
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpiGrid">
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Loading</span>
+                    <i class="fas fa-spinner fa-pulse"></i>
+                </div>
+                <div class="kpi-value">...</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
         <div class="filters-section">
             <div class="filters-header">
-                <h3><i class="fas fa-filter"></i> Filter Incident Reports</h3>
+                <h3><i class="fas fa-filter"></i> Filter Reports</h3>
                 <span class="record-count" id="recordCount">Loading...</span>
             </div>
             <div class="filter-grid">
@@ -624,11 +543,11 @@
                     </div>
                 </div>
                 <div class="filter-group">
-                    <label><i class="fas fa-user"></i> Driver Name</label>
+                    <label><i class="fas fa-user"></i> Driver</label>
                     <input type="text" id="driverFilter" placeholder="Search driver...">
                 </div>
                 <div class="filter-group">
-                    <label><i class="fas fa-truck"></i> Vehicle Reg</label>
+                    <label><i class="fas fa-truck"></i> Vehicle</label>
                     <input type="text" id="vehicleFilter" placeholder="Search vehicle...">
                 </div>
                 <div class="filter-group">
@@ -637,30 +556,13 @@
                         <option value="all">All Departments</option>
                     </select>
                 </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-tag"></i> Accident Type</label>
-                    <select id="accidentTypeFilter">
-                        <option value="all">All Types</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-balance-scale"></i> At Fault</label>
-                    <select id="atFaultFilter">
-                        <option value="all">All</option>
-                        <option value="Yes">At Fault</option>
-                        <option value="No">Not at Fault</option>
-                    </select>
-                </div>
             </div>
             <div class="filter-actions">
                 <button class="btn btn-secondary" onclick="resetFilters()">
                     <i class="fas fa-undo"></i> Reset
                 </button>
                 <button class="btn btn-primary" onclick="applyFilters()">
-                    <i class="fas fa-search"></i> Apply Filters
-                </button>
-                <button class="btn btn-success" onclick="exportToCSV()">
-                    <i class="fas fa-file-csv"></i> Export CSV
+                    <i class="fas fa-search"></i> Apply
                 </button>
                 <button class="btn btn-warning" onclick="refreshData()">
                     <i class="fas fa-sync-alt"></i> Refresh
@@ -668,37 +570,29 @@
             </div>
         </div>
 
-        <!-- Charts Row -->
+        <!-- Charts -->
         <div class="charts-row">
             <div class="chart-card">
                 <div class="chart-header">
-                    <h4><i class="fas fa-chart-pie"></i> Incidents by Department</h4>
-                    <div class="chart-actions">
-                        <button onclick="exportChart('deptChart', 'dept_incidents')"><i class="fas fa-download"></i></button>
-                    </div>
+                    <h4><i class="fas fa-chart-pie"></i> By Department</h4>
                 </div>
                 <canvas id="deptChart"></canvas>
             </div>
             <div class="chart-card">
                 <div class="chart-header">
-                    <h4><i class="fas fa-chart-line"></i> Incidents Over Time</h4>
-                    <div class="chart-actions">
-                        <button onclick="exportChart('timelineChart', 'incident_timeline')"><i class="fas fa-download"></i></button>
-                    </div>
+                    <h4><i class="fas fa-chart-line"></i> Recent Incidents</h4>
                 </div>
                 <canvas id="timelineChart"></canvas>
             </div>
         </div>
 
-        <!-- Table Section -->
+        <!-- Table -->
         <div class="table-section">
             <div class="table-header">
                 <h2><i class="fas fa-list-alt"></i> Incident Reports</h2>
-                <div class="export-buttons">
-                    <button class="btn btn-secondary" onclick="printReport()">
-                        <i class="fas fa-print"></i> Print
-                    </button>
-                </div>
+                <button class="btn btn-secondary" onclick="exportToCSV()">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </button>
             </div>
             <div class="table-container">
                 <table id="incidentTable">
@@ -706,29 +600,21 @@
                         <tr>
                             <th>Date</th>
                             <th>Time</th>
-                            <th>Vehicle Reg</th>
+                            <th>Vehicle</th>
                             <th>Location</th>
-                            <th>Accident Type</th>
+                            <th>Type</th>
                             <th>Department</th>
                             <th>Cost Center</th>
                             <th>Driver</th>
-                            <th>Driver Phone</th>
-                            <th>Description</th>
-                            <th>Other Parties</th>
-                            <th>Reported to Metro</th>
-                            <th>Officer Name</th>
-                            <th>Officer Phone</th>
-                            <th>Drunken Driving</th>
-                            <th>Police Report No</th>
+                            <th>Phone</th>
                             <th>At Fault</th>
-                            <th>Coordinates</th>
                             <th>Image</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
                         <tr>
-                            <td colspan="19" style="text-align: center; padding: 50px;">
-                                <i class="fas fa-spinner fa-pulse"></i> Loading incident data...
+                            <td colspan="11" style="text-align: center; padding: 50px;">
+                                <i class="fas fa-spinner fa-pulse"></i> Loading data...
                             </td>
                         </tr>
                     </tbody>
@@ -738,23 +624,23 @@
     </div>
 
     <script>
-        // Configuration
+        // CONFIGURATION - IMPORTANT: Replace with your actual deployed URL
         const CONFIG = {
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbxJIn7fM7P-0-uSi4z2HEArPT6u2S__46QpT5PzePEJvseqaqJ7Pyijy_4J8yjinkPe/exec',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbyz29AyRwRF2quRPJGq5L5ibu_fJ99af3rQo7HXeWRg2tlV8JvkYcGvPx87I6KPe7eV/exec',
             SHEET_ID: '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI',
-            SHEET_NAME: 'Onpoint Incident Fleet Report',
-            DRIVE_FOLDER_ID: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
+            SHEET_NAME: 'Onpoint Incident Fleet Report'
         };
 
         // Global variables
         let allIncidents = [];
         let filteredIncidents = [];
         let deptChart, timelineChart;
+        let useDemoData = false;
 
         // Initialize
         window.onload = function() {
             setDefaultDates();
-            loadIncidents();
+            testApiConnection();
         };
 
         function setDefaultDates() {
@@ -773,7 +659,7 @@
             
             icon.className = type === 'success' ? 'fas fa-check-circle' : 
                             type === 'error' ? 'fas fa-exclamation-circle' : 
-                            'fas fa-info-circle';
+                            'fas fa-exclamation-triangle';
             
             notification.className = `notification ${type}`;
             messageEl.textContent = message;
@@ -788,123 +674,153 @@
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
         }
 
-        function updateSyncStatus(status) {
+        function updateSyncStatus(status, message) {
             const syncEl = document.getElementById('syncStatus');
+            const debugEl = document.getElementById('debugMessage');
+            
             if (status === 'online') {
+                syncEl.className = 'sync-status';
                 syncEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> <span>Connected to Google Sheets</span>';
+                debugEl.innerHTML = message || 'Connected successfully';
             } else {
-                syncEl.innerHTML = '<i class="fas fa-cloud-offline"></i> <span>Offline - Using Demo Data</span>';
+                syncEl.className = 'sync-status offline';
+                syncEl.innerHTML = '<i class="fas fa-cloud-offline"></i> <span>Using Demo Data</span>';
+                debugEl.innerHTML = message || 'Using demo data - check connection';
             }
         }
 
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            return dateStr;
+        // Test API connection
+        async function testApiConnection() {
+            setLoading(true);
+            const debugEl = document.getElementById('debugMessage');
+            debugEl.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Testing connection...';
+            
+            try {
+                const testUrl = `${CONFIG.GAS_URL}?action=test&_=${Date.now()}`;
+                console.log('Testing connection to:', testUrl);
+                
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Test response:', data);
+                
+                if (data.success) {
+                    updateSyncStatus('online', `Connected to sheet: ${data.sheetName}`);
+                    loadIncidents();
+                } else {
+                    throw new Error(data.error || 'API returned error');
+                }
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                updateSyncStatus('offline', `Connection failed: ${error.message}`);
+                showNotification('Cannot connect to Google Sheets. Using demo data.', 'warning');
+                generateDemoData();
+                setLoading(false);
+            }
         }
 
-        // Load incidents from Google Sheets
+        // Load real incidents
         async function loadIncidents() {
-            setLoading(true);
             try {
-                const url = `${CONFIG.GAS_URL}?action=getIncidents&sheetId=${CONFIG.SHEET_ID}&sheetName=${encodeURIComponent(CONFIG.SHEET_NAME)}`;
+                const url = `${CONFIG.GAS_URL}?action=getIncidents&_=${Date.now()}`;
+                console.log('Loading incidents from:', url);
                 
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Received data:', data);
                 
                 if (data.success && data.data) {
                     allIncidents = data.data;
                     filteredIncidents = [...allIncidents];
                     
-                    updateRecordCount();
+                    document.getElementById('recordCount').innerHTML = `📊 ${allIncidents.length} records`;
+                    
                     populateFilters();
                     updateDashboard();
-                    updateSyncStatus('online');
                     showNotification(`Loaded ${allIncidents.length} incident reports`, 'success');
                 } else {
                     throw new Error(data.error || 'No data received');
                 }
             } catch (error) {
                 console.error('Error loading incidents:', error);
-                showNotification('Using demo data - ' + error.message, 'info');
-                updateSyncStatus('offline');
-                
-                // Generate demo data for testing
+                showNotification('Error loading data. Using demo data.', 'error');
                 generateDemoData();
             } finally {
                 setLoading(false);
             }
         }
 
-        // Generate demo data for testing
+        // Generate demo data
         function generateDemoData() {
-            const departments = ['Fleet', 'Operations', 'Logistics', 'Procurement', 'Warehouse'];
-            const accidentTypes = ['Rear-end', 'Side-impact', 'Rollover', 'Single-vehicle', 'Other'];
-            const costCenters = ['Onpoint Group HQ', 'DI Solutions', 'Aqua Telecoms', 'Nkanyezi Projects'];
+            useDemoData = true;
+            
+            const departments = ['Fleet', 'Operations', 'Logistics', 'Warehouse'];
+            const types = ['Rear-end', 'Side-impact', 'Rollover', 'Single-vehicle'];
+            const costCenters = ['Onpoint Group HQ', 'DI Solutions', 'Aqua Telecoms'];
             
             allIncidents = [];
-            const today = new Date();
             
-            for (let i = 0; i < 30; i++) {
-                const date = new Date(today);
+            for (let i = 0; i < 25; i++) {
+                const date = new Date();
                 date.setDate(date.getDate() - i);
                 
-                const atFault = Math.random() > 0.5 ? 'Yes' : 'No';
-                
                 allIncidents.push({
-                    Timestamp: date.toISOString(),
                     Date: date.toISOString().split('T')[0],
-                    Time: `${String(Math.floor(Math.random() * 12) + 8).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
+                    Time: `${String(8 + Math.floor(Math.random() * 10)).padStart(2,'0')}:${String(Math.floor(Math.random() * 60)).padStart(2,'0')}`,
                     VehicleReg: `FLEET-${Math.floor(Math.random() * 900 + 100)}`,
-                    Location: `${Math.random() > 0.5 ? 'Main Rd' : 'Highway N1'} km ${Math.floor(Math.random() * 50)}`,
-                    AccidentType: accidentTypes[Math.floor(Math.random() * accidentTypes.length)],
+                    Location: `N${Math.floor(Math.random() * 4 + 1)} Highway, km ${Math.floor(Math.random() * 50)}`,
+                    AccidentType: types[Math.floor(Math.random() * types.length)],
                     Department: departments[Math.floor(Math.random() * departments.length)],
                     CostCenter: costCenters[Math.floor(Math.random() * costCenters.length)],
-                    DriverName: ['John Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown'][Math.floor(Math.random() * 4)],
-                    DriverPhone: `+27 7${Math.floor(Math.random() * 9)} ${Math.floor(Math.random() * 900 + 100)} ${Math.floor(Math.random() * 9000 + 1000)}`,
-                    Description: 'Incident description sample text',
+                    DriverName: ['John Smith', 'Mike Johnson', 'Sarah Williams'][Math.floor(Math.random() * 3)],
+                    DriverPhone: `082 ${Math.floor(Math.random() * 900 + 100)} ${Math.floor(Math.random() * 9000 + 1000)}`,
+                    Description: 'Sample incident description',
                     OtherParties: Math.random() > 0.5 ? 'Another vehicle' : 'None',
                     ReportedToMetro: Math.random() > 0.3 ? 'Yes' : 'No',
-                    OfficerName: Math.random() > 0.3 ? `Officer ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}` : 'N/A',
-                    OfficerPhone: Math.random() > 0.3 ? `082 ${Math.floor(Math.random() * 900 + 100)} ${Math.floor(Math.random() * 9000 + 1000)}` : 'N/A',
+                    OfficerName: Math.random() > 0.5 ? 'Officer Davis' : 'N/A',
+                    OfficerPhone: Math.random() > 0.5 ? '082 555 0123' : 'N/A',
                     DrunkenDriving: Math.random() > 0.9 ? 'Yes' : 'No',
-                    PoliceReportNo: Math.random() > 0.3 ? `PD-${Math.floor(Math.random() * 9000 + 1000)}` : 'N/A',
-                    AtFault: atFault,
+                    PoliceReportNo: Math.random() > 0.5 ? `PD-${Math.floor(Math.random() * 9000 + 1000)}` : 'N/A',
+                    AtFault: Math.random() > 0.5 ? 'Yes' : 'No',
                     Latitude: (-25.9 - Math.random() * 0.2).toFixed(6),
                     Longitude: (28.1 + Math.random() * 0.2).toFixed(6),
-                    GeoUrl: 'https://maps.google.com',
-                    ImageFilename: Math.random() > 0.5 ? `incident_${i}.jpg` : '',
-                    ImageDriveUrl: Math.random() > 0.7 ? `https://drive.google.com/file/d/xxx/view` : ''
+                    GeoUrl: '#',
+                    ImageFilename: Math.random() > 0.7 ? `incident_${i}.jpg` : '',
+                    ImageDriveUrl: Math.random() > 0.7 ? '#demo' : ''
                 });
             }
             
             filteredIncidents = [...allIncidents];
-            updateRecordCount();
+            document.getElementById('recordCount').innerHTML = `📊 ${allIncidents.length} records (Demo)`;
             populateFilters();
             updateDashboard();
-        }
-
-        // Update record count
-        function updateRecordCount() {
-            document.getElementById('recordCount').innerHTML = `📊 ${filteredIncidents.length} records`;
         }
 
         // Populate filter dropdowns
         function populateFilters() {
             const departments = [...new Set(allIncidents.map(i => i.Department).filter(d => d))];
-            const accidentTypes = [...new Set(allIncidents.map(i => i.AccidentType).filter(a => a))];
-            
             const deptFilter = document.getElementById('departmentFilter');
-            const typeFilter = document.getElementById('accidentTypeFilter');
             
             deptFilter.innerHTML = '<option value="all">All Departments</option>';
-            typeFilter.innerHTML = '<option value="all">All Types</option>';
-            
             departments.sort().forEach(dept => {
                 deptFilter.innerHTML += `<option value="${dept}">${dept}</option>`;
-            });
-            
-            accidentTypes.sort().forEach(type => {
-                typeFilter.innerHTML += `<option value="${type}">${type}</option>`;
             });
         }
 
@@ -912,46 +828,30 @@
         function applyFilters() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
-            const driver = document.getElementById('driverFilter').value.toLowerCase().trim();
-            const vehicle = document.getElementById('vehicleFilter').value.toLowerCase().trim();
+            const driver = document.getElementById('driverFilter').value.toLowerCase();
+            const vehicle = document.getElementById('vehicleFilter').value.toLowerCase();
             const department = document.getElementById('departmentFilter').value;
-            const accidentType = document.getElementById('accidentTypeFilter').value;
-            const atFault = document.getElementById('atFaultFilter').value;
             
             filteredIncidents = allIncidents.filter(inc => {
-                let matches = true;
+                let match = true;
                 
                 if (startDate && endDate) {
-                    const incDate = inc.Date;
-                    matches = matches && incDate >= startDate && incDate <= endDate;
+                    match = match && inc.Date >= startDate && inc.Date <= endDate;
                 }
-                
                 if (driver) {
-                    const incDriver = (inc.DriverName || '').toLowerCase();
-                    matches = matches && incDriver.includes(driver);
+                    match = match && (inc.DriverName || '').toLowerCase().includes(driver);
                 }
-                
                 if (vehicle) {
-                    const incVehicle = (inc.VehicleReg || '').toLowerCase();
-                    matches = matches && incVehicle.includes(vehicle);
+                    match = match && (inc.VehicleReg || '').toLowerCase().includes(vehicle);
                 }
-                
                 if (department !== 'all') {
-                    matches = matches && inc.Department === department;
+                    match = match && inc.Department === department;
                 }
                 
-                if (accidentType !== 'all') {
-                    matches = matches && inc.AccidentType === accidentType;
-                }
-                
-                if (atFault !== 'all') {
-                    matches = matches && inc.AtFault === atFault;
-                }
-                
-                return matches;
+                return match;
             });
             
-            updateRecordCount();
+            document.getElementById('recordCount').innerHTML = `📊 ${filteredIncidents.length} records`;
             updateDashboard();
             showNotification(`Found ${filteredIncidents.length} incidents`, 'success');
         }
@@ -961,20 +861,23 @@
             document.getElementById('driverFilter').value = '';
             document.getElementById('vehicleFilter').value = '';
             document.getElementById('departmentFilter').value = 'all';
-            document.getElementById('accidentTypeFilter').value = 'all';
-            document.getElementById('atFaultFilter').value = 'all';
             
             filteredIncidents = [...allIncidents];
-            updateRecordCount();
+            document.getElementById('recordCount').innerHTML = `📊 ${filteredIncidents.length} records`;
             updateDashboard();
             showNotification('Filters reset', 'info');
         }
 
         function refreshData() {
-            loadIncidents();
+            if (useDemoData) {
+                generateDemoData();
+            } else {
+                setLoading(true);
+                loadIncidents();
+            }
         }
 
-        // Update dashboard with filtered data
+        // Update dashboard
         function updateDashboard() {
             updateKPIs();
             updateCharts();
@@ -982,13 +885,10 @@
         }
 
         function updateKPIs() {
-            const totalIncidents = filteredIncidents.length;
-            const atFaultCount = filteredIncidents.filter(i => i.AtFault === 'Yes').length;
-            const reportedToMetro = filteredIncidents.filter(i => i.ReportedToMetro === 'Yes').length;
-            const drunkenDriving = filteredIncidents.filter(i => i.DrunkenDriving === 'Yes').length;
-            
-            // Get unique vehicles involved
-            const uniqueVehicles = new Set(filteredIncidents.map(i => i.VehicleReg).filter(v => v)).size;
+            const total = filteredIncidents.length;
+            const atFault = filteredIncidents.filter(i => i.AtFault === 'Yes').length;
+            const reported = filteredIncidents.filter(i => i.ReportedToMetro === 'Yes').length;
+            const drunken = filteredIncidents.filter(i => i.DrunkenDriving === 'Yes').length;
             
             document.getElementById('kpiGrid').innerHTML = `
                 <div class="kpi-card">
@@ -996,47 +896,35 @@
                         <span class="kpi-label">Total Incidents</span>
                         <i class="fas fa-car-crash"></i>
                     </div>
-                    <div class="kpi-value">${totalIncidents}</div>
-                    <div class="kpi-trend"><i class="fas fa-chart-line"></i> This period</div>
+                    <div class="kpi-value">${total}</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-header">
                         <span class="kpi-label">At Fault</span>
                         <i class="fas fa-gavel"></i>
                     </div>
-                    <div class="kpi-value">${atFaultCount}</div>
-                    <div class="kpi-trend">${totalIncidents ? ((atFaultCount/totalIncidents)*100).toFixed(1) : 0}% of total</div>
+                    <div class="kpi-value">${atFault} (${total ? ((atFault/total)*100).toFixed(0) : 0}%)</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-header">
                         <span class="kpi-label">Reported to Metro</span>
                         <i class="fas fa-building"></i>
                     </div>
-                    <div class="kpi-value">${reportedToMetro}</div>
-                    <div class="kpi-trend">${totalIncidents ? ((reportedToMetro/totalIncidents)*100).toFixed(1) : 0}% reported</div>
+                    <div class="kpi-value">${reported}</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-header">
                         <span class="kpi-label">Drunken Driving</span>
                         <i class="fas fa-wine-bottle"></i>
                     </div>
-                    <div class="kpi-value">${drunkenDriving}</div>
-                    <div class="kpi-trend">${totalIncidents ? ((drunkenDriving/totalIncidents)*100).toFixed(1) : 0}% of incidents</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <span class="kpi-label">Vehicles Involved</span>
-                        <i class="fas fa-truck"></i>
-                    </div>
-                    <div class="kpi-value">${uniqueVehicles}</div>
-                    <div class="kpi-trend">Unique vehicles</div>
+                    <div class="kpi-value">${drunken}</div>
                 </div>
             `;
         }
 
         function updateCharts() {
-            // Department Chart
-            const ctx1 = document.getElementById('deptChart').getContext('2d');
+            // Department chart
+            const deptCtx = document.getElementById('deptChart').getContext('2d');
             if (deptChart) deptChart.destroy();
             
             const deptCounts = {};
@@ -1045,47 +933,44 @@
                 deptCounts[dept] = (deptCounts[dept] || 0) + 1;
             });
             
-            deptChart = new Chart(ctx1, {
+            deptChart = new Chart(deptCtx, {
                 type: 'doughnut',
                 data: {
                     labels: Object.keys(deptCounts),
                     datasets: [{
                         data: Object.values(deptCounts),
-                        backgroundColor: ['#0b2b5c', '#1a4a7a', '#2d7aff', '#ffc107', '#28a745', '#dc3545'],
-                        borderWidth: 0
+                        backgroundColor: ['#0b2b5c', '#1a4a7a', '#2d7aff', '#ffc107']
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
+                    plugins: { legend: { position: 'bottom' } }
                 }
             });
 
-            // Timeline Chart
-            const ctx2 = document.getElementById('timelineChart').getContext('2d');
+            // Timeline chart
+            const timelineCtx = document.getElementById('timelineChart').getContext('2d');
             if (timelineChart) timelineChart.destroy();
             
-            const last30Days = [];
+            const last7Days = [];
             const counts = [];
-            
             const today = new Date();
-            for (let i = 29; i >= 0; i--) {
+            
+            for (let i = 6; i >= 0; i--) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
                 const dateStr = date.toISOString().split('T')[0];
-                last30Days.push(dateStr.substring(5)); // Show MM-DD
+                last7Days.push(dateStr.substring(5));
                 
                 const count = filteredIncidents.filter(inc => inc.Date === dateStr).length;
                 counts.push(count);
             }
             
-            timelineChart = new Chart(ctx2, {
+            timelineChart = new Chart(timelineCtx, {
                 type: 'line',
                 data: {
-                    labels: last30Days,
+                    labels: last7Days,
                     datasets: [{
                         label: 'Incidents',
                         data: counts,
@@ -1098,9 +983,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, stepSize: 1 }
-                    }
+                    scales: { y: { beginAtZero: true, stepSize: 1 } }
                 }
             });
         }
@@ -1110,35 +993,26 @@
             tbody.innerHTML = '';
             
             if (filteredIncidents.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="19" style="text-align: center; padding: 50px;">No incidents found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 50px;">No incidents found</td></tr>';
                 return;
             }
             
-            filteredIncidents.slice(0, 100).forEach(inc => {
+            filteredIncidents.slice(0, 50).forEach(inc => {
                 const row = tbody.insertRow();
-                
                 row.innerHTML = `
                     <td>${inc.Date || ''}</td>
                     <td>${inc.Time || ''}</td>
                     <td><strong>${inc.VehicleReg || ''}</strong></td>
-                    <td>${inc.Location || ''}</td>
+                    <td>${(inc.Location || '').substring(0, 20)}${inc.Location && inc.Location.length > 20 ? '...' : ''}</td>
                     <td>${inc.AccidentType || ''}</td>
                     <td>${inc.Department || ''}</td>
-                    <td>${inc.CostCenter || ''}</td>
+                    <td>${(inc.CostCenter || '').substring(0, 15)}</td>
                     <td>${inc.DriverName || ''}</td>
                     <td>${inc.DriverPhone || ''}</td>
-                    <td title="${inc.Description || ''}">${(inc.Description || '').substring(0, 30)}${inc.Description && inc.Description.length > 30 ? '...' : ''}</td>
-                    <td>${inc.OtherParties || ''}</td>
-                    <td><span class="${inc.ReportedToMetro === 'Yes' ? 'badge-yes' : ''}" style="padding:3px 8px; border-radius:12px;">${inc.ReportedToMetro || ''}</span></td>
-                    <td>${inc.OfficerName || ''}</td>
-                    <td>${inc.OfficerPhone || ''}</td>
-                    <td><span class="${inc.DrunkenDriving === 'Yes' ? 'badge-yes' : ''}" style="padding:3px 8px; border-radius:12px;">${inc.DrunkenDriving || ''}</span></td>
-                    <td>${inc.PoliceReportNo || ''}</td>
-                    <td><span class="at-fault-badge ${inc.AtFault === 'Yes' ? 'badge-yes' : 'badge-no'}">${inc.AtFault || ''}</span></td>
-                    <td><a href="${inc.GeoUrl || '#'}" target="_blank" class="image-link"><i class="fas fa-map-marker-alt"></i> ${inc.Latitude ? inc.Latitude.substring(0,8) : ''}, ${inc.Longitude ? inc.Longitude.substring(0,8) : ''}</a></td>
+                    <td><span class="${inc.AtFault === 'Yes' ? 'badge-yes' : 'badge-no'}">${inc.AtFault || ''}</span></td>
                     <td>
                         ${inc.ImageDriveUrl ? 
-                            `<a href="#" onclick="showImage('${inc.ImageDriveUrl}')" class="image-link"><i class="fas fa-image"></i> View</a>` : 
+                            `<a href="${inc.ImageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> View</a>` : 
                             '<span style="color:#999;">No image</span>'
                         }
                     </td>
@@ -1146,81 +1020,25 @@
             });
         }
 
-        // Image modal functions
-        function showImage(url) {
-            const modal = document.getElementById('imageModal');
-            const modalImg = document.getElementById('modalImage');
-            
-            // Handle different Google Drive URL formats
-            let imageUrl = url;
-            if (url.includes('drive.google.com')) {
-                const fileId = url.match(/[-\w]{25,}/);
-                if (fileId) {
-                    imageUrl = `https://drive.google.com/uc?export=view&id=${fileId[0]}`;
-                }
-            }
-            
-            modalImg.src = imageUrl;
-            modal.style.display = 'flex';
-        }
-
-        function closeImageModal() {
-            document.getElementById('imageModal').style.display = 'none';
-        }
-
-        window.onclick = function(event) {
-            const modal = document.getElementById('imageModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        // Export functions
         function exportToCSV() {
-            if (filteredIncidents.length === 0) {
-                showNotification('No data to export', 'error');
-                return;
-            }
+            if (filteredIncidents.length === 0) return;
             
-            const headers = [
-                'Date', 'Time', 'Vehicle Reg', 'Location', 'Accident Type', 'Department', 'Cost Center',
-                'Driver Name', 'Driver Phone', 'Description', 'Other Parties', 'Reported to Metro',
-                'Officer Name', 'Officer Phone', 'Drunken Driving', 'Police Report No', 'At Fault',
-                'Latitude', 'Longitude', 'Geo URL', 'Image Filename', 'Image Drive URL'
-            ];
-            
+            const headers = ['Date', 'Time', 'Vehicle', 'Location', 'Type', 'Department', 'Cost Center', 'Driver', 'Phone', 'At Fault'];
             const rows = filteredIncidents.map(inc => [
-                inc.Date, inc.Time, inc.VehicleReg, inc.Location, inc.AccidentType, inc.Department, inc.CostCenter,
-                inc.DriverName, inc.DriverPhone, inc.Description, inc.OtherParties, inc.ReportedToMetro,
-                inc.OfficerName, inc.OfficerPhone, inc.DrunkenDriving, inc.PoliceReportNo, inc.AtFault,
-                inc.Latitude, inc.Longitude, inc.GeoUrl, inc.ImageFilename, inc.ImageDriveUrl
+                inc.Date, inc.Time, inc.VehicleReg, inc.Location, inc.AccidentType,
+                inc.Department, inc.CostCenter, inc.DriverName, inc.DriverPhone, inc.AtFault
             ]);
             
-            const csvContent = [headers, ...rows]
-                .map(row => row.map(cell => `"${cell || ''}"`).join(','))
-                .join('\n');
-            
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
+            const csv = [headers, ...rows].map(row => row.map(c => `"${c || ''}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `incident_report_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `incidents_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
-            window.URL.revokeObjectURL(url);
+            URL.revokeObjectURL(url);
             
-            showNotification('CSV exported successfully', 'success');
-        }
-
-        function exportChart(chartId, filename) {
-            const canvas = document.getElementById(chartId);
-            const link = document.createElement('a');
-            link.download = `${filename}_${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        function printReport() {
-            window.print();
+            showNotification('CSV exported', 'success');
         }
     </script>
 </body>
