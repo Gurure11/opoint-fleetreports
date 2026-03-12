@@ -19,10 +19,8 @@
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
     
-    <!-- Moment.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    
     <style>
+        /* All your existing CSS remains exactly the same */
         * {
             margin: 0;
             padding: 0;
@@ -37,7 +35,6 @@
             position: relative;
         }
 
-        /* Floating Background Animation */
         body::before {
             content: '';
             position: fixed;
@@ -58,7 +55,6 @@
             z-index: 1;
         }
 
-        /* Header */
         .dashboard-header {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -126,6 +122,11 @@
             gap: 8px;
         }
 
+        .sync-status.offline {
+            background: #ffebee;
+            color: #c62828;
+        }
+
         .logout-btn {
             background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
             color: white;
@@ -147,7 +148,34 @@
             box-shadow: 0 15px 30px rgba(225, 29, 72, 0.4);
         }
 
-        /* KPI Cards */
+        .debug-bar {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            color: #856404;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .test-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -206,7 +234,6 @@
             gap: 5px;
         }
 
-        /* Filters Section */
         .filters-section {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -341,7 +368,6 @@
             box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4);
         }
 
-        /* Charts Row */
         .charts-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
@@ -377,7 +403,6 @@
             height: 250px !important;
         }
 
-        /* Table Section */
         .table-section {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -409,7 +434,6 @@
             gap: 10px;
         }
 
-        /* DataTables Customization */
         .dataTables_wrapper {
             padding: 20px 0;
         }
@@ -441,7 +465,6 @@
             background: #f8fafc;
         }
 
-        /* Image Gallery Modal */
         .modal {
             display: none;
             position: fixed;
@@ -485,11 +508,6 @@
             justify-content: center;
         }
 
-        .close-modal:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        /* Loading Overlay */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -520,7 +538,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Image Gallery */
         .image-gallery {
             display: flex;
             gap: 5px;
@@ -542,13 +559,6 @@
             border-color: #667eea;
         }
 
-        .no-image {
-            color: #999;
-            font-size: 12px;
-            font-style: italic;
-        }
-
-        /* Status Badges */
         .badge {
             padding: 5px 10px;
             border-radius: 20px;
@@ -566,12 +576,6 @@
             color: white;
         }
 
-        .badge-damage {
-            background: #f43f5e;
-            color: white;
-        }
-
-        /* Notification */
         .notification {
             position: fixed;
             top: 20px;
@@ -600,11 +604,10 @@
             border-left: 4px solid #f43f5e;
         }
 
-        .notification.info {
-            border-left: 4px solid #667eea;
+        .notification.warning {
+            border-left: 4px solid #ffc107;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .charts-row {
                 grid-template-columns: 1fr;
@@ -626,24 +629,6 @@
             .header-actions {
                 width: 100%;
                 flex-direction: column;
-            }
-            
-            .sync-status,
-            .logout-btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
-        /* Print Styles */
-        @media print {
-            .filters-section,
-            .charts-row,
-            .table-actions,
-            .logout-btn,
-            .sync-status,
-            .btn {
-                display: none;
             }
         }
     </style>
@@ -667,7 +652,6 @@
         <img class="modal-content" id="modalImage" onclick="event.stopPropagation()">
     </div>
 
-    <!-- Dashboard Container -->
     <div class="dashboard-container">
         <!-- Header -->
         <div class="dashboard-header">
@@ -688,12 +672,23 @@
             <div class="header-actions">
                 <div class="sync-status" id="syncStatus">
                     <i class="fas fa-cloud-upload-alt"></i>
-                    <span>Connected</span>
+                    <span>Checking connection...</span>
                 </div>
                 <a href="index.html" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </a>
             </div>
+        </div>
+
+        <!-- Debug Bar -->
+        <div class="debug-bar" id="debugBar">
+            <div>
+                <i class="fas fa-info-circle"></i>
+                <span id="debugMessage">Initializing connection to Google Sheets...</span>
+            </div>
+            <button class="test-btn" onclick="testConnection()">
+                <i class="fas fa-vial"></i> Test Connection
+            </button>
         </div>
 
         <!-- KPI Cards -->
@@ -721,9 +716,9 @@
                 <div class="filter-group">
                     <label><i class="fas fa-calendar"></i> Date Range</label>
                     <div class="date-range">
-                        <input type="date" id="startDate" placeholder="Start Date">
+                        <input type="date" id="startDate">
                         <span>to</span>
-                        <input type="date" id="endDate" placeholder="End Date">
+                        <input type="date" id="endDate">
                     </div>
                 </div>
                 <div class="filter-group">
@@ -764,7 +759,7 @@
                     <i class="fas fa-file-excel"></i> Export Excel
                 </button>
                 <button class="btn btn-primary" onclick="refreshData()">
-                    <i class="fas fa-sync-alt"></i> Refresh
+                    <i class="fas fa-sync-alt"></i> Refresh Data
                 </button>
             </div>
         </div>
@@ -840,9 +835,12 @@
     </div>
 
     <script>
-        // Configuration
+        // ============================================
+        // CONFIGURATION - UPDATE THIS WITH YOUR DEPLOYED URL
+        // ============================================
         const CONFIG = {
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbxmNtnvgbjnWTCLV8vxy0Nk2kYG4rg4yeUjiZYtoScv8j8PwMpVwsR3M_Gubl5m6G0g-Q/exec', // Replace with your deployed URL
+            // IMPORTANT: Replace this URL with your actual deployed Google Apps Script URL
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbyRXoAK7wUYBSdGTz1bzxUdOj2NsBLkTRv1TPTeyrAVStm_l-T2Quxygqg0hN8qFD8ZHg/exec',
             SHEET_ID: '1vBDeyPBy3LLYg0EM2OFgceI3deVFhXL2Nr-IpdveZoU',
             SHEET_NAME: 'Vehicle Handovers',
             DRIVE_FOLDER_ID: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
@@ -883,7 +881,7 @@
             
             icon.className = type === 'success' ? 'fas fa-check-circle' : 
                             type === 'error' ? 'fas fa-exclamation-circle' : 
-                            'fas fa-info-circle';
+                            'fas fa-exclamation-triangle';
             
             notification.className = `notification ${type}`;
             messageEl.textContent = message;
@@ -900,32 +898,54 @@
 
         function updateSyncStatus(status, message) {
             const syncEl = document.getElementById('syncStatus');
-            syncEl.innerHTML = status === 'online' 
-                ? '<i class="fas fa-cloud-upload-alt"></i> <span>Connected</span>'
-                : '<i class="fas fa-cloud-offline"></i> <span>Offline</span>';
+            const debugEl = document.getElementById('debugMessage');
             
-            document.getElementById('lastUpdate').innerHTML = message || new Date().toLocaleString();
+            if (status === 'online') {
+                syncEl.className = 'sync-status';
+                syncEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> <span>Connected to Google Sheets</span>';
+                debugEl.innerHTML = message || 'Connected successfully';
+            } else {
+                syncEl.className = 'sync-status offline';
+                syncEl.innerHTML = '<i class="fas fa-cloud-offline"></i> <span>Using Demo Data</span>';
+                debugEl.innerHTML = message || 'Using demo data - check connection';
+            }
         }
 
-        // Test connection
+        // Test API connection
         async function testConnection() {
             setLoading(true);
+            const debugEl = document.getElementById('debugMessage');
+            debugEl.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Testing connection...';
+            
             try {
-                const response = await fetch(`${CONFIG.GAS_URL}?action=test&_=${Date.now()}`);
+                // Add cache-busting parameter
+                const testUrl = `${CONFIG.GAS_URL}?action=test&_=${Date.now()}`;
+                console.log('Testing connection to:', testUrl);
+                
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Test response:', data);
                 
                 if (data.success) {
-                    updateSyncStatus('online', 'Connected to Google Sheets');
+                    updateSyncStatus('online', `Connected to sheet: ${data.sheetName}`);
                     loadHandovers();
                 } else {
-                    throw new Error('Connection failed');
+                    throw new Error(data.error || 'API returned error');
                 }
             } catch (error) {
                 console.error('Connection test failed:', error);
-                updateSyncStatus('offline', 'Using demo data');
-                showNotification('Using demo data - check connection', 'warning');
+                updateSyncStatus('offline', `Connection failed: ${error.message}`);
+                showNotification('Cannot connect to Google Sheets. Using demo data.', 'warning');
                 generateDemoData();
-            } finally {
                 setLoading(false);
             }
         }
@@ -933,18 +953,32 @@
         // Load handovers from Google Sheets
         async function loadHandovers() {
             try {
-                const response = await fetch(`${CONFIG.GAS_URL}?action=getHandovers&_=${Date.now()}`);
+                const url = `${CONFIG.GAS_URL}?action=getHandovers&_=${Date.now()}`;
+                console.log('Loading handovers from:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Received data:', data);
                 
                 if (data.success && data.data) {
                     allHandovers = data.data;
                     filteredHandovers = [...allHandovers];
                     
                     document.getElementById('recordCount').innerHTML = `${allHandovers.length} records`;
+                    document.getElementById('lastUpdate').innerHTML = new Date().toLocaleString();
                     
                     populateFilters();
                     updateDashboard();
-                    showNotification(`Loaded ${allHandovers.length} handover records`, 'success');
+                    showNotification(`Loaded ${allHandovers.length} handover records from Google Sheets`, 'success');
                 } else {
                     throw new Error(data.error || 'No data received');
                 }
@@ -952,6 +986,8 @@
                 console.error('Error loading handovers:', error);
                 showNotification('Error loading data. Using demo data.', 'error');
                 generateDemoData();
+            } finally {
+                setLoading(false);
             }
         }
 
@@ -963,13 +999,13 @@
             
             allHandovers = [];
             
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 20; i++) {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
                 const handoverType = i % 2 === 0 ? 'Handover' : 'Takeover';
                 
                 allHandovers.push({
-                    submissionId: `HND-${Date.now()}-${i}`,
+                    submissionId: `DEMO-${Date.now()}-${i}`,
                     timestamp: date.toISOString(),
                     date: date.toISOString().split('T')[0],
                     time: `${String(8 + i % 10).padStart(2, '0')}:${String(i * 3 % 60).padStart(2, '0')}`,
@@ -984,18 +1020,20 @@
                     handoverType: handoverType,
                     fuelLevel: ['Empty', '1/4', '1/2', '3/4', 'Full'][i % 5],
                     checklistItems: 'Keys, License Disk, Spare Tire, Jack',
-                    damageDescription: i % 3 === 0 ? 'Small scratch on front bumper' : 'None',
-                    damageLocation: i % 3 === 0 ? 'Front Bumper' : 'N/A',
-                    additionalNotes: i % 4 === 0 ? 'Please check tire pressure' : 'None',
-                    photoLinks: i % 3 === 0 ? 'demo_photo.jpg' : '',
-                    folderId: 'demo-folder-id'
+                    damageDescription: i % 3 === 0 ? 'Small scratch on front bumper' : '',
+                    damageLocation: i % 3 === 0 ? 'Front Bumper' : '',
+                    additionalNotes: i % 4 === 0 ? 'Please check tire pressure' : '',
+                    photoLinks: '',
+                    folderId: CONFIG.DRIVE_FOLDER_ID
                 });
             }
             
             filteredHandovers = [...allHandovers];
             document.getElementById('recordCount').innerHTML = `${allHandovers.length} records (Demo)`;
+            document.getElementById('lastUpdate').innerHTML = new Date().toLocaleString() + ' (Demo)';
             populateFilters();
             updateDashboard();
+            setLoading(false);
         }
 
         // Populate filter dropdowns
@@ -1065,9 +1103,7 @@
 
         function refreshData() {
             setLoading(true);
-            setTimeout(() => {
-                loadHandovers();
-            }, 500);
+            testConnection();
         }
 
         // Update dashboard
@@ -1081,7 +1117,7 @@
             const total = filteredHandovers.length;
             const handovers = filteredHandovers.filter(h => h.handoverType === 'Handover').length;
             const takeovers = filteredHandovers.filter(h => h.handoverType === 'Takeover').length;
-            const withDamage = filteredHandovers.filter(h => h.damageDescription && h.damageDescription !== 'None').length;
+            const withDamage = filteredHandovers.filter(h => h.damageDescription && h.damageDescription !== '' && h.damageDescription !== 'None').length;
             
             const totalMileage = filteredHandovers.reduce((sum, h) => sum + (parseInt(h.mileage) || 0), 0);
             const avgMileage = total > 0 ? Math.round(totalMileage / total) : 0;
@@ -1271,14 +1307,14 @@
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');
             
-            if (url.includes('drive.google.com')) {
+            if (url && url.includes('drive.google.com')) {
                 const fileId = url.match(/[-\w]{25,}/);
                 if (fileId) {
                     url = `https://drive.google.com/uc?export=view&id=${fileId[0]}`;
                 }
             }
             
-            modalImg.src = url;
+            modalImg.src = url || '';
             modal.style.display = 'flex';
         }
 
