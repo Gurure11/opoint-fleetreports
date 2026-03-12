@@ -771,11 +771,12 @@
     </div>
 
     <script>
-        // Configuration - REPLACE WITH YOUR FUEL LOG APPS SCRIPT URL
+        // Configuration - CORRECTED WITH YOUR ACTUAL APPS SCRIPT URL
         const CONFIG = {
-            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyC3fdEn5UoX-h4ewUaj1eXa3jVVZVUIamAvJPFSiLD6riM2XW4ssg3gkZTQSXgX7lv/exec',
-            SHEET_ID: 'YOUR_SPREADSHEET_ID_HERE',
-            SHEET_NAME: 'Fuel Log'
+            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzgmEbZj2F0mWCaEghEvleosnaLdGR_FEGL2yjf6qBaJMUbopWpZNJIzGb014OTXkZz0w/exec',
+            SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
+            SHEET_NAME: 'Fuel Log',
+            DRIVE_FOLDER_ID: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
         };
 
         // Global variables
@@ -868,7 +869,7 @@
             return Number(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
-        // Generate demo data matching the new 24-column structure
+        // Generate demo data matching the 24-column structure
         function generateDemoData() {
             const vehicles = ['Toyota Hilux - ABC123', 'Nissan NP300 - XYZ789', 'Ford Ranger - DEF456', 'Isuzu KB - GHI789'];
             const drivers = ['John Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown'];
@@ -927,39 +928,43 @@
         async function loadFuelEntries() {
             setLoading(true);
             try {
-                // For testing with the new script, we'll use a GET request with action parameter
-                const testUrl = `${CONFIG.GOOGLE_SCRIPT_URL}?action=getEntries`;
+                // Use the correct Apps Script URL with action parameter
+                const url = `${CONFIG.GOOGLE_SCRIPT_URL}?action=getEntries&sheetId=${CONFIG.SHEET_ID}&sheetName=${CONFIG.SHEET_NAME}`;
                 
-                const response = await fetch(testUrl);
+                const response = await fetch(url);
                 const data = await response.json();
                 
-                if (data.success) {
-                    // Map the data to match our internal structure
-                    allEntries = (data.data || []).map(entry => ({
-                        Date: entry.Date || '',
-                        Driver: entry.Driver || '',
-                        Vehicle: entry.Vehicle || '',
-                        ERNumber: entry.ERNumber || entry['ER Number'] || '',
-                        Merchant: entry.Merchant || '',
-                        OdoStart: parseFloat(entry.OdoStart || entry['Odo Start'] || 0),
-                        OdoFinish: parseFloat(entry.OdoFinish || entry['Odo Finish'] || 0),
-                        Distance: parseFloat(entry.KMTraveled || entry['KM Traveled'] || 0),
-                        FuelType: entry.FuelType || entry['Fuel Type'] || '',
-                        PricePerLiter: parseFloat(entry.PricePerLiter || entry['Price/L'] || 0),
-                        Liters: parseFloat(entry.Liters || entry['Fuel Volume (L)'] || 0),
-                        FuelTotal: parseFloat(entry.FuelTotal || entry['Fuel Total'] || 0),
-                        Lubrication: entry.Lubrication || '',
-                        LubeCost: parseFloat(entry.LubeCost || entry['Lube Cost'] || 0),
-                        Tolls: entry.Tolls || '',
-                        TollTotal: parseFloat(entry.TollTotal || entry['Toll Total'] || 0),
-                        GrandTotal: parseFloat(entry.GrandTotal || entry['Grand Total'] || 0),
-                        KmPerLiter: parseFloat(entry.KmPerLiter || entry['KM/Liter'] || 0),
-                        CostCenter: entry.CostCenter || entry['Cost Center'] || '',
-                        Department: entry.Department || '',
-                        Notes: entry.Notes || '',
-                        SubmissionID: entry.SubmissionID || entry['Submission ID'] || '',
-                        Status: entry.Status || 'Completed'
-                    }));
+                if (data.success && data.data) {
+                    // Map the data from Google Sheets to match our internal structure
+                    // The data should come in the same 24-column format as your Apps Script
+                    allEntries = data.data.map(entry => {
+                        // Create a standardized entry object
+                        return {
+                            Date: entry.Date || entry[1] || '',
+                            Driver: entry.Driver || entry[2] || '',
+                            Vehicle: entry.Vehicle || entry[3] || '',
+                            ERNumber: entry.ERNumber || entry['ER Number'] || entry[4] || '',
+                            Merchant: entry.Merchant || entry[5] || '',
+                            OdoStart: parseFloat(entry.OdoStart || entry['Odo Start'] || entry[6] || 0),
+                            OdoFinish: parseFloat(entry.OdoFinish || entry['Odo Finish'] || entry[7] || 0),
+                            Distance: parseFloat(entry.KMTraveled || entry['KM Traveled'] || entry[20] || 0),
+                            FuelType: entry.FuelType || entry['Fuel Type'] || entry[8] || '',
+                            PricePerLiter: parseFloat(entry.PricePerLiter || entry['Price/L'] || entry[9] || 0),
+                            Liters: parseFloat(entry.Liters || entry[10] || 0),
+                            FuelTotal: parseFloat(entry.FuelTotal || entry['Fuel Total'] || entry[11] || 0),
+                            Lubrication: entry.Lubrication || entry[12] || '',
+                            LubeCost: parseFloat(entry.LubeCost || entry['Lube Cost'] || entry[13] || 0),
+                            Tolls: entry.Tolls || entry[14] || '',
+                            TollTotal: parseFloat(entry.TollTotal || entry['Toll Total'] || entry[15] || 0),
+                            GrandTotal: parseFloat(entry.GrandTotal || entry['Grand Total'] || entry[16] || 0),
+                            KmPerLiter: parseFloat(entry.KmPerLiter || entry['KM/Liter'] || entry[21] || 0),
+                            CostCenter: entry.CostCenter || entry['Cost Center'] || entry[17] || '',
+                            Department: entry.Department || entry[18] || '',
+                            Notes: entry.Notes || entry[19] || '',
+                            SubmissionID: entry.SubmissionID || entry['Submission ID'] || entry[22] || '',
+                            Status: entry.Status || entry[23] || 'Completed'
+                        };
+                    });
                     
                     filteredEntries = [...allEntries];
                     document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
@@ -967,9 +972,9 @@
                     populateFilters();
                     updateDashboard();
                     updateSyncStatus('online');
-                    showNotification(`Loaded ${allEntries.length} fuel entries`, 'success');
+                    showNotification(`Loaded ${allEntries.length} fuel entries from Google Sheets`, 'success');
                 } else {
-                    throw new Error(data.error || 'Unknown error');
+                    throw new Error(data.error || 'No data received');
                 }
             } catch (error) {
                 console.error('Error loading fuel entries:', error);
