@@ -650,6 +650,16 @@
                     <input type="text" id="vehicleFilter" placeholder="Search vehicle...">
                 </div>
                 <div class="filter-group">
+                    <label><i class="fas fa-hashtag"></i> ER Number</label>
+                    <input type="text" id="erNumberFilter" placeholder="Search ER Number...">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-store"></i> Merchant</label>
+                    <select id="merchantFilter">
+                        <option value="all">All Merchants</option>
+                    </select>
+                </div>
+                <div class="filter-group">
                     <label><i class="fas fa-tag"></i> Cost Center</label>
                     <select id="costCenterFilter">
                         <option value="all">All Cost Centers</option>
@@ -726,26 +736,31 @@
                             <th>Date</th>
                             <th>Driver</th>
                             <th>Vehicle</th>
-                            <th>Odometer Start</th>
-                            <th>Odometer Finish</th>
+                            <th>ER Number</th>
+                            <th>Merchant</th>
+                            <th>Odo Start</th>
+                            <th>Odo Finish</th>
                             <th>Distance (km)</th>
                             <th>Fuel Type</th>
                             <th>Price/L</th>
-                            <th>Volume (L)</th>
+                            <th>Liters</th>
                             <th>Fuel Total</th>
-                            <th>km/L</th>
+                            <th>Lubrication</th>
                             <th>Lube Cost</th>
+                            <th>Tolls</th>
                             <th>Toll Total</th>
                             <th>Grand Total</th>
+                            <th>km/L</th>
                             <th>Cost Center</th>
                             <th>Department</th>
                             <th>Notes</th>
-                            <th>Image</th>
+                            <th>Submission ID</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
                         <tr>
-                            <td colspan="18" style="text-align: center; padding: 50px;">
+                            <td colspan="23" style="text-align: center; padding: 50px;">
                                 <i class="fas fa-spinner fa-pulse"></i> Loading data...
                             </td>
                         </tr>
@@ -756,11 +771,11 @@
     </div>
 
     <script>
-        // Configuration - REPLACE THIS WITH YOUR FUEL ENTRIES APPS SCRIPT URL
+        // Configuration - REPLACE WITH YOUR FUEL LOG APPS SCRIPT URL
         const CONFIG = {
             GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyC3fdEn5UoX-h4ewUaj1eXa3jVVZVUIamAvJPFSiLD6riM2XW4ssg3gkZTQSXgX7lv/exec',
-            SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
-            SHEET_NAME: 'Fuel Entries'
+            SHEET_ID: 'YOUR_SPREADSHEET_ID_HERE',
+            SHEET_NAME: 'Fuel Log'
         };
 
         // Global variables
@@ -853,45 +868,56 @@
             return Number(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
-        // Generate demo data for testing when API is unavailable
+        // Generate demo data matching the new 24-column structure
         function generateDemoData() {
             const vehicles = ['Toyota Hilux - ABC123', 'Nissan NP300 - XYZ789', 'Ford Ranger - DEF456', 'Isuzu KB - GHI789'];
             const drivers = ['John Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown'];
-            const fuelTypes = ['Petrol 95', 'Diesel 50ppm'];
-            const costCenters = ['Logistics', 'Operations', 'Mining'];
-            const departments = ['Fleet', 'Field Services'];
+            const fuelTypes = ['Petrol', 'Diesel'];
+            const merchants = ['Shell', 'Engen', 'Sasol', 'BP', 'Caltex'];
+            const costCenters = ['Onpoint Group HQ', 'DI Solutions', 'Aqua Telecoms', 'Nkanyezi Projects'];
+            const departments = ['Fleet Management', 'Operations', 'Logistics', 'Procurement'];
             
             const entries = [];
             const today = new Date();
             
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 50; i++) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
                 const start = 50000 + Math.floor(Math.random() * 1000);
                 const distance = Math.floor(Math.random() * 300) + 50;
                 const finish = start + distance;
-                const volume = (distance / (Math.random() * 3 + 7)).toFixed(2);
+                const liters = (distance / (Math.random() * 3 + 7)).toFixed(2);
                 const price = (Math.random() * 5 + 20).toFixed(2);
+                const fuelTotal = parseFloat(price) * parseFloat(liters);
+                const lubeCost = Math.random() * 200;
+                const tollTotal = Math.random() * 100;
+                const grandTotal = fuelTotal + lubeCost + tollTotal;
+                const kmPerLiter = (distance / liters).toFixed(2);
                 
                 entries.push({
                     Date: date.toISOString().split('T')[0],
                     Driver: drivers[Math.floor(Math.random() * drivers.length)],
                     Vehicle: vehicles[Math.floor(Math.random() * vehicles.length)],
-                    'Odometer Start (km)': start,
-                    'Odometer Finish (km)': finish,
-                    'Distance (km)': distance,
-                    'Fuel Type': fuelTypes[Math.floor(Math.random() * fuelTypes.length)],
-                    'Price/L (R)': parseFloat(price),
-                    'Fuel Volume (L)': parseFloat(volume),
-                    'Fuel Total (R)': parseFloat(price) * parseFloat(volume),
-                    'km/Liter': (distance / volume).toFixed(2),
-                    'Lube Cost (R)': Math.random() * 200,
-                    'Toll Total (R)': Math.random() * 100,
-                    'Grand Total (R)': parseFloat(price) * parseFloat(volume) + Math.random() * 300,
-                    'Cost Center': costCenters[Math.floor(Math.random() * costCenters.length)],
-                    'Department': departments[Math.floor(Math.random() * departments.length)],
-                    'Notes': 'Regular refuel',
-                    'Image Drive URL': Math.random() > 0.7 ? 'https://drive.google.com' : ''
+                    ERNumber: 'ER' + Math.floor(Math.random() * 10000),
+                    Merchant: merchants[Math.floor(Math.random() * merchants.length)],
+                    OdoStart: start,
+                    OdoFinish: finish,
+                    Distance: distance,
+                    FuelType: fuelTypes[Math.floor(Math.random() * fuelTypes.length)],
+                    PricePerLiter: parseFloat(price),
+                    Liters: parseFloat(liters),
+                    FuelTotal: fuelTotal,
+                    Lubrication: 'Engine Oil - ' + (Math.random() * 5).toFixed(1) + 'L',
+                    LubeCost: lubeCost,
+                    Tolls: 'N3:R' + tollTotal.toFixed(2),
+                    TollTotal: tollTotal,
+                    GrandTotal: grandTotal,
+                    KmPerLiter: parseFloat(kmPerLiter),
+                    CostCenter: costCenters[Math.floor(Math.random() * costCenters.length)],
+                    Department: departments[Math.floor(Math.random() * departments.length)],
+                    Notes: 'Regular refuel',
+                    SubmissionID: 'FUEL-' + Date.now().toString(36).toUpperCase() + i,
+                    Status: 'Completed'
                 });
             }
             return entries;
@@ -901,15 +927,40 @@
         async function loadFuelEntries() {
             setLoading(true);
             try {
-                // For testing purposes, let's first check if the URL is accessible
-                // You can replace this with your actual fuel entries script URL
+                // For testing with the new script, we'll use a GET request with action parameter
                 const testUrl = `${CONFIG.GOOGLE_SCRIPT_URL}?action=getEntries`;
                 
                 const response = await fetch(testUrl);
                 const data = await response.json();
                 
                 if (data.success) {
-                    allEntries = data.data || [];
+                    // Map the data to match our internal structure
+                    allEntries = (data.data || []).map(entry => ({
+                        Date: entry.Date || '',
+                        Driver: entry.Driver || '',
+                        Vehicle: entry.Vehicle || '',
+                        ERNumber: entry.ERNumber || entry['ER Number'] || '',
+                        Merchant: entry.Merchant || '',
+                        OdoStart: parseFloat(entry.OdoStart || entry['Odo Start'] || 0),
+                        OdoFinish: parseFloat(entry.OdoFinish || entry['Odo Finish'] || 0),
+                        Distance: parseFloat(entry.KMTraveled || entry['KM Traveled'] || 0),
+                        FuelType: entry.FuelType || entry['Fuel Type'] || '',
+                        PricePerLiter: parseFloat(entry.PricePerLiter || entry['Price/L'] || 0),
+                        Liters: parseFloat(entry.Liters || entry['Fuel Volume (L)'] || 0),
+                        FuelTotal: parseFloat(entry.FuelTotal || entry['Fuel Total'] || 0),
+                        Lubrication: entry.Lubrication || '',
+                        LubeCost: parseFloat(entry.LubeCost || entry['Lube Cost'] || 0),
+                        Tolls: entry.Tolls || '',
+                        TollTotal: parseFloat(entry.TollTotal || entry['Toll Total'] || 0),
+                        GrandTotal: parseFloat(entry.GrandTotal || entry['Grand Total'] || 0),
+                        KmPerLiter: parseFloat(entry.KmPerLiter || entry['KM/Liter'] || 0),
+                        CostCenter: entry.CostCenter || entry['Cost Center'] || '',
+                        Department: entry.Department || '',
+                        Notes: entry.Notes || '',
+                        SubmissionID: entry.SubmissionID || entry['Submission ID'] || '',
+                        Status: entry.Status || 'Completed'
+                    }));
+                    
                     filteredEntries = [...allEntries];
                     document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
                     
@@ -918,17 +969,7 @@
                     updateSyncStatus('online');
                     showNotification(`Loaded ${allEntries.length} fuel entries`, 'success');
                 } else {
-                    // If API returns error but has data property, use it
-                    if (data.data) {
-                        allEntries = data.data;
-                        filteredEntries = [...allEntries];
-                        populateFilters();
-                        updateDashboard();
-                        updateSyncStatus('online');
-                        showNotification(`Loaded ${allEntries.length} fuel entries`, 'success');
-                    } else {
-                        throw new Error(data.error || 'Unknown error');
-                    }
+                    throw new Error(data.error || 'Unknown error');
                 }
             } catch (error) {
                 console.error('Error loading fuel entries:', error);
@@ -948,18 +989,25 @@
 
         // Populate filter dropdowns from actual data
         function populateFilters() {
-            const costCenters = [...new Set(allEntries.map(e => e['Cost Center']).filter(cc => cc))];
-            const departments = [...new Set(allEntries.map(e => e['Department']).filter(d => d))];
-            const fuelTypes = [...new Set(allEntries.map(e => e['Fuel Type']).filter(f => f))];
+            const merchants = [...new Set(allEntries.map(e => e.Merchant).filter(m => m))];
+            const costCenters = [...new Set(allEntries.map(e => e.CostCenter).filter(cc => cc))];
+            const departments = [...new Set(allEntries.map(e => e.Department).filter(d => d))];
+            const fuelTypes = [...new Set(allEntries.map(e => e.FuelType).filter(f => f))];
             
+            const merchantFilter = document.getElementById('merchantFilter');
             const costFilter = document.getElementById('costCenterFilter');
             const deptFilter = document.getElementById('departmentFilter');
             const fuelFilter = document.getElementById('fuelTypeFilter');
             
             // Clear existing options except 'all'
+            merchantFilter.innerHTML = '<option value="all">All Merchants</option>';
             costFilter.innerHTML = '<option value="all">All Cost Centers</option>';
             deptFilter.innerHTML = '<option value="all">All Departments</option>';
             fuelFilter.innerHTML = '<option value="all">All Types</option>';
+            
+            merchants.forEach(m => {
+                merchantFilter.innerHTML += `<option value="${m}">${m}</option>`;
+            });
             
             costCenters.forEach(cc => {
                 costFilter.innerHTML += `<option value="${cc}">${cc}</option>`;
@@ -980,6 +1028,8 @@
             const endDate = document.getElementById('endDate').value;
             const driver = document.getElementById('driverFilter').value.toLowerCase().trim();
             const vehicle = document.getElementById('vehicleFilter').value.toLowerCase().trim();
+            const erNumber = document.getElementById('erNumberFilter').value.toLowerCase().trim();
+            const merchant = document.getElementById('merchantFilter').value;
             const costCenter = document.getElementById('costCenterFilter').value;
             const department = document.getElementById('departmentFilter').value;
             const fuelType = document.getElementById('fuelTypeFilter').value;
@@ -1006,11 +1056,19 @@
                     matchesVehicle = entryVehicle.includes(vehicle);
                 }
                 
-                const matchesCost = costCenter === 'all' || !costCenter || entry['Cost Center'] === costCenter;
-                const matchesDept = department === 'all' || !department || entry['Department'] === department;
-                const matchesFuel = fuelType === 'all' || !fuelType || entry['Fuel Type'] === fuelType;
+                // ER Number filtering
+                let matchesER = true;
+                if (erNumber) {
+                    const entryER = (entry.ERNumber || '').toLowerCase();
+                    matchesER = entryER.includes(erNumber);
+                }
                 
-                return matchesDate && matchesDriver && matchesVehicle && matchesCost && matchesDept && matchesFuel;
+                const matchesMerchant = merchant === 'all' || !merchant || entry.Merchant === merchant;
+                const matchesCost = costCenter === 'all' || !costCenter || entry.CostCenter === costCenter;
+                const matchesDept = department === 'all' || !department || entry.Department === department;
+                const matchesFuel = fuelType === 'all' || !fuelType || entry.FuelType === fuelType;
+                
+                return matchesDate && matchesDriver && matchesVehicle && matchesER && matchesMerchant && matchesCost && matchesDept && matchesFuel;
             });
             
             document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
@@ -1022,6 +1080,8 @@
             setDefaultDates();
             document.getElementById('driverFilter').value = '';
             document.getElementById('vehicleFilter').value = '';
+            document.getElementById('erNumberFilter').value = '';
+            document.getElementById('merchantFilter').value = 'all';
             document.getElementById('costCenterFilter').value = 'all';
             document.getElementById('departmentFilter').value = 'all';
             document.getElementById('fuelTypeFilter').value = 'all';
@@ -1040,7 +1100,6 @@
         async function checkLimits() {
             setLoading(true);
             try {
-                // For demo, calculate locally
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
@@ -1050,11 +1109,10 @@
                     return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
                 });
                 
-                const monthlyTotal = monthEntries.reduce((sum, e) => sum + (parseFloat(e['Grand Total (R)']) || 0), 0);
-                const monthlyVolume = monthEntries.reduce((sum, e) => sum + (parseFloat(e['Fuel Volume (L)']) || 0), 0);
-                const avgKmPerLiter = monthEntries.length > 0 
-                    ? monthEntries.reduce((sum, e) => sum + (parseFloat(e['km/Liter']) || 0), 0) / monthEntries.length 
-                    : 0;
+                const monthlyTotal = monthEntries.reduce((sum, e) => sum + (e.GrandTotal || 0), 0);
+                const monthlyVolume = monthEntries.reduce((sum, e) => sum + (e.Liters || 0), 0);
+                const totalDistance = monthEntries.reduce((sum, e) => sum + (e.Distance || 0), 0);
+                const avgKmPerLiter = monthlyVolume > 0 ? totalDistance / monthlyVolume : 0;
                 
                 const issues = [];
                 
@@ -1143,12 +1201,12 @@
         }
 
         function updateKPIs() {
-            const totalFuel = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Fuel Total (R)']) || 0), 0);
-            const totalLube = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Lube Cost (R)']) || 0), 0);
-            const totalToll = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Toll Total (R)']) || 0), 0);
-            const totalGrand = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Grand Total (R)']) || 0), 0);
-            const totalVolume = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Fuel Volume (L)']) || 0), 0);
-            const totalDistance = filteredEntries.reduce((sum, e) => sum + (parseFloat(e['Distance (km)']) || 0), 0);
+            const totalFuel = filteredEntries.reduce((sum, e) => sum + (e.FuelTotal || 0), 0);
+            const totalLube = filteredEntries.reduce((sum, e) => sum + (e.LubeCost || 0), 0);
+            const totalToll = filteredEntries.reduce((sum, e) => sum + (e.TollTotal || 0), 0);
+            const totalGrand = filteredEntries.reduce((sum, e) => sum + (e.GrandTotal || 0), 0);
+            const totalVolume = filteredEntries.reduce((sum, e) => sum + (e.Liters || 0), 0);
+            const totalDistance = filteredEntries.reduce((sum, e) => sum + (e.Distance || 0), 0);
             const avgEfficiency = totalVolume > 0 ? (totalDistance / totalVolume).toFixed(2) : 0;
             
             document.getElementById('kpiCards').innerHTML = `
@@ -1197,8 +1255,8 @@
             const recent = sorted.slice(-30);
             
             const dates = recent.map(e => e.Date);
-            const fuelTotals = recent.map(e => parseFloat(e['Fuel Total (R)']) || 0);
-            const volumes = recent.map(e => parseFloat(e['Fuel Volume (L)']) || 0);
+            const fuelTotals = recent.map(e => e.FuelTotal || 0);
+            const volumes = recent.map(e => e.Liters || 0);
 
             fuelTrendChart = new Chart(ctx1, {
                 type: 'line',
@@ -1261,7 +1319,7 @@
             const vehicles = {};
             filteredEntries.forEach(e => {
                 const vehicle = e.Vehicle || 'Unknown';
-                vehicles[vehicle] = (vehicles[vehicle] || 0) + (parseFloat(e['Fuel Total (R)']) || 0);
+                vehicles[vehicle] = (vehicles[vehicle] || 0) + (e.FuelTotal || 0);
             });
             
             const vehicleLabels = Object.keys(vehicles).slice(0, 8);
@@ -1300,13 +1358,13 @@
             tbody.innerHTML = '';
             
             if (filteredEntries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="18" style="text-align: center; padding: 50px;">No fuel entries found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="23" style="text-align: center; padding: 50px;">No fuel entries found</td></tr>';
                 return;
             }
             
             filteredEntries.slice(0, 100).forEach(entry => {
                 const row = tbody.insertRow();
-                const efficiency = parseFloat(entry['km/Liter']) || 0;
+                const efficiency = entry.KmPerLiter || 0;
                 
                 if (efficiency < fuelLimits.kmPerLiter && efficiency > 0) {
                     row.classList.add('exceed-limit');
@@ -1316,28 +1374,28 @@
                     <td>${entry.Date || ''}</td>
                     <td>${entry.Driver || ''}</td>
                     <td>${entry.Vehicle || ''}</td>
-                    <td>${entry['Odometer Start (km)'] || ''}</td>
-                    <td>${entry['Odometer Finish (km)'] || ''}</td>
-                    <td>${entry['Distance (km)'] || ''}</td>
-                    <td>${entry['Fuel Type'] || ''}</td>
-                    <td>R ${parseFloat(entry['Price/L (R)'] || 0).toFixed(2)}</td>
-                    <td>${parseFloat(entry['Fuel Volume (L)'] || 0).toFixed(2)} L</td>
-                    <td>R ${parseFloat(entry['Fuel Total (R)'] || 0).toFixed(2)}</td>
+                    <td>${entry.ERNumber || ''}</td>
+                    <td>${entry.Merchant || ''}</td>
+                    <td>${entry.OdoStart || ''}</td>
+                    <td>${entry.OdoFinish || ''}</td>
+                    <td>${entry.Distance ? entry.Distance.toFixed(1) : ''}</td>
+                    <td>${entry.FuelType || ''}</td>
+                    <td>R ${(entry.PricePerLiter || 0).toFixed(2)}</td>
+                    <td>${(entry.Liters || 0).toFixed(2)} L</td>
+                    <td>R ${(entry.FuelTotal || 0).toFixed(2)}</td>
+                    <td>${entry.Lubrication || ''}</td>
+                    <td>R ${(entry.LubeCost || 0).toFixed(2)}</td>
+                    <td>${entry.Tolls || ''}</td>
+                    <td>R ${(entry.TollTotal || 0).toFixed(2)}</td>
+                    <td><strong>R ${(entry.GrandTotal || 0).toFixed(2)}</strong></td>
                     <td class="${efficiency >= fuelLimits.kmPerLiter ? 'fuel-efficient' : 'fuel-inefficient'}">
                         ${efficiency > 0 ? efficiency.toFixed(2) : '0.00'} km/L
                     </td>
-                    <td>R ${parseFloat(entry['Lube Cost (R)'] || 0).toFixed(2)}</td>
-                    <td>R ${parseFloat(entry['Toll Total (R)'] || 0).toFixed(2)}</td>
-                    <td><strong>R ${parseFloat(entry['Grand Total (R)'] || 0).toFixed(2)}</strong></td>
-                    <td>${entry['Cost Center'] || ''}</td>
-                    <td>${entry['Department'] || ''}</td>
-                    <td>${entry['Notes'] || ''}</td>
-                    <td>
-                        ${entry['Image Drive URL'] ? 
-                            `<a href="${entry['Image Drive URL']}" target="_blank" class="view-image"><i class="fas fa-image"></i> View</a>` : 
-                            'No image'
-                        }
-                    </td>
+                    <td>${entry.CostCenter || ''}</td>
+                    <td>${entry.Department || ''}</td>
+                    <td>${entry.Notes || ''}</td>
+                    <td>${entry.SubmissionID || ''}</td>
+                    <td>${entry.Status || ''}</td>
                 `;
             });
         }
@@ -1356,25 +1414,36 @@
                 return;
             }
             
-            const headers = ['Date', 'Driver', 'Vehicle', 'Odometer Start', 'Odometer Finish', 'Distance', 'Fuel Type', 'Price/L', 'Volume', 'Fuel Total', 'km/L', 'Lube Cost', 'Toll Total', 'Grand Total', 'Cost Center', 'Department', 'Notes'];
+            const headers = [
+                'Date', 'Driver', 'Vehicle', 'ER Number', 'Merchant', 'Odo Start', 'Odo Finish', 'Distance',
+                'Fuel Type', 'Price/L', 'Liters', 'Fuel Total', 'Lubrication', 'Lube Cost', 'Tolls',
+                'Toll Total', 'Grand Total', 'km/L', 'Cost Center', 'Department', 'Notes', 'Submission ID', 'Status'
+            ];
+            
             const rows = filteredEntries.map(e => [
                 e.Date,
                 e.Driver,
                 e.Vehicle,
-                e['Odometer Start (km)'],
-                e['Odometer Finish (km)'],
-                e['Distance (km)'],
-                e['Fuel Type'],
-                e['Price/L (R)'],
-                e['Fuel Volume (L)'],
-                e['Fuel Total (R)'],
-                e['km/Liter'],
-                e['Lube Cost (R)'],
-                e['Toll Total (R)'],
-                e['Grand Total (R)'],
-                e['Cost Center'],
-                e['Department'],
-                e['Notes']
+                e.ERNumber,
+                e.Merchant,
+                e.OdoStart,
+                e.OdoFinish,
+                e.Distance,
+                e.FuelType,
+                e.PricePerLiter,
+                e.Liters,
+                e.FuelTotal,
+                e.Lubrication,
+                e.LubeCost,
+                e.Tolls,
+                e.TollTotal,
+                e.GrandTotal,
+                e.KmPerLiter,
+                e.CostCenter,
+                e.Department,
+                e.Notes,
+                e.SubmissionID,
+                e.Status
             ]);
             
             const csvContent = [headers, ...rows]
