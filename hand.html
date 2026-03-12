@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Handover Dashboard | OnPoint Fleet</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    
+    <!-- Moment.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Floating Background Animation */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.1"><path d="M10 50 Q 30 30, 50 50 T 90 50" stroke="white" fill="none" stroke-width="2"/><circle cx="20" cy="40" r="3" fill="white"/><circle cx="80" cy="60" r="3" fill="white"/></svg>');
+            background-size: 100px 100px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 30px;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .header-title h1 {
+            font-size: 24px;
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .header-title p {
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .sync-status {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(225, 29, 72, 0.3);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(225, 29, 72, 0.4);
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .kpi-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .kpi-header i {
+            font-size: 32px;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 10px;
+            border-radius: 15px;
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .kpi-trend {
+            font-size: 13px;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Filters Section */
+        .filters-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .filters-header h3 {
+            font-size: 18px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .record-count {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            position: relative;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #eef2f6;
+            border-radius: 15px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .date-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .date-range input {
+            flex: 1;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #eef2f6;
+            color: #555;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Charts Row */
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-header h4 {
+            font-size: 16px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 250px !important;
+        }
+
+        /* Table Section */
+        .table-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.5);
+            margin-bottom: 25px;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .table-header h2 {
+            font-size: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* DataTables Customization */
+        .dataTables_wrapper {
+            padding: 20px 0;
+        }
+
+        table.dataTable {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+
+        table.dataTable thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        table.dataTable tbody td {
+            padding: 15px;
+            background: white;
+            border-bottom: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        table.dataTable tbody tr:hover td {
+            background: #f8fafc;
+        }
+
+        /* Image Gallery Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .modal-image {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 10px;
+            border: 3px solid white;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Image Gallery */
+        .image-gallery {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .image-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid #eef2f6;
+            transition: all 0.3s;
+        }
+
+        .image-thumb:hover {
+            transform: scale(1.1);
+            border-color: #667eea;
+        }
+
+        .no-image {
+            color: #999;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        /* Status Badges */
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-handover {
+            background: #667eea;
+            color: white;
+        }
+
+        .badge-takeover {
+            background: #10b981;
+            color: white;
+        }
+
+        .badge-damage {
+            background: #f43f5e;
+            color: white;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 4000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .notification.error {
+            border-left: 4px solid #f43f5e;
+        }
+
+        .notification.info {
+            border-left: 4px solid #667eea;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .date-range {
+                flex-direction: column;
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .header-actions {
+                width: 100%;
+                flex-direction: column;
+            }
+            
+            .sync-status,
+            .logout-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .filters-section,
+            .charts-row,
+            .table-actions,
+            .logout-btn,
+            .sync-status,
+            .btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div style="color: #333; font-weight: 600;">Loading dashboard data...</div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <i class="fas fa-check-circle" id="notificationIcon"></i>
+        <span id="notificationMessage">Notification</span>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fas fa-truck"></i>
+                </div>
+                <div class="header-title">
+                    <h1>Vehicle Handover Dashboard</h1>
+                    <p>
+                        <i class="fas fa-map-marker-alt" style="color: #667eea;"></i>
+                        OnPoint OnTime Fleet Solutions
+                        <i class="fas fa-circle" style="font-size: 6px; margin: 0 8px;"></i>
+                        <span id="lastUpdate">Loading...</span>
+                    </p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="sync-status" id="syncStatus">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Connected</span>
+                </div>
+                <a href="index.html" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpiCards">
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Loading</span>
+                    <i class="fas fa-spinner fa-pulse"></i>
+                </div>
+                <div class="kpi-value">...</div>
+                <div class="kpi-trend">Please wait</div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="filters-header">
+                <h3>
+                    <i class="fas fa-filter" style="color: #667eea;"></i>
+                    Search & Filter Handovers
+                </h3>
+                <span class="record-count" id="recordCount">0 records</span>
+            </div>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label><i class="fas fa-calendar"></i> Date Range</label>
+                    <div class="date-range">
+                        <input type="date" id="startDate" placeholder="Start Date">
+                        <span>to</span>
+                        <input type="date" id="endDate" placeholder="End Date">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-user"></i> Employee Name</label>
+                    <input type="text" id="employeeFilter" placeholder="Search by employee...">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-id-card"></i> Employee Number</label>
+                    <input type="text" id="empNumberFilter" placeholder="Search by employee #...">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-truck"></i> Vehicle Reg</label>
+                    <input type="text" id="vehicleFilter" placeholder="Search by registration...">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-building"></i> Department</label>
+                    <select id="departmentFilter">
+                        <option value="all">All Departments</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-gas-pump"></i> Handover Type</label>
+                    <select id="typeFilter">
+                        <option value="all">All Types</option>
+                        <option value="Handover">Handover</option>
+                        <option value="Takeover">Takeover</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-secondary" onclick="resetFilters()">
+                    <i class="fas fa-undo"></i> Reset
+                </button>
+                <button class="btn btn-primary" onclick="applyFilters()">
+                    <i class="fas fa-search"></i> Apply Filters
+                </button>
+                <button class="btn btn-success" onclick="exportToExcel()">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </button>
+                <button class="btn btn-primary" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h4><i class="fas fa-chart-pie" style="color: #667eea;"></i> Handovers by Department</h4>
+                    <button class="btn btn-secondary" style="padding: 5px 10px;" onclick="exportChart('deptChart', 'dept_handovers')">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+                <canvas id="deptChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h4><i class="fas fa-chart-line" style="color: #667eea;"></i> Weekly Handover Trend</h4>
+                    <button class="btn btn-secondary" style="padding: 5px 10px;" onclick="exportChart('trendChart', 'handover_trend')">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="table-section">
+            <div class="table-header">
+                <h2>
+                    <i class="fas fa-clipboard-list" style="color: #667eea;"></i>
+                    Vehicle Handover Records
+                </h2>
+                <div class="table-actions">
+                    <button class="btn btn-secondary" onclick="printTable()">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+            
+            <table id="handoverTable" class="display responsive nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Submission ID</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Employee Name</th>
+                        <th>Employee #</th>
+                        <th>ID Number</th>
+                        <th>Department</th>
+                        <th>Vehicle Reg</th>
+                        <th>Model</th>
+                        <th>Mileage</th>
+                        <th>Service Due</th>
+                        <th>Type</th>
+                        <th>Fuel Level</th>
+                        <th>Checklist</th>
+                        <th>Damage Desc</th>
+                        <th>Damage Location</th>
+                        <th>Additional Notes</th>
+                        <th>Photos</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="18" style="text-align: center; padding: 50px;">
+                            <i class="fas fa-spinner fa-pulse"></i> Loading data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbxmNtnvgbjnWTCLV8vxy0Nk2kYG4rg4yeUjiZYtoScv8j8PwMpVwsR3M_Gubl5m6G0g-Q/exec', // Replace with your deployed URL
+            SHEET_ID: '1vBDeyPBy3LLYg0EM2OFgceI3deVFhXL2Nr-IpdveZoU',
+            SHEET_NAME: 'Vehicle Handovers',
+            DRIVE_FOLDER_ID: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
+        };
+
+        // Global variables
+        let allHandovers = [];
+        let filteredHandovers = [];
+        let deptChart, trendChart;
+        let dataTable;
+
+        // Initialize
+        window.onload = function() {
+            setDefaultDates();
+            testConnection();
+        };
+
+        function setDefaultDates() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            document.getElementById('startDate').value = formatDateForInput(firstDay);
+            document.getElementById('endDate').value = formatDateForInput(lastDay);
+        }
+
+        function formatDateForInput(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notificationIcon');
+            const messageEl = document.getElementById('notificationMessage');
+            
+            icon.className = type === 'success' ? 'fas fa-check-circle' : 
+                            type === 'error' ? 'fas fa-exclamation-circle' : 
+                            'fas fa-info-circle';
+            
+            notification.className = `notification ${type}`;
+            messageEl.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function setLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function updateSyncStatus(status, message) {
+            const syncEl = document.getElementById('syncStatus');
+            syncEl.innerHTML = status === 'online' 
+                ? '<i class="fas fa-cloud-upload-alt"></i> <span>Connected</span>'
+                : '<i class="fas fa-cloud-offline"></i> <span>Offline</span>';
+            
+            document.getElementById('lastUpdate').innerHTML = message || new Date().toLocaleString();
+        }
+
+        // Test connection
+        async function testConnection() {
+            setLoading(true);
+            try {
+                const response = await fetch(`${CONFIG.GAS_URL}?action=test&_=${Date.now()}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateSyncStatus('online', 'Connected to Google Sheets');
+                    loadHandovers();
+                } else {
+                    throw new Error('Connection failed');
+                }
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                updateSyncStatus('offline', 'Using demo data');
+                showNotification('Using demo data - check connection', 'warning');
+                generateDemoData();
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Load handovers from Google Sheets
+        async function loadHandovers() {
+            try {
+                const response = await fetch(`${CONFIG.GAS_URL}?action=getHandovers&_=${Date.now()}`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    allHandovers = data.data;
+                    filteredHandovers = [...allHandovers];
+                    
+                    document.getElementById('recordCount').innerHTML = `${allHandovers.length} records`;
+                    
+                    populateFilters();
+                    updateDashboard();
+                    showNotification(`Loaded ${allHandovers.length} handover records`, 'success');
+                } else {
+                    throw new Error(data.error || 'No data received');
+                }
+            } catch (error) {
+                console.error('Error loading handovers:', error);
+                showNotification('Error loading data. Using demo data.', 'error');
+                generateDemoData();
+            }
+        }
+
+        // Generate demo data
+        function generateDemoData() {
+            const departments = ['Logistics', 'Sales', 'Management', 'Maintenance', 'Operations'];
+            const vehicles = ['CA 123-456', 'CY 789-012', 'FJ 345-678', 'GP 901-234', 'KZN 567-890'];
+            const employees = ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown'];
+            
+            allHandovers = [];
+            
+            for (let i = 0; i < 30; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const handoverType = i % 2 === 0 ? 'Handover' : 'Takeover';
+                
+                allHandovers.push({
+                    submissionId: `HND-${Date.now()}-${i}`,
+                    timestamp: date.toISOString(),
+                    date: date.toISOString().split('T')[0],
+                    time: `${String(8 + i % 10).padStart(2, '0')}:${String(i * 3 % 60).padStart(2, '0')}`,
+                    employeeName: employees[i % employees.length],
+                    employeeNumber: `EMP${String(100 + i).padStart(3, '0')}`,
+                    idNumber: `900101 ${String(5000 + i).padStart(4, '0')} 089`,
+                    department: departments[i % departments.length],
+                    vehicleReg: vehicles[i % vehicles.length],
+                    vehicleModel: 'Toyota Hilux 2023',
+                    mileage: 45000 + i * 100,
+                    serviceDue: '50000 km',
+                    handoverType: handoverType,
+                    fuelLevel: ['Empty', '1/4', '1/2', '3/4', 'Full'][i % 5],
+                    checklistItems: 'Keys, License Disk, Spare Tire, Jack',
+                    damageDescription: i % 3 === 0 ? 'Small scratch on front bumper' : 'None',
+                    damageLocation: i % 3 === 0 ? 'Front Bumper' : 'N/A',
+                    additionalNotes: i % 4 === 0 ? 'Please check tire pressure' : 'None',
+                    photoLinks: i % 3 === 0 ? 'demo_photo.jpg' : '',
+                    folderId: 'demo-folder-id'
+                });
+            }
+            
+            filteredHandovers = [...allHandovers];
+            document.getElementById('recordCount').innerHTML = `${allHandovers.length} records (Demo)`;
+            populateFilters();
+            updateDashboard();
+        }
+
+        // Populate filter dropdowns
+        function populateFilters() {
+            const departments = [...new Set(allHandovers.map(h => h.department).filter(d => d))];
+            const deptFilter = document.getElementById('departmentFilter');
+            
+            deptFilter.innerHTML = '<option value="all">All Departments</option>';
+            departments.sort().forEach(dept => {
+                deptFilter.innerHTML += `<option value="${dept}">${dept}</option>`;
+            });
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const employee = document.getElementById('employeeFilter').value.toLowerCase();
+            const empNumber = document.getElementById('empNumberFilter').value.toLowerCase();
+            const vehicle = document.getElementById('vehicleFilter').value.toLowerCase();
+            const department = document.getElementById('departmentFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            
+            filteredHandovers = allHandovers.filter(h => {
+                let match = true;
+                
+                if (startDate && endDate) {
+                    match = match && h.date >= startDate && h.date <= endDate;
+                }
+                if (employee) {
+                    match = match && (h.employeeName || '').toLowerCase().includes(employee);
+                }
+                if (empNumber) {
+                    match = match && (h.employeeNumber || '').toLowerCase().includes(empNumber);
+                }
+                if (vehicle) {
+                    match = match && (h.vehicleReg || '').toLowerCase().includes(vehicle);
+                }
+                if (department !== 'all') {
+                    match = match && h.department === department;
+                }
+                if (type !== 'all') {
+                    match = match && h.handoverType === type;
+                }
+                
+                return match;
+            });
+            
+            document.getElementById('recordCount').innerHTML = `${filteredHandovers.length} records`;
+            updateDashboard();
+            showNotification(`Found ${filteredHandovers.length} records`, 'success');
+        }
+
+        function resetFilters() {
+            setDefaultDates();
+            document.getElementById('employeeFilter').value = '';
+            document.getElementById('empNumberFilter').value = '';
+            document.getElementById('vehicleFilter').value = '';
+            document.getElementById('departmentFilter').value = 'all';
+            document.getElementById('typeFilter').value = 'all';
+            
+            filteredHandovers = [...allHandovers];
+            document.getElementById('recordCount').innerHTML = `${filteredHandovers.length} records`;
+            updateDashboard();
+            showNotification('Filters reset', 'info');
+        }
+
+        function refreshData() {
+            setLoading(true);
+            setTimeout(() => {
+                loadHandovers();
+            }, 500);
+        }
+
+        // Update dashboard
+        function updateDashboard() {
+            updateKPIs();
+            updateCharts();
+            updateTable();
+        }
+
+        function updateKPIs() {
+            const total = filteredHandovers.length;
+            const handovers = filteredHandovers.filter(h => h.handoverType === 'Handover').length;
+            const takeovers = filteredHandovers.filter(h => h.handoverType === 'Takeover').length;
+            const withDamage = filteredHandovers.filter(h => h.damageDescription && h.damageDescription !== 'None').length;
+            
+            const totalMileage = filteredHandovers.reduce((sum, h) => sum + (parseInt(h.mileage) || 0), 0);
+            const avgMileage = total > 0 ? Math.round(totalMileage / total) : 0;
+            
+            document.getElementById('kpiCards').innerHTML = `
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Total Handovers</span>
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="kpi-value">${total}</div>
+                    <div class="kpi-trend"><i class="fas fa-chart-line"></i> All time</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Handovers</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                    <div class="kpi-value">${handovers}</div>
+                    <div class="kpi-trend">${total ? ((handovers/total)*100).toFixed(1) : 0}% of total</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Takeovers</span>
+                        <i class="fas fa-arrow-left"></i>
+                    </div>
+                    <div class="kpi-value">${takeovers}</div>
+                    <div class="kpi-trend">${total ? ((takeovers/total)*100).toFixed(1) : 0}% of total</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Damage Reports</span>
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="kpi-value">${withDamage}</div>
+                    <div class="kpi-trend">${total ? ((withDamage/total)*100).toFixed(1) : 0}% of vehicles</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Avg Mileage</span>
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <div class="kpi-value">${avgMileage.toLocaleString()}</div>
+                    <div class="kpi-trend">km per vehicle</div>
+                </div>
+            `;
+        }
+
+        function updateCharts() {
+            // Department Chart
+            const deptCtx = document.getElementById('deptChart').getContext('2d');
+            if (deptChart) deptChart.destroy();
+            
+            const deptCounts = {};
+            filteredHandovers.forEach(h => {
+                const dept = h.department || 'Unknown';
+                deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+            });
+            
+            deptChart = new Chart(deptCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(deptCounts),
+                    datasets: [{
+                        data: Object.values(deptCounts),
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f43f5e', '#10b981', '#f59e0b', '#6366f1'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // Trend Chart
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            if (trendChart) trendChart.destroy();
+            
+            const last7Days = [];
+            const handoverCounts = [];
+            const takeoverCounts = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                last7Days.push(dateStr.substring(5));
+                
+                const dayHandovers = filteredHandovers.filter(h => 
+                    h.date === dateStr && h.handoverType === 'Handover'
+                ).length;
+                const dayTakeovers = filteredHandovers.filter(h => 
+                    h.date === dateStr && h.handoverType === 'Takeover'
+                ).length;
+                
+                handoverCounts.push(dayHandovers);
+                takeoverCounts.push(dayTakeovers);
+            }
+            
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: last7Days,
+                    datasets: [
+                        {
+                            label: 'Handovers',
+                            data: handoverCounts,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Takeovers',
+                            data: takeoverCounts,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, stepSize: 1 } }
+                }
+            });
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            
+            if (filteredHandovers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="18" style="text-align: center; padding: 50px;">No handover records found</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            filteredHandovers.slice(0, 100).forEach(h => {
+                const photoLinks = h.photoLinks ? h.photoLinks.split(',').filter(p => p) : [];
+                
+                html += `
+                    <tr>
+                        <td><small>${h.submissionId || 'N/A'}</small></td>
+                        <td>${h.date || ''}</td>
+                        <td>${h.time || ''}</td>
+                        <td><strong>${h.employeeName || ''}</strong></td>
+                        <td>${h.employeeNumber || ''}</td>
+                        <td><small>${h.idNumber || ''}</small></td>
+                        <td>${h.department || ''}</td>
+                        <td><span class="badge" style="background: #667eea20; color: #667eea;">${h.vehicleReg || ''}</span></td>
+                        <td>${h.vehicleModel || ''}</td>
+                        <td>${h.mileage ? Number(h.mileage).toLocaleString() : ''}</td>
+                        <td>${h.serviceDue || ''}</td>
+                        <td><span class="badge ${h.handoverType === 'Handover' ? 'badge-handover' : 'badge-takeover'}">${h.handoverType || ''}</span></td>
+                        <td>${h.fuelLevel || ''}</td>
+                        <td><small title="${h.checklistItems || ''}">${(h.checklistItems || '').substring(0, 20)}${h.checklistItems && h.checklistItems.length > 20 ? '...' : ''}</small></td>
+                        <td><small title="${h.damageDescription || ''}">${(h.damageDescription || '').substring(0, 20)}${h.damageDescription && h.damageDescription.length > 20 ? '...' : ''}</small></td>
+                        <td>${h.damageLocation || ''}</td>
+                        <td><small title="${h.additionalNotes || ''}">${(h.additionalNotes || '').substring(0, 20)}${h.additionalNotes && h.additionalNotes.length > 20 ? '...' : ''}</small></td>
+                        <td>
+                            <div class="image-gallery">
+                                ${photoLinks.length > 0 ? 
+                                    photoLinks.map((link, idx) => 
+                                        `<img src="${link}" class="image-thumb" onclick="showImage('${link}')" title="Photo ${idx+1}">`
+                                    ).join('') :
+                                    '<span class="no-image">No photos</span>'
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+
+        // Image modal functions
+        function showImage(url) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            
+            if (url.includes('drive.google.com')) {
+                const fileId = url.match(/[-\w]{25,}/);
+                if (fileId) {
+                    url = `https://drive.google.com/uc?export=view&id=${fileId[0]}`;
+                }
+            }
+            
+            modalImg.src = url;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        // Export functions
+        function exportToExcel() {
+            if (filteredHandovers.length === 0) {
+                showNotification('No data to export', 'error');
+                return;
+            }
+            
+            const headers = [
+                'Submission ID', 'Date', 'Time', 'Employee Name', 'Employee Number', 'ID Number',
+                'Department', 'Vehicle Registration', 'Vehicle Model', 'Mileage', 'Service Due',
+                'Handover Type', 'Fuel Level', 'Checklist Items', 'Damage Description',
+                'Damage Location', 'Additional Notes', 'Photo Links', 'Folder ID'
+            ];
+            
+            const rows = filteredHandovers.map(h => [
+                h.submissionId, h.date, h.time, h.employeeName, h.employeeNumber, h.idNumber,
+                h.department, h.vehicleReg, h.vehicleModel, h.mileage, h.serviceDue,
+                h.handoverType, h.fuelLevel, h.checklistItems, h.damageDescription,
+                h.damageLocation, h.additionalNotes, h.photoLinks, h.folderId
+            ]);
+            
+            const csv = [headers, ...rows].map(row => 
+                row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')
+            ).join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `handovers_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Export completed', 'success');
+        }
+
+        function exportChart(chartId, filename) {
+            const canvas = document.getElementById(chartId);
+            const link = document.createElement('a');
+            link.download = `${filename}_${new Date().toISOString().split('T')[0]}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function printTable() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
