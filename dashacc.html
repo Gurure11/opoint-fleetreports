@@ -223,7 +223,7 @@
 
         .filter-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
         }
 
@@ -233,6 +233,11 @@
             gap: 8px;
         }
 
+        /* Special styling for the date range group */
+        .filter-group.date-range-group {
+            grid-column: span 1;
+        }
+
         .filter-group label {
             font-weight: 600;
             font-size: 13px;
@@ -240,6 +245,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            white-space: nowrap;
         }
 
         .filter-group label i {
@@ -253,10 +259,31 @@
             border-radius: 15px;
             font-size: 14px;
             outline: none;
+            width: 100%;
         }
 
         .filter-group input:focus, .filter-group select:focus {
             border-color: #0b2b5c;
+        }
+
+        /* Date range container styling */
+        .date-range-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .date-range-container input[type="date"] {
+            flex: 1;
+            min-width: 0; /* Prevents flex items from overflowing */
+            padding: 12px 10px;
+        }
+
+        .date-range-container span {
+            color: #6c757d;
+            font-weight: 500;
+            white-space: nowrap;
         }
 
         .filter-actions {
@@ -470,6 +497,28 @@
         .notification.success { border-left: 4px solid #28a745; }
         .notification.error { border-left: 4px solid #dc3545; }
         .notification.warning { border-left: 4px solid #ffc107; }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .filter-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .date-range-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .date-range-container span {
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -536,9 +585,9 @@
             <div class="filter-grid">
                 <div class="filter-group">
                     <label><i class="fas fa-calendar"></i> Date Range</label>
-                    <div style="display: flex; gap: 5px;">
+                    <div class="date-range-container">
                         <input type="date" id="startDate">
-                        <span style="align-self: center;">to</span>
+                        <span>to</span>
                         <input type="date" id="endDate">
                     </div>
                 </div>
@@ -624,12 +673,9 @@
     </div>
 
     <script>
-        // CONFIGURATION - IMPORTANT: Replace with your actual deployed URL
+        // CONFIGURATION - UPDATED WITH YOUR NEW URL
         const CONFIG = {
-            GAS_URL: '9:34:23 PM	Error	
-TypeError: response.setStatusCode is not a function
-createResponse	@ Code.gs:161
-doGet	@ Code.gs:21',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbwbYQMpNv4nABL-_dJiqF0lOiJoFFOGYrOsmdhAHJpT_T-3iJz-jPMg6uZ10Cu_j9d9pg/exec',
             SHEET_ID: '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI',
             SHEET_NAME: 'Onpoint Incident Fleet Report'
         };
