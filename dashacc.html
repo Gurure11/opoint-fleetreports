@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Your existing CSS remains exactly the same */
         * {
             margin: 0;
             padding: 0;
@@ -541,7 +540,7 @@
                     <i class="fas fa-cloud-upload-alt"></i>
                     <span>Checking connection...</span>
                 </div>
-                <a href="index.html" class="logout-btn">
+                <a href="#" class="logout-btn" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </a>
             </div>
@@ -666,9 +665,9 @@
     </div>
 
     <script>
-        // CONFIGURATION - Updated with better error handling
+        // CONFIGURATION - Replace with your deployed URL
         const CONFIG = {
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbxSIe8ApL1iTZqVvq5Hj_XDxupmBWvDEdr-FB_cyTnLedidt2odm1TJCVNqIfh3FT9e/exec',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbzIbBQ7Ak1DTAC4ikv7Qp1oRWq-VTHJovof8WJjYKG1OmqPfTtOw8kaIZhRdjJH4Naq9Q/exec', // Replace with your Apps Script URL
             SHEET_ID: '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI',
             SHEET_NAME: 'Onpoint Incident Fleet Report'
         };
@@ -682,23 +681,22 @@
         // Initialize
         window.onload = function() {
             setDefaultDates();
-            // Small delay to ensure DOM is ready
-            setTimeout(() => {
-                testApiConnection();
-            }, 100);
+            testApiConnection();
         };
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.reload();
+            }
+        }
 
         function setDefaultDates() {
             const today = new Date();
             const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
             const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
             
-            const formatDate = (date) => {
-                return date.toISOString().split('T')[0];
-            };
-            
-            document.getElementById('startDate').value = formatDate(firstDay);
-            document.getElementById('endDate').value = formatDate(lastDay);
+            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('endDate').value = lastDay.toISOString().split('T')[0];
         }
 
         function showNotification(message, type = 'success') {
@@ -738,155 +736,43 @@
             }
         }
 
-        // Test API connection with better error handling
         async function testApiConnection() {
             setLoading(true);
             const debugEl = document.getElementById('debugMessage');
             debugEl.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Testing connection...';
             
-            // Try multiple approaches to connect
-            let connected = false;
-            let errorMessage = '';
-            
-            // Approach 1: Direct fetch with no-cors mode
             try {
                 const testUrl = `${CONFIG.GAS_URL}?action=test&_=${Date.now()}`;
                 console.log('Testing connection to:', testUrl);
                 
-                // Try with no-cors mode first
                 const response = await fetch(testUrl, {
                     method: 'GET',
                     mode: 'cors',
-                    headers: { 
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Accept': 'application/json' }
                 });
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Test response:', data);
-                    
-                    if (data.success) {
-                        updateSyncStatus('online', `Connected to sheet: ${data.sheetName || data.actualSheetName}`);
-                        connected = true;
-                        await loadIncidents();
-                    } else {
-                        throw new Error(data.error || 'API returned error');
-                    }
-                } else {
+                if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
-            } catch (error) {
-                console.error('Connection test failed with cors:', error);
-                errorMessage = error.message;
                 
-                // Try approach 2: JSONP-like approach
-                try {
-                    const scriptUrl = `${CONFIG.GAS_URL}?action=test&callback=handleJsonp&_=${Date.now()}`;
-                    console.log('Trying JSONP approach:', scriptUrl);
-                    
-                    // Create a promise that resolves with JSONP
-                    const jsonpData = await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        const callbackName = 'jsonp_callback_' + Date.now();
-                        
-                        window[callbackName] = function(data) {
-                            delete window[callbackName];
-                            document.body.removeChild(script);
-                            resolve(data);
-                        };
-                        
-                        script.onerror = function() {
-                            delete window[callbackName];
-                            document.body.removeChild(script);
-                            reject(new Error('JSONP failed'));
-                        };
-                        
-                        script.src = `${CONFIG.GAS_URL}?action=test&callback=${callbackName}&_=${Date.now()}`;
-                        document.body.appendChild(script);
-                        
-                        // Timeout after 5 seconds
-                        setTimeout(() => {
-                            if (window[callbackName]) {
-                                delete window[callbackName];
-                                document.body.removeChild(script);
-                                reject(new Error('JSONP timeout'));
-                            }
-                        }, 5000);
-                    });
-                    
-                    if (jsonpData && jsonpData.success) {
-                        updateSyncStatus('online', `Connected via JSONP to: ${jsonpData.sheetName || jsonpData.actualSheetName}`);
-                        connected = true;
-                        await loadIncidentsJsonp();
-                    } else {
-                        throw new Error(jsonpData?.error || 'JSONP returned error');
-                    }
-                } catch (jsonpError) {
-                    console.error('JSONP approach also failed:', jsonpError);
-                    
-                    // If both approaches fail, use demo data
-                    updateSyncStatus('offline', `Connection failed: ${errorMessage}. Using demo data.`);
-                    showNotification('Cannot connect to Google Sheets. Using demo data.', 'warning');
-                    generateDemoData();
+                const data = await response.json();
+                console.log('Test response:', data);
+                
+                if (data.success) {
+                    updateSyncStatus('online', `Connected to sheet: ${data.sheetName}`);
+                    loadIncidents();
+                } else {
+                    throw new Error(data.error || 'API returned error');
                 }
-            } finally {
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                updateSyncStatus('offline', `Connection failed: ${error.message}`);
+                showNotification('Cannot connect to Google Sheets. Using demo data.', 'warning');
+                generateDemoData();
                 setLoading(false);
             }
         }
 
-        // JSONP version of loadIncidents
-        async function loadIncidentsJsonp() {
-            try {
-                const data = await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    const callbackName = 'incidents_callback_' + Date.now();
-                    
-                    window[callbackName] = function(data) {
-                        delete window[callbackName];
-                        document.body.removeChild(script);
-                        resolve(data);
-                    };
-                    
-                    script.onerror = function() {
-                        delete window[callbackName];
-                        document.body.removeChild(script);
-                        reject(new Error('Failed to load incidents via JSONP'));
-                    };
-                    
-                    script.src = `${CONFIG.GAS_URL}?action=getIncidents&callback=${callbackName}&_=${Date.now()}`;
-                    document.body.appendChild(script);
-                    
-                    setTimeout(() => {
-                        if (window[callbackName]) {
-                            delete window[callbackName];
-                            document.body.removeChild(script);
-                            reject(new Error('Incidents JSONP timeout'));
-                        }
-                    }, 10000);
-                });
-                
-                if (data.success && data.data) {
-                    allIncidents = data.data;
-                    filteredIncidents = [...allIncidents];
-                    
-                    document.getElementById('recordCount').innerHTML = `📊 ${allIncidents.length} records`;
-                    
-                    populateFilters();
-                    updateDashboard();
-                    showNotification(`Loaded ${allIncidents.length} incident reports`, 'success');
-                } else {
-                    throw new Error(data.error || 'No data received');
-                }
-            } catch (error) {
-                console.error('Error loading incidents via JSONP:', error);
-                showNotification('Error loading data. Using demo data.', 'error');
-                generateDemoData();
-            }
-        }
-
-        // Load real incidents - original fetch version
         async function loadIncidents() {
             try {
                 const url = `${CONFIG.GAS_URL}?action=getIncidents&_=${Date.now()}`;
@@ -895,10 +781,7 @@
                 const response = await fetch(url, {
                     method: 'GET',
                     mode: 'cors',
-                    headers: { 
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Accept': 'application/json' }
                 });
                 
                 if (!response.ok) {
@@ -924,16 +807,18 @@
                 console.error('Error loading incidents:', error);
                 showNotification('Error loading data. Using demo data.', 'error');
                 generateDemoData();
+            } finally {
+                setLoading(false);
             }
         }
 
-        // Generate demo data (unchanged)
         function generateDemoData() {
             useDemoData = true;
             
             const departments = ['Fleet', 'Operations', 'Logistics', 'Warehouse'];
             const types = ['Rear-end', 'Side-impact', 'Rollover', 'Single-vehicle'];
             const costCenters = ['Onpoint Group HQ', 'DI Solutions', 'Aqua Telecoms'];
+            const drivers = ['John Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown', 'Lisa Anderson'];
             
             allIncidents = [];
             
@@ -949,20 +834,11 @@
                     AccidentType: types[Math.floor(Math.random() * types.length)],
                     Department: departments[Math.floor(Math.random() * departments.length)],
                     CostCenter: costCenters[Math.floor(Math.random() * costCenters.length)],
-                    DriverName: ['John Smith', 'Mike Johnson', 'Sarah Williams'][Math.floor(Math.random() * 3)],
+                    DriverName: drivers[Math.floor(Math.random() * drivers.length)],
                     DriverPhone: `082 ${Math.floor(Math.random() * 900 + 100)} ${Math.floor(Math.random() * 9000 + 1000)}`,
-                    Description: 'Sample incident description',
-                    OtherParties: Math.random() > 0.5 ? 'Another vehicle' : 'None',
                     ReportedToMetro: Math.random() > 0.3 ? 'Yes' : 'No',
-                    OfficerName: Math.random() > 0.5 ? 'Officer Davis' : 'N/A',
-                    OfficerPhone: Math.random() > 0.5 ? '082 555 0123' : 'N/A',
                     DrunkenDriving: Math.random() > 0.9 ? 'Yes' : 'No',
-                    PoliceReportNo: Math.random() > 0.5 ? `PD-${Math.floor(Math.random() * 9000 + 1000)}` : 'N/A',
                     AtFault: Math.random() > 0.5 ? 'Yes' : 'No',
-                    Latitude: (-25.9 - Math.random() * 0.2).toFixed(6),
-                    Longitude: (28.1 + Math.random() * 0.2).toFixed(6),
-                    GeoUrl: '#',
-                    ImageFilename: Math.random() > 0.7 ? `incident_${i}.jpg` : '',
                     ImageDriveUrl: Math.random() > 0.7 ? '#demo' : ''
                 });
             }
@@ -973,7 +849,6 @@
             updateDashboard();
         }
 
-        // Populate filter dropdowns
         function populateFilters() {
             const departments = [...new Set(allIncidents.map(i => i.Department).filter(d => d))];
             const deptFilter = document.getElementById('departmentFilter');
@@ -984,7 +859,6 @@
             });
         }
 
-        // Apply filters
         function applyFilters() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
@@ -1033,11 +907,10 @@
                 generateDemoData();
             } else {
                 setLoading(true);
-                testApiConnection();
+                loadIncidents();
             }
         }
 
-        // Update dashboard
         function updateDashboard() {
             updateKPIs();
             updateCharts();
@@ -1083,7 +956,6 @@
         }
 
         function updateCharts() {
-            // Department chart
             const deptCtx = document.getElementById('deptChart').getContext('2d');
             if (deptChart) deptChart.destroy();
             
@@ -1099,7 +971,7 @@
                     labels: Object.keys(deptCounts),
                     datasets: [{
                         data: Object.values(deptCounts),
-                        backgroundColor: ['#0b2b5c', '#1a4a7a', '#2d7aff', '#ffc107']
+                        backgroundColor: ['#0b2b5c', '#1a4a7a', '#2d7aff', '#ffc107', '#28a745']
                     }]
                 },
                 options: {
@@ -1109,7 +981,6 @@
                 }
             });
 
-            // Timeline chart
             const timelineCtx = document.getElementById('timelineChart').getContext('2d');
             if (timelineChart) timelineChart.destroy();
             
@@ -1163,13 +1034,13 @@
                     <td>${inc.Date || ''}</td>
                     <td>${inc.Time || ''}</td>
                     <td><strong>${inc.VehicleReg || ''}</strong></td>
-                    <td>${(inc.Location || '').substring(0, 20)}${inc.Location && inc.Location.length > 20 ? '...' : ''}</td>
+                    <td>${(inc.Location || '').substring(0, 30)}${inc.Location && inc.Location.length > 30 ? '...' : ''}</td>
                     <td>${inc.AccidentType || ''}</td>
                     <td>${inc.Department || ''}</td>
                     <td>${(inc.CostCenter || '').substring(0, 15)}</td>
                     <td>${inc.DriverName || ''}</td>
                     <td>${inc.DriverPhone || ''}</td>
-                    <td><span class="${inc.AtFault === 'Yes' ? 'badge-yes' : 'badge-no'}">${inc.AtFault || ''}</span></td>
+                    <td><span class="${inc.AtFault === 'Yes' ? 'badge-yes' : 'badge-no'}">${inc.AtFault || 'No'}</span></td>
                     <td>
                         ${inc.ImageDriveUrl ? 
                             `<a href="${inc.ImageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> View</a>` : 
@@ -1181,7 +1052,10 @@
         }
 
         function exportToCSV() {
-            if (filteredIncidents.length === 0) return;
+            if (filteredIncidents.length === 0) {
+                showNotification('No data to export', 'warning');
+                return;
+            }
             
             const headers = ['Date', 'Time', 'Vehicle', 'Location', 'Type', 'Department', 'Cost Center', 'Driver', 'Phone', 'At Fault'];
             const rows = filteredIncidents.map(inc => [
@@ -1198,7 +1072,7 @@
             a.click();
             URL.revokeObjectURL(url);
             
-            showNotification('CSV exported', 'success');
+            showNotification('CSV exported successfully', 'success');
         }
     </script>
 </body>
