@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* All your existing CSS remains the same */
+        /* Your existing CSS remains exactly the same */
         * {
             margin: 0;
             padding: 0;
@@ -233,11 +233,6 @@
             gap: 8px;
         }
 
-        /* Special styling for the date range group */
-        .filter-group.date-range-group {
-            grid-column: span 1;
-        }
-
         .filter-group label {
             font-weight: 600;
             font-size: 13px;
@@ -266,7 +261,6 @@
             border-color: #0b2b5c;
         }
 
-        /* Date range container styling */
         .date-range-container {
             display: flex;
             align-items: center;
@@ -276,7 +270,7 @@
 
         .date-range-container input[type="date"] {
             flex: 1;
-            min-width: 0; /* Prevents flex items from overflowing */
+            min-width: 0;
             padding: 12px 10px;
         }
 
@@ -498,7 +492,6 @@
         .notification.error { border-left: 4px solid #dc3545; }
         .notification.warning { border-left: 4px solid #ffc107; }
 
-        /* Responsive adjustments */
         @media (max-width: 1200px) {
             .filter-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -673,9 +666,9 @@
     </div>
 
     <script>
-        // CONFIGURATION - UPDATED WITH YOUR NEW URL
+        // CONFIGURATION - Updated with better error handling
         const CONFIG = {
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbwbYQMpNv4nABL-_dJiqF0lOiJoFFOGYrOsmdhAHJpT_T-3iJz-jPMg6uZ10Cu_j9d9pg/exec',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbxHf-tPJpESHo4iadM_RJcw45eMF3n0kabaJQNHdKwZMu5M2UTl5vICaqD6MlT_yZU/exec',
             SHEET_ID: '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI',
             SHEET_NAME: 'Onpoint Incident Fleet Report'
         };
@@ -689,7 +682,10 @@
         // Initialize
         window.onload = function() {
             setDefaultDates();
-            testApiConnection();
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                testApiConnection();
+            }, 100);
         };
 
         function setDefaultDates() {
@@ -697,8 +693,12 @@
             const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
             const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
             
-            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
-            document.getElementById('endDate').value = lastDay.toISOString().split('T')[0];
+            const formatDate = (date) => {
+                return date.toISOString().split('T')[0];
+            };
+            
+            document.getElementById('startDate').value = formatDate(firstDay);
+            document.getElementById('endDate').value = formatDate(lastDay);
         }
 
         function showNotification(message, type = 'success') {
@@ -738,45 +738,155 @@
             }
         }
 
-        // Test API connection
+        // Test API connection with better error handling
         async function testApiConnection() {
             setLoading(true);
             const debugEl = document.getElementById('debugMessage');
             debugEl.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Testing connection...';
             
+            // Try multiple approaches to connect
+            let connected = false;
+            let errorMessage = '';
+            
+            // Approach 1: Direct fetch with no-cors mode
             try {
                 const testUrl = `${CONFIG.GAS_URL}?action=test&_=${Date.now()}`;
                 console.log('Testing connection to:', testUrl);
                 
+                // Try with no-cors mode first
                 const response = await fetch(testUrl, {
                     method: 'GET',
                     mode: 'cors',
-                    headers: { 'Accept': 'application/json' }
+                    headers: { 
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
-                if (!response.ok) {
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Test response:', data);
+                    
+                    if (data.success) {
+                        updateSyncStatus('online', `Connected to sheet: ${data.sheetName || data.actualSheetName}`);
+                        connected = true;
+                        await loadIncidents();
+                    } else {
+                        throw new Error(data.error || 'API returned error');
+                    }
+                } else {
                     throw new Error(`HTTP ${response.status}`);
                 }
-                
-                const data = await response.json();
-                console.log('Test response:', data);
-                
-                if (data.success) {
-                    updateSyncStatus('online', `Connected to sheet: ${data.sheetName}`);
-                    loadIncidents();
-                } else {
-                    throw new Error(data.error || 'API returned error');
-                }
             } catch (error) {
-                console.error('Connection test failed:', error);
-                updateSyncStatus('offline', `Connection failed: ${error.message}`);
-                showNotification('Cannot connect to Google Sheets. Using demo data.', 'warning');
-                generateDemoData();
+                console.error('Connection test failed with cors:', error);
+                errorMessage = error.message;
+                
+                // Try approach 2: JSONP-like approach
+                try {
+                    const scriptUrl = `${CONFIG.GAS_URL}?action=test&callback=handleJsonp&_=${Date.now()}`;
+                    console.log('Trying JSONP approach:', scriptUrl);
+                    
+                    // Create a promise that resolves with JSONP
+                    const jsonpData = await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        const callbackName = 'jsonp_callback_' + Date.now();
+                        
+                        window[callbackName] = function(data) {
+                            delete window[callbackName];
+                            document.body.removeChild(script);
+                            resolve(data);
+                        };
+                        
+                        script.onerror = function() {
+                            delete window[callbackName];
+                            document.body.removeChild(script);
+                            reject(new Error('JSONP failed'));
+                        };
+                        
+                        script.src = `${CONFIG.GAS_URL}?action=test&callback=${callbackName}&_=${Date.now()}`;
+                        document.body.appendChild(script);
+                        
+                        // Timeout after 5 seconds
+                        setTimeout(() => {
+                            if (window[callbackName]) {
+                                delete window[callbackName];
+                                document.body.removeChild(script);
+                                reject(new Error('JSONP timeout'));
+                            }
+                        }, 5000);
+                    });
+                    
+                    if (jsonpData && jsonpData.success) {
+                        updateSyncStatus('online', `Connected via JSONP to: ${jsonpData.sheetName || jsonpData.actualSheetName}`);
+                        connected = true;
+                        await loadIncidentsJsonp();
+                    } else {
+                        throw new Error(jsonpData?.error || 'JSONP returned error');
+                    }
+                } catch (jsonpError) {
+                    console.error('JSONP approach also failed:', jsonpError);
+                    
+                    // If both approaches fail, use demo data
+                    updateSyncStatus('offline', `Connection failed: ${errorMessage}. Using demo data.`);
+                    showNotification('Cannot connect to Google Sheets. Using demo data.', 'warning');
+                    generateDemoData();
+                }
+            } finally {
                 setLoading(false);
             }
         }
 
-        // Load real incidents
+        // JSONP version of loadIncidents
+        async function loadIncidentsJsonp() {
+            try {
+                const data = await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    const callbackName = 'incidents_callback_' + Date.now();
+                    
+                    window[callbackName] = function(data) {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        resolve(data);
+                    };
+                    
+                    script.onerror = function() {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        reject(new Error('Failed to load incidents via JSONP'));
+                    };
+                    
+                    script.src = `${CONFIG.GAS_URL}?action=getIncidents&callback=${callbackName}&_=${Date.now()}`;
+                    document.body.appendChild(script);
+                    
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            document.body.removeChild(script);
+                            reject(new Error('Incidents JSONP timeout'));
+                        }
+                    }, 10000);
+                });
+                
+                if (data.success && data.data) {
+                    allIncidents = data.data;
+                    filteredIncidents = [...allIncidents];
+                    
+                    document.getElementById('recordCount').innerHTML = `📊 ${allIncidents.length} records`;
+                    
+                    populateFilters();
+                    updateDashboard();
+                    showNotification(`Loaded ${allIncidents.length} incident reports`, 'success');
+                } else {
+                    throw new Error(data.error || 'No data received');
+                }
+            } catch (error) {
+                console.error('Error loading incidents via JSONP:', error);
+                showNotification('Error loading data. Using demo data.', 'error');
+                generateDemoData();
+            }
+        }
+
+        // Load real incidents - original fetch version
         async function loadIncidents() {
             try {
                 const url = `${CONFIG.GAS_URL}?action=getIncidents&_=${Date.now()}`;
@@ -785,7 +895,10 @@
                 const response = await fetch(url, {
                     method: 'GET',
                     mode: 'cors',
-                    headers: { 'Accept': 'application/json' }
+                    headers: { 
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
                 if (!response.ok) {
@@ -811,12 +924,10 @@
                 console.error('Error loading incidents:', error);
                 showNotification('Error loading data. Using demo data.', 'error');
                 generateDemoData();
-            } finally {
-                setLoading(false);
             }
         }
 
-        // Generate demo data
+        // Generate demo data (unchanged)
         function generateDemoData() {
             useDemoData = true;
             
@@ -922,7 +1033,7 @@
                 generateDemoData();
             } else {
                 setLoading(true);
-                loadIncidents();
+                testApiConnection();
             }
         }
 
