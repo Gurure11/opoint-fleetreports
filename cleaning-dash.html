@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Onpoint Command Center · Cleaning & Field Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #eef2f5;
+            overflow-x: hidden;
+        }
+
+        /* Header & Navigation */
+        .dashboard-header {
+            background: linear-gradient(135deg, #0f2b3d 0%, #1b4d3e 100%);
+            color: white;
+            padding: 1.2rem 2rem;
+            box-shadow: 0 10px 25px -8px rgba(0,0,0,0.2);
+        }
+
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-area h1 {
+            font-size: 1.7rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-area p {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .badge-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .badge {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(4px);
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .refresh-btn {
+            background: #ffb347;
+            border: none;
+            color: #1e3b2f;
+            padding: 0.6rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover {
+            background: #ff9f1a;
+            transform: scale(0.97);
+        }
+
+        /* Stats row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.2rem;
+            padding: 1.8rem 2rem;
+            background: white;
+            margin: 1.5rem 2rem;
+            border-radius: 28px;
+            box-shadow: 0 5px 18px rgba(0,0,0,0.05);
+        }
+
+        .stat-card {
+            background: #f9fafc;
+            border-radius: 24px;
+            padding: 1.2rem;
+            text-align: center;
+            transition: 0.2s;
+            border-left: 5px solid #2d6a4f;
+        }
+
+        .stat-card .stat-icon {
+            font-size: 1.8rem;
+            color: #2d6a4f;
+        }
+
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1e3b2f;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            margin: 0 2rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.9rem 1.8rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 30px 30px 0 0;
+            transition: 0.2s;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #1b4d3e;
+            border-bottom: 3px solid #2d6a4f;
+        }
+
+        .tab-pane {
+            display: none;
+            animation: fade 0.25s ease;
+        }
+
+        .tab-pane.active-pane {
+            display: block;
+        }
+
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(5px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        /* Cards and tables */
+        .data-card {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-bottom: 1.8rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.03);
+            border: 1px solid #eef2f5;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+            color: #0f2b3d;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #2d6a4f;
+            padding-left: 15px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 8px;
+            background: #f1f5f9;
+            color: #1e3b2f;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .badge-status {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .priority-high {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .priority-medium {
+            background: #ffedd5;
+            color: #b45309;
+        }
+        .priority-low {
+            background: #e0e7ff;
+            color: #1e3a8a;
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-box {
+            background: white;
+            border-radius: 24px;
+            padding: 1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #5b6e8c;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.8rem;
+            color: #5b6e8c;
+        }
+
+        @media (max-width: 680px) {
+            .stats-grid { margin: 1rem; padding: 1rem; }
+            .tabs-container { margin: 0 1rem; }
+            .tab-btn { padding: 0.6rem 1rem; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-header">
+    <div class="header-flex">
+        <div class="logo-area">
+            <h1><i class="fas fa-chalkboard-user"></i> Onpoint Command Center</h1>
+            <p>Cleaning timer logs + Field tasks · unified intelligence</p>
+        </div>
+        <div class="badge-group">
+            <div class="badge"><i class="fas fa-database"></i> Live from Sheets</div>
+            <button class="refresh-btn" id="refreshAllBtn"><i class="fas fa-sync-alt"></i> Sync now</button>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Row -->
+<div class="stats-grid" id="statsContainer">
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-broom"></i></div><div class="stat-value" id="totalCleanSessions">—</div><div>Cleaning sessions</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-leaf"></i></div><div class="stat-value" id="totalFieldTasks">—</div><div>Field tasks</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-value" id="totalHoursCleaning">—</div><div>Cleaning hours</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-value" id="uniqueStaffCount">—</div><div>Active staff</div></div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="tabs-container">
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="cleaning"><i class="fas fa-chart-line"></i> Cleaning Reports</button>
+        <button class="tab-btn" data-tab="field"><i class="fas fa-tractor"></i> Field Maintenance</button>
+        <button class="tab-btn" data-tab="insights"><i class="fas fa-chart-pie"></i> Insights & Analytics</button>
+    </div>
+
+    <!-- Tab 1: Cleaning Reports (Timer system) -->
+    <div id="cleaningTab" class="tab-pane active-pane">
+        <div class="data-card">
+            <div class="card-title"><i class="fas fa-list-check"></i> Detailed Cleaning Sessions</div>
+            <div class="table-wrapper">
+                <table id="cleaningTable">
+                    <thead>
+                        <tr><th>Staff</th><th>Department</th><th>Task</th><th>Date</th><th>Duration (min)</th><th>Shift</th><th>Location</th></tr>
+                    </thead>
+                    <tbody id="cleaningTableBody"><tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading cleaning data...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: Field Tasks (Field Maintenance System) -->
+    <div id="fieldTab" class="tab-pane">
+        <div class="data-card">
+            <div class="card-title"><i class="fas fa-clipboard-list"></i> Field Operations Log</div>
+            <div class="table-wrapper">
+                <table id="fieldTable">
+                    <thead><tr><th>Assigned To</th><th>Date</th><th>Cost Center</th><th>Department</th><th>Tasks</th><th>Priority</th><th>Total Hours</th><th>Status</th></tr></thead>
+                    <tbody id="fieldTableBody"><tr><td colspan="8" class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading field tasks...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Charts & Insights -->
+    <div id="insightsTab" class="tab-pane">
+        <div class="chart-row">
+            <div class="chart-box"><canvas id="taskPerDeptChart" width="400" height="250"></canvas></div>
+            <div class="chart-box"><canvas id="priorityChart" width="400" height="250"></canvas></div>
+        </div>
+        <div class="chart-row">
+            <div class="chart-box"><canvas id="dailyActivityChart" width="400" height="250"></canvas></div>
+            <div class="chart-box"><canvas id="topStaffChart" width="400" height="250"></canvas></div>
+        </div>
+    </div>
+</div>
+<footer>© Onpoint Group · Real-time data from Google Sheets (Cleaning Reports + Field Maintenance) — Last sync: <span id="lastSyncTime">—</span></footer>
+
+<script>
+    // ============================================================
+    // CONFIGURATION - Google Sheets IDs (provided by user)
+    // ============================================================
+    const CLEANING_SHEET_ID = '1ogeECC3RIlGRnKI4ttmWOFSCt4m_6opEizIVVTdyerI';
+    const CLEANING_SHEET_NAME = 'Cleaning Reports';
+    const FIELD_SHEET_ID = '1Wvuq8Ys-F4sl4NitRHmoaSVMnLPw7RzWr7JvbM4xP6s';   // from field.html script
+    const FIELD_SHEET_NAME = 'Field Maintenance';
+
+    // Google Sheets CSV export URLs (public read access required or script)
+    // Using standard CSV export for published sheets (must be shared to "Anyone with link")
+    // If sheets are private, you need Apps Script proxy, but we assume sheets are published or shared.
+    function getCleaningCsvUrl() {
+        return `https://docs.google.com/spreadsheets/d/${CLEANING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(CLEANING_SHEET_NAME)}`;
+    }
+    
+    function getFieldCsvUrl() {
+        return `https://docs.google.com/spreadsheets/d/${FIELD_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(FIELD_SHEET_NAME)}`;
+    }
+
+    // Global storage
+    let cleaningData = [];
+    let fieldData = [];
+
+    // Chart instances
+    let deptChart, priorityChart, dailyChart, staffChart;
+
+    // Helper: fetch CSV and parse
+    async function fetchSheetData(csvUrl) {
+        try {
+            const response = await fetch(csvUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const csvText = await response.text();
+            return parseCSV(csvText);
+        } catch (err) {
+            console.warn(`Fetch error from ${csvUrl}:`, err);
+            return [];
+        }
+    }
+
+    // Simple CSV parser (handles quotes)
+    function parseCSV(csvText) {
+        const rows = [];
+        const regex = /(?:,|^)(?:"([^"]*(?:""[^"]*)*)"|([^",]*))/g;
+        let lines = csvText.split(/\r?\n/);
+        if (lines.length === 0) return rows;
+        // Detect headers
+        let headers = [];
+        const firstLine = lines[0];
+        let match;
+        let colValues = [];
+        while ((match = regex.exec(firstLine)) !== null) {
+            colValues.push(match[1] !== undefined ? match[1].replace(/""/g, '"') : (match[2] || ''));
+        }
+        if (colValues.length) headers = colValues;
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line === "") continue;
+            let values = [];
+            let lastIndex = 0;
+            let inQuotes = false;
+            let current = '';
+            for (let j = 0; j < line.length; j++) {
+                const ch = line[j];
+                if (ch === '"') {
+                    inQuotes = !inQuotes;
+                } else if (ch === ',' && !inQuotes) {
+                    values.push(current.trim());
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
+            values.push(current.trim());
+            if (values.length < headers.length) {
+                while(values.length < headers.length) values.push('');
+            }
+            const obj = {};
+            headers.forEach((h, idx) => { obj[h] = values[idx] || ''; });
+            rows.push(obj);
+        }
+        return rows;
+    }
+
+    // Normalize cleaning data (original timer system)
+    function normalizeCleaningRecords(rows) {
+        if (!rows || rows.length === 0) return [];
+        // Expected columns: staffName, department, taskName, workDate, durationMinutes, shiftStart, shiftEnd, workLocation etc.
+        // map flexibly
+        return rows.map(row => ({
+            staffName: row['staffName'] || row['Staff Name'] || row['staff'] || 'Unknown',
+            department: row['department'] || row['Department'] || row['costCenter'] || '—',
+            taskName: row['taskName'] || row['Task'] || row['task'] || 'Cleaning',
+            workDate: row['workDate'] || row['Date'] || row['Work Date'] || '',
+            durationMin: parseFloat(row['durationMinutes'] || row['Duration (min)'] || row['durationMinutes'] || 0),
+            shiftStart: row['shiftStart'] || row['Start'] || '',
+            shiftEnd: row['shiftEnd'] || row['End'] || '',
+            workLocation: row['workLocation'] || row['Location'] || '—',
+            supervisor: row['supervisor'] || ''
+        }));
+    }
+
+    // Normalize field data (Field Maintenance)
+    function normalizeFieldRecords(rows) {
+        if (!rows || rows.length === 0) return [];
+        return rows.map(row => ({
+            assignedTo: row['assignedTo'] || row['Assigned To'] || row['staff'] || 'Unassigned',
+            date: row['date'] || row['Date'] || row['Task Date'] || '',
+            costCenter: row['costCenter'] || row['Cost Center'] || '—',
+            department: row['department'] || row['Department'] || '—',
+            tasks: row['tasks'] || row['Tasks'] || '—',
+            priority: row['priority'] || row['Priority'] || 'Medium',
+            totalHours: parseFloat(row['totalHours'] || row['Total Hours'] || 0),
+            status: row['status'] || row['Status'] || 'Pending',
+            shift: row['shift'] || row['Shift'] || 'Day'
+        }));
+    }
+
+    // Update UI
+    async function loadAllData() {
+        document.getElementById('cleaningTableBody').innerHTML = '<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-pulse"></i> Syncing cleaning data...</td></tr>';
+        document.getElementById('fieldTableBody').innerHTML = '<tr><td colspan="8" class="loading"><i class="fas fa-spinner fa-pulse"></i> Syncing field data...</td></tr>';
+        
+        // Fetch both sources in parallel
+        const [cleaningRaw, fieldRaw] = await Promise.all([
+            fetchSheetData(getCleaningCsvUrl()),
+            fetchSheetData(getFieldCsvUrl())
+        ]);
+        
+        cleaningData = normalizeCleaningRecords(cleaningRaw);
+        fieldData = normalizeFieldRecords(fieldRaw);
+        
+        renderCleaningTable();
+        renderFieldTable();
+        updateStatsAndKPIs();
+        updateCharts();
+        document.getElementById('lastSyncTime').innerText = new Date().toLocaleTimeString();
+    }
+
+    function renderCleaningTable() {
+        const tbody = document.getElementById('cleaningTableBody');
+        if (!cleaningData.length) {
+            tbody.innerHTML = '<tr><td colspan="7">✅ No cleaning records found (or sheet empty). Start timer tasks to see data.</td></tr>';
+            return;
+        }
+        const rowsHtml = cleaningData.slice(0, 200).map(rec => `
+            <tr>
+                <td>${escapeHtml(rec.staffName)}</td>
+                <td>${escapeHtml(rec.department)}</td>
+                <td>${escapeHtml(rec.taskName)}</td>
+                <td>${rec.workDate || '—'}</td>
+                <td>${rec.durationMin ? Math.round(rec.durationMin) + ' min' : '—'}</td>
+                <td>${rec.shiftStart} - ${rec.shiftEnd}</td>
+                <td>${escapeHtml(rec.workLocation)}</td>
+            </tr>
+        `).join('');
+        tbody.innerHTML = rowsHtml;
+    }
+
+    function renderFieldTable() {
+        const tbody = document.getElementById('fieldTableBody');
+        if (!fieldData.length) {
+            tbody.innerHTML = '<tr><td colspan="8">📋 No field tasks submitted yet. Use Field Manager to add tasks.</td></tr>';
+            return;
+        }
+        const rowsHtml = fieldData.slice(0, 200).map(rec => {
+            let priorityClass = '';
+            if (rec.priority === 'High') priorityClass = 'priority-high';
+            else if (rec.priority === 'Medium') priorityClass = 'priority-medium';
+            else priorityClass = 'priority-low';
+            return `<tr>
+                <td>${escapeHtml(rec.assignedTo)}</td>
+                <td>${rec.date}</td>
+                <td>${escapeHtml(rec.costCenter)}</td>
+                <td>${escapeHtml(rec.department)}</td>
+                <td>${escapeHtml(rec.tasks.substring(0, 50))}</td>
+                <td><span class="badge-status ${priorityClass}">${rec.priority}</span></td>
+                <td>${rec.totalHours}h</td>
+                <td><span class="badge-status">${rec.status}</span></td>
+            </tr>`;
+        }).join('');
+        tbody.innerHTML = rowsHtml;
+    }
+
+    function updateStatsAndKPIs() {
+        const totalSessions = cleaningData.length;
+        const totalField = fieldData.length;
+        let totalCleaningHours = cleaningData.reduce((sum, r) => sum + (r.durationMin || 0) / 60, 0);
+        const uniqueStaff = new Set();
+        cleaningData.forEach(c => { if(c.staffName) uniqueStaff.add(c.staffName); });
+        fieldData.forEach(f => { if(f.assignedTo) uniqueStaff.add(f.assignedTo); });
+        
+        document.getElementById('totalCleanSessions').innerText = totalSessions;
+        document.getElementById('totalFieldTasks').innerText = totalField;
+        document.getElementById('totalHoursCleaning').innerText = totalCleaningHours.toFixed(1) + ' hrs';
+        document.getElementById('uniqueStaffCount').innerText = uniqueStaff.size;
+    }
+
+    function updateCharts() {
+        // Department distribution from cleaning data
+        const deptMap = new Map();
+        cleaningData.forEach(rec => {
+            let dept = rec.department || 'General';
+            deptMap.set(dept, (deptMap.get(dept) || 0) + 1);
+        });
+        // also include field department data
+        fieldData.forEach(rec => {
+            let dept = rec.department || 'Field Ops';
+            deptMap.set(dept, (deptMap.get(dept) || 0) + 1);
+        });
+        const deptLabels = Array.from(deptMap.keys());
+        const deptCounts = deptLabels.map(l => deptMap.get(l));
+        
+        if (deptChart) deptChart.destroy();
+        const ctxDept = document.getElementById('taskPerDeptChart').getContext('2d');
+        deptChart = new Chart(ctxDept, {
+            type: 'bar',
+            data: { labels: deptLabels, datasets: [{ label: 'Task Count', data: deptCounts, backgroundColor: '#2d6a4f', borderRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } }
+        });
+
+        // Priority distribution (field)
+        const priorityMap = { Low: 0, Medium: 0, High: 0 };
+        fieldData.forEach(f => { let p = f.priority || 'Medium'; priorityMap[p] = (priorityMap[p] || 0) + 1; });
+        if (priorityChart) priorityChart.destroy();
+        const ctxPrior = document.getElementById('priorityChart').getContext('2d');
+        priorityChart = new Chart(ctxPrior, {
+            type: 'doughnut',
+            data: { labels: ['Low', 'Medium', 'High'], datasets: [{ data: [priorityMap.Low, priorityMap.Medium, priorityMap.High], backgroundColor: ['#6c757d', '#ffc107', '#dc3545'] }] },
+            options: { responsive: true }
+        });
+
+        // Daily activity (combine cleaning + field by date)
+        const dateMap = new Map();
+        cleaningData.forEach(c => { if(c.workDate) dateMap.set(c.workDate, (dateMap.get(c.workDate) || 0) + 1); });
+        fieldData.forEach(f => { if(f.date) dateMap.set(f.date, (dateMap.get(f.date) || 0) + 1); });
+        const sortedDates = Array.from(dateMap.keys()).sort().slice(-7);
+        const dailyCounts = sortedDates.map(d => dateMap.get(d));
+        if (dailyChart) dailyChart.destroy();
+        const ctxDaily = document.getElementById('dailyActivityChart').getContext('2d');
+        dailyChart = new Chart(ctxDaily, {
+            type: 'line',
+            data: { labels: sortedDates, datasets: [{ label: 'Tasks / Sessions', data: dailyCounts, borderColor: '#1e3c72', tension: 0.2, fill: false }] },
+            options: { responsive: true }
+        });
+
+        // Top staff by cleaning + field contributions
+        const staffCount = new Map();
+        cleaningData.forEach(c => { if(c.staffName) staffCount.set(c.staffName, (staffCount.get(c.staffName) || 0) + 1); });
+        fieldData.forEach(f => { if(f.assignedTo) staffCount.set(f.assignedTo, (staffCount.get(f.assignedTo) || 0) + 1); });
+        const topStaff = Array.from(staffCount.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        if (staffChart) staffChart.destroy();
+        const ctxStaff = document.getElementById('topStaffChart').getContext('2d');
+        staffChart = new Chart(ctxStaff, {
+            type: 'bar',
+            data: { labels: topStaff.map(s=>s[0]), datasets: [{ label: 'Total Activities', data: topStaff.map(s=>s[1]), backgroundColor: '#ffb347' }] },
+            options: { responsive: true }
+        });
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m === '&') return '&amp;'; if(m === '<') return '&lt;'; if(m === '>') return '&gt;'; return m;}); }
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const target = btn.getAttribute('data-tab');
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active-pane'));
+            if(target === 'cleaning') document.getElementById('cleaningTab').classList.add('active-pane');
+            if(target === 'field') document.getElementById('fieldTab').classList.add('active-pane');
+            if(target === 'insights') document.getElementById('insightsTab').classList.add('active-pane');
+            // resize charts after visibility
+            setTimeout(() => { if(deptChart) deptChart.resize(); if(priorityChart) priorityChart.resize(); }, 100);
+        });
+    });
+
+    document.getElementById('refreshAllBtn').addEventListener('click', async () => {
+        await loadAllData();
+    });
+
+    // initial load
+    loadAllData();
+    setInterval(() => { loadAllData(); }, 60000); // auto-refresh every minute
+</script>
+</body>
+</html>
