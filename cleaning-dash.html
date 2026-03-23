@@ -20,7 +20,6 @@
             overflow-x: hidden;
         }
 
-        /* Header & Navigation */
         .dashboard-header {
             background: linear-gradient(135deg, #0f2b3d 0%, #1b4d3e 100%);
             color: white;
@@ -83,7 +82,6 @@
             transform: scale(0.97);
         }
 
-        /* Stats row */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -115,7 +113,6 @@
             color: #1e3b2f;
         }
 
-        /* Tabs */
         .tabs-container {
             margin: 0 2rem;
         }
@@ -162,7 +159,6 @@
             to { opacity: 1; transform: translateY(0);}
         }
 
-        /* Cards and tables */
         .data-card {
             background: white;
             border-radius: 28px;
@@ -214,6 +210,7 @@
             border-radius: 30px;
             font-size: 0.75rem;
             font-weight: 600;
+            display: inline-block;
         }
 
         .priority-high {
@@ -255,6 +252,20 @@
             color: #5b6e8c;
         }
 
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 30px;
+            font-size: 0.85rem;
+        }
+
         @media (max-width: 680px) {
             .stats-grid { margin: 1rem; padding: 1rem; }
             .tabs-container { margin: 0 1rem; }
@@ -268,10 +279,10 @@
     <div class="header-flex">
         <div class="logo-area">
             <h1><i class="fas fa-chalkboard-user"></i> Onpoint Command Center</h1>
-            <p>Cleaning timer logs + Field tasks · unified intelligence</p>
+            <p>Cleaning Reports · Field Maintenance · Unified Intelligence</p>
         </div>
         <div class="badge-group">
-            <div class="badge"><i class="fas fa-database"></i> Live from Sheets</div>
+            <div class="badge"><i class="fas fa-database"></i> Live from Google Sheets</div>
             <button class="refresh-btn" id="refreshAllBtn"><i class="fas fa-sync-alt"></i> Sync now</button>
         </div>
     </div>
@@ -293,16 +304,28 @@
         <button class="tab-btn" data-tab="insights"><i class="fas fa-chart-pie"></i> Insights & Analytics</button>
     </div>
 
-    <!-- Tab 1: Cleaning Reports (Timer system) -->
+    <!-- Tab 1: Cleaning Reports (Timer system with exact headers) -->
     <div id="cleaningTab" class="tab-pane active-pane">
         <div class="data-card">
             <div class="card-title"><i class="fas fa-list-check"></i> Detailed Cleaning Sessions</div>
+            <div class="filter-bar">
+                <input type="text" id="cleaningSearch" class="filter-input" placeholder="🔍 Search staff, department, task..." style="flex:1;">
+                <select id="deptFilter" class="filter-input">
+                    <option value="">All Departments</option>
+                </select>
+            </div>
             <div class="table-wrapper">
                 <table id="cleaningTable">
                     <thead>
-                        <tr><th>Staff</th><th>Department</th><th>Task</th><th>Date</th><th>Duration (min)</th><th>Shift</th><th>Location</th></tr>
+                        <tr>
+                            <th>Timestamp</th><th>Submission ID</th><th>Department</th><th>Task Name</th><th>Staff Name</th>
+                            <th>Employee ID</th><th>Work Date</th><th>Duration (min)</th><th>Hours</th>
+                            <th>Work Location</th><th>Supervisor</th>
+                        </tr>
                     </thead>
-                    <tbody id="cleaningTableBody"><tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading cleaning data...</td></tr></tbody>
+                    <tbody id="cleaningTableBody">
+                        <tr><td colspan="11" class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading cleaning data...<\/td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -312,10 +335,13 @@
     <div id="fieldTab" class="tab-pane">
         <div class="data-card">
             <div class="card-title"><i class="fas fa-clipboard-list"></i> Field Operations Log</div>
+            <div class="filter-bar">
+                <input type="text" id="fieldSearch" class="filter-input" placeholder="🔍 Search assignee, cost center..." style="flex:1;">
+            </div>
             <div class="table-wrapper">
                 <table id="fieldTable">
-                    <thead><tr><th>Assigned To</th><th>Date</th><th>Cost Center</th><th>Department</th><th>Tasks</th><th>Priority</th><th>Total Hours</th><th>Status</th></tr></thead>
-                    <tbody id="fieldTableBody"><tr><td colspan="8" class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading field tasks...</td></tr></tbody>
+                    <thead><tr><th>Assigned To</th><th>Date</th><th>Cost Center</th><th>Department</th><th>Tasks</th><th>Priority</th><th>Total Hours</th><th>Shift</th><th>Status</th></tr></thead>
+                    <tbody id="fieldTableBody"><tr><td colspan="9" class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading field tasks...<\/td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -333,20 +359,17 @@
         </div>
     </div>
 </div>
-<footer>© Onpoint Group · Real-time data from Google Sheets (Cleaning Reports + Field Maintenance) — Last sync: <span id="lastSyncTime">—</span></footer>
+<footer>© Onpoint Group · Data from Cleaning Reports (exact headers) + Field Maintenance — Last sync: <span id="lastSyncTime">—</span></footer>
 
 <script>
     // ============================================================
-    // CONFIGURATION - Google Sheets IDs (provided by user)
+    // CONFIGURATION - Google Sheets IDs
     // ============================================================
     const CLEANING_SHEET_ID = '1ogeECC3RIlGRnKI4ttmWOFSCt4m_6opEizIVVTdyerI';
     const CLEANING_SHEET_NAME = 'Cleaning Reports';
-    const FIELD_SHEET_ID = '1Wvuq8Ys-F4sl4NitRHmoaSVMnLPw7RzWr7JvbM4xP6s';   // from field.html script
+    const FIELD_SHEET_ID = '1Wvuq8Ys-F4sl4NitRHmoaSVMnLPw7RzWr7JvbM4xP6s';
     const FIELD_SHEET_NAME = 'Field Maintenance';
 
-    // Google Sheets CSV export URLs (public read access required or script)
-    // Using standard CSV export for published sheets (must be shared to "Anyone with link")
-    // If sheets are private, you need Apps Script proxy, but we assume sheets are published or shared.
     function getCleaningCsvUrl() {
         return `https://docs.google.com/spreadsheets/d/${CLEANING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(CLEANING_SHEET_NAME)}`;
     }
@@ -355,14 +378,60 @@
         return `https://docs.google.com/spreadsheets/d/${FIELD_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(FIELD_SHEET_NAME)}`;
     }
 
-    // Global storage
-    let cleaningData = [];
+    let cleaningData = [];      // raw parsed objects with exact column headers
     let fieldData = [];
+    let filteredCleaning = [];
+    let filteredField = [];
 
-    // Chart instances
     let deptChart, priorityChart, dailyChart, staffChart;
 
-    // Helper: fetch CSV and parse
+    // Robust CSV parser (handles quotes, commas inside fields)
+    function parseCSV(csvText) {
+        const rows = [];
+        const lines = csvText.split(/\r?\n/);
+        if (lines.length === 0) return rows;
+        
+        // Parse headers
+        let headers = [];
+        const parseRow = (line) => {
+            const result = [];
+            let inQuote = false;
+            let current = '';
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') {
+                    inQuote = !inQuote;
+                } else if (ch === ',' && !inQuote) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        };
+        
+        let headerRow = parseRow(lines[0]);
+        headers = headerRow.map(h => h.replace(/^"|"$/g, '').trim());
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line === "") continue;
+            let values = parseRow(line);
+            // Ensure values length matches headers
+            while(values.length < headers.length) values.push('');
+            const obj = {};
+            headers.forEach((h, idx) => {
+                let val = values[idx] || '';
+                val = val.replace(/^"|"$/g, '').trim();
+                obj[h] = val;
+            });
+            rows.push(obj);
+        }
+        return rows;
+    }
+
     async function fetchSheetData(csvUrl) {
         try {
             const response = await fetch(csvUrl);
@@ -370,77 +439,43 @@
             const csvText = await response.text();
             return parseCSV(csvText);
         } catch (err) {
-            console.warn(`Fetch error from ${csvUrl}:`, err);
+            console.warn(`Fetch error: ${err}`);
             return [];
         }
     }
 
-    // Simple CSV parser (handles quotes)
-    function parseCSV(csvText) {
-        const rows = [];
-        const regex = /(?:,|^)(?:"([^"]*(?:""[^"]*)*)"|([^",]*))/g;
-        let lines = csvText.split(/\r?\n/);
-        if (lines.length === 0) return rows;
-        // Detect headers
-        let headers = [];
-        const firstLine = lines[0];
-        let match;
-        let colValues = [];
-        while ((match = regex.exec(firstLine)) !== null) {
-            colValues.push(match[1] !== undefined ? match[1].replace(/""/g, '"') : (match[2] || ''));
-        }
-        if (colValues.length) headers = colValues;
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line === "") continue;
-            let values = [];
-            let lastIndex = 0;
-            let inQuotes = false;
-            let current = '';
-            for (let j = 0; j < line.length; j++) {
-                const ch = line[j];
-                if (ch === '"') {
-                    inQuotes = !inQuotes;
-                } else if (ch === ',' && !inQuotes) {
-                    values.push(current.trim());
-                    current = '';
-                } else {
-                    current += ch;
-                }
-            }
-            values.push(current.trim());
-            if (values.length < headers.length) {
-                while(values.length < headers.length) values.push('');
-            }
-            const obj = {};
-            headers.forEach((h, idx) => { obj[h] = values[idx] || ''; });
-            rows.push(obj);
-        }
-        return rows;
+    // Normalize cleaning data using exact expected headers:
+    // Timestamp, SubmissionID, Department, TaskName, StaffName, EmployeeID, WorkDate, 
+    // TaskStartTime, TaskEndTime, DurationSeconds, DurationMinutes, DurationHours, 
+    // ShiftStart, ShiftEnd, WorkLocation, Supervisor, Notes, TaskNotes, SubmittedBy, SubmissionTimestamp
+    function mapCleaningRecord(row) {
+        return {
+            timestamp: row['Timestamp'] || '',
+            submissionId: row['SubmissionID'] || row['SubmissionId'] || '',
+            department: row['Department'] || '',
+            taskName: row['TaskName'] || '',
+            staffName: row['StaffName'] || '',
+            employeeId: row['EmployeeID'] || '',
+            workDate: row['WorkDate'] || '',
+            taskStartTime: row['TaskStartTime'] || '',
+            taskEndTime: row['TaskEndTime'] || '',
+            durationSeconds: parseFloat(row['DurationSeconds']) || 0,
+            durationMinutes: parseFloat(row['DurationMinutes']) || 0,
+            durationHours: parseFloat(row['DurationHours']) || 0,
+            shiftStart: row['ShiftStart'] || '',
+            shiftEnd: row['ShiftEnd'] || '',
+            workLocation: row['WorkLocation'] || '',
+            supervisor: row['Supervisor'] || '',
+            notes: row['Notes'] || '',
+            taskNotes: row['TaskNotes'] || '',
+            submittedBy: row['SubmittedBy'] || '',
+            submissionTimestamp: row['SubmissionTimestamp'] || ''
+        };
     }
 
-    // Normalize cleaning data (original timer system)
-    function normalizeCleaningRecords(rows) {
-        if (!rows || rows.length === 0) return [];
-        // Expected columns: staffName, department, taskName, workDate, durationMinutes, shiftStart, shiftEnd, workLocation etc.
-        // map flexibly
-        return rows.map(row => ({
-            staffName: row['staffName'] || row['Staff Name'] || row['staff'] || 'Unknown',
-            department: row['department'] || row['Department'] || row['costCenter'] || '—',
-            taskName: row['taskName'] || row['Task'] || row['task'] || 'Cleaning',
-            workDate: row['workDate'] || row['Date'] || row['Work Date'] || '',
-            durationMin: parseFloat(row['durationMinutes'] || row['Duration (min)'] || row['durationMinutes'] || 0),
-            shiftStart: row['shiftStart'] || row['Start'] || '',
-            shiftEnd: row['shiftEnd'] || row['End'] || '',
-            workLocation: row['workLocation'] || row['Location'] || '—',
-            supervisor: row['supervisor'] || ''
-        }));
-    }
-
-    // Normalize field data (Field Maintenance)
-    function normalizeFieldRecords(rows) {
-        if (!rows || rows.length === 0) return [];
-        return rows.map(row => ({
+    // Normalize field data from field maintenance sheet
+    function mapFieldRecord(row) {
+        return {
             assignedTo: row['assignedTo'] || row['Assigned To'] || row['staff'] || 'Unassigned',
             date: row['date'] || row['Date'] || row['Task Date'] || '',
             costCenter: row['costCenter'] || row['Cost Center'] || '—',
@@ -450,45 +485,81 @@
             totalHours: parseFloat(row['totalHours'] || row['Total Hours'] || 0),
             status: row['status'] || row['Status'] || 'Pending',
             shift: row['shift'] || row['Shift'] || 'Day'
-        }));
+        };
     }
 
-    // Update UI
     async function loadAllData() {
-        document.getElementById('cleaningTableBody').innerHTML = '<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-pulse"></i> Syncing cleaning data...</td></tr>';
-        document.getElementById('fieldTableBody').innerHTML = '<tr><td colspan="8" class="loading"><i class="fas fa-spinner fa-pulse"></i> Syncing field data...</td></tr>';
+        document.getElementById('cleaningTableBody').innerHTML = '<tr><td colspan="11" class="loading"><i class="fas fa-spinner fa-pulse"></i> Syncing cleaning data...<\/td></tr>';
+        document.getElementById('fieldTableBody').innerHTML = '<tr><td colspan="9" class="loading"><i class="fas fa-spinner fa-pulse"></i> Syncing field data...<\/td></tr>';
         
-        // Fetch both sources in parallel
         const [cleaningRaw, fieldRaw] = await Promise.all([
             fetchSheetData(getCleaningCsvUrl()),
             fetchSheetData(getFieldCsvUrl())
         ]);
         
-        cleaningData = normalizeCleaningRecords(cleaningRaw);
-        fieldData = normalizeFieldRecords(fieldRaw);
+        cleaningData = cleaningRaw.map(mapCleaningRecord).filter(r => r.staffName || r.taskName);
+        fieldData = fieldRaw.map(mapFieldRecord).filter(r => r.assignedTo !== 'Unassigned' || r.tasks !== '—');
+        
+        // Populate department filter
+        const deptSet = new Set();
+        cleaningData.forEach(c => { if(c.department) deptSet.add(c.department); });
+        const deptFilter = document.getElementById('deptFilter');
+        deptFilter.innerHTML = '<option value="">All Departments</option>' + 
+            Array.from(deptSet).sort().map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+        
+        applyFiltersAndRender();
+        updateStatsAndKPIs();
+        updateCharts();
+        document.getElementById('lastSyncTime').innerText = new Date().toLocaleString();
+    }
+
+    function applyFiltersAndRender() {
+        const searchTerm = document.getElementById('cleaningSearch')?.value.toLowerCase() || '';
+        const deptVal = document.getElementById('deptFilter')?.value || '';
+        
+        filteredCleaning = cleaningData.filter(rec => {
+            const matchSearch = searchTerm === '' || 
+                (rec.staffName || '').toLowerCase().includes(searchTerm) ||
+                (rec.taskName || '').toLowerCase().includes(searchTerm) ||
+                (rec.department || '').toLowerCase().includes(searchTerm) ||
+                (rec.workLocation || '').toLowerCase().includes(searchTerm);
+            const matchDept = deptVal === '' || rec.department === deptVal;
+            return matchSearch && matchDept;
+        });
+        
+        // Field search filter
+        const fieldSearch = document.getElementById('fieldSearch')?.value.toLowerCase() || '';
+        filteredField = fieldData.filter(rec => {
+            return fieldSearch === '' || 
+                (rec.assignedTo || '').toLowerCase().includes(fieldSearch) ||
+                (rec.costCenter || '').toLowerCase().includes(fieldSearch) ||
+                (rec.department || '').toLowerCase().includes(fieldSearch) ||
+                (rec.tasks || '').toLowerCase().includes(fieldSearch);
+        });
         
         renderCleaningTable();
         renderFieldTable();
-        updateStatsAndKPIs();
-        updateCharts();
-        document.getElementById('lastSyncTime').innerText = new Date().toLocaleTimeString();
     }
 
     function renderCleaningTable() {
         const tbody = document.getElementById('cleaningTableBody');
-        if (!cleaningData.length) {
-            tbody.innerHTML = '<tr><td colspan="7">✅ No cleaning records found (or sheet empty). Start timer tasks to see data.</td></tr>';
+        if (!filteredCleaning.length) {
+            tbody.innerHTML = '<tr><td colspan="11">📋 No cleaning records match filters or sheet empty. Start timer tasks to see data.<\/td></tr>';
             return;
         }
-        const rowsHtml = cleaningData.slice(0, 200).map(rec => `
+        const rowsHtml = filteredCleaning.slice(0, 500).map(rec => `
             <tr>
-                <td>${escapeHtml(rec.staffName)}</td>
-                <td>${escapeHtml(rec.department)}</td>
-                <td>${escapeHtml(rec.taskName)}</td>
+                <td style="font-size:0.75rem;">${escapeHtml(rec.timestamp?.substring(0,16) || '—')}</td>
+                <td style="font-size:0.7rem;">${escapeHtml(rec.submissionId?.substring(0,12) || '—')}</td>
+                <td>${escapeHtml(rec.department || '—')}</td>
+                <td>${escapeHtml(rec.taskName || '—')}</td>
+                <td><strong>${escapeHtml(rec.staffName || '—')}</strong></td>
+                <td>${escapeHtml(rec.employeeId || '—')}</td>
                 <td>${rec.workDate || '—'}</td>
-                <td>${rec.durationMin ? Math.round(rec.durationMin) + ' min' : '—'}</td>
-                <td>${rec.shiftStart} - ${rec.shiftEnd}</td>
-                <td>${escapeHtml(rec.workLocation)}</td>
+                <td>${rec.durationMinutes ? Math.round(rec.durationMinutes) + ' min' : (rec.durationSeconds ? Math.round(rec.durationSeconds/60) + ' min' : '—')}</td>
+                <td>${rec.durationHours ? rec.durationHours.toFixed(1) + 'h' : (rec.durationMinutes ? (rec.durationMinutes/60).toFixed(1)+'h' : '—')}</td>
+                <td>${escapeHtml(rec.workLocation || '—')}</td>
+                <td>${escapeHtml(rec.supervisor || '—')}</td>
             </tr>
         `).join('');
         tbody.innerHTML = rowsHtml;
@@ -496,11 +567,11 @@
 
     function renderFieldTable() {
         const tbody = document.getElementById('fieldTableBody');
-        if (!fieldData.length) {
-            tbody.innerHTML = '<tr><td colspan="8">📋 No field tasks submitted yet. Use Field Manager to add tasks.</td></tr>';
+        if (!filteredField.length) {
+            tbody.innerHTML = '<tr><td colspan="9">📋 No field tasks submitted yet. Use Field Manager to add tasks.<\/td></tr>';
             return;
         }
-        const rowsHtml = fieldData.slice(0, 200).map(rec => {
+        const rowsHtml = filteredField.slice(0, 300).map(rec => {
             let priorityClass = '';
             if (rec.priority === 'High') priorityClass = 'priority-high';
             else if (rec.priority === 'Medium') priorityClass = 'priority-medium';
@@ -510,9 +581,10 @@
                 <td>${rec.date}</td>
                 <td>${escapeHtml(rec.costCenter)}</td>
                 <td>${escapeHtml(rec.department)}</td>
-                <td>${escapeHtml(rec.tasks.substring(0, 50))}</td>
+                <td>${escapeHtml(rec.tasks.substring(0, 55))}</td>
                 <td><span class="badge-status ${priorityClass}">${rec.priority}</span></td>
-                <td>${rec.totalHours}h</td>
+                <td>${rec.totalHours ? rec.totalHours + 'h' : '—'}</td>
+                <td>${rec.shift || 'Day'}</td>
                 <td><span class="badge-status">${rec.status}</span></td>
             </tr>`;
         }).join('');
@@ -522,7 +594,7 @@
     function updateStatsAndKPIs() {
         const totalSessions = cleaningData.length;
         const totalField = fieldData.length;
-        let totalCleaningHours = cleaningData.reduce((sum, r) => sum + (r.durationMin || 0) / 60, 0);
+        let totalCleaningHours = cleaningData.reduce((sum, r) => sum + (r.durationHours || (r.durationMinutes/60) || 0), 0);
         const uniqueStaff = new Set();
         cleaningData.forEach(c => { if(c.staffName) uniqueStaff.add(c.staffName); });
         fieldData.forEach(f => { if(f.assignedTo) uniqueStaff.add(f.assignedTo); });
@@ -537,23 +609,22 @@
         // Department distribution from cleaning data
         const deptMap = new Map();
         cleaningData.forEach(rec => {
-            let dept = rec.department || 'General';
+            let dept = rec.department || 'Unspecified';
             deptMap.set(dept, (deptMap.get(dept) || 0) + 1);
         });
-        // also include field department data
         fieldData.forEach(rec => {
             let dept = rec.department || 'Field Ops';
             deptMap.set(dept, (deptMap.get(dept) || 0) + 1);
         });
-        const deptLabels = Array.from(deptMap.keys());
+        const deptLabels = Array.from(deptMap.keys()).slice(0, 8);
         const deptCounts = deptLabels.map(l => deptMap.get(l));
         
         if (deptChart) deptChart.destroy();
         const ctxDept = document.getElementById('taskPerDeptChart').getContext('2d');
         deptChart = new Chart(ctxDept, {
             type: 'bar',
-            data: { labels: deptLabels, datasets: [{ label: 'Task Count', data: deptCounts, backgroundColor: '#2d6a4f', borderRadius: 8 }] },
-            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } }
+            data: { labels: deptLabels, datasets: [{ label: 'Total Tasks', data: deptCounts, backgroundColor: '#2d6a4f', borderRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: true }
         });
 
         // Priority distribution (field)
@@ -567,7 +638,7 @@
             options: { responsive: true }
         });
 
-        // Daily activity (combine cleaning + field by date)
+        // Daily activity (use WorkDate from cleaning + date from field)
         const dateMap = new Map();
         cleaningData.forEach(c => { if(c.workDate) dateMap.set(c.workDate, (dateMap.get(c.workDate) || 0) + 1); });
         fieldData.forEach(f => { if(f.date) dateMap.set(f.date, (dateMap.get(f.date) || 0) + 1); });
@@ -581,7 +652,7 @@
             options: { responsive: true }
         });
 
-        // Top staff by cleaning + field contributions
+        // Top staff by cleaning contributions
         const staffCount = new Map();
         cleaningData.forEach(c => { if(c.staffName) staffCount.set(c.staffName, (staffCount.get(c.staffName) || 0) + 1); });
         fieldData.forEach(f => { if(f.assignedTo) staffCount.set(f.assignedTo, (staffCount.get(f.assignedTo) || 0) + 1); });
@@ -597,7 +668,13 @@
 
     function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m === '&') return '&amp;'; if(m === '<') return '&lt;'; if(m === '>') return '&gt;'; return m;}); }
 
-    // Tab switching
+    // Event Listeners
+    document.getElementById('refreshAllBtn').addEventListener('click', () => loadAllData());
+    document.getElementById('cleaningSearch')?.addEventListener('input', () => applyFiltersAndRender());
+    document.getElementById('deptFilter')?.addEventListener('change', () => applyFiltersAndRender());
+    document.getElementById('fieldSearch')?.addEventListener('input', () => applyFiltersAndRender());
+
+    // Tab switching with chart resize
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -607,18 +684,12 @@
             if(target === 'cleaning') document.getElementById('cleaningTab').classList.add('active-pane');
             if(target === 'field') document.getElementById('fieldTab').classList.add('active-pane');
             if(target === 'insights') document.getElementById('insightsTab').classList.add('active-pane');
-            // resize charts after visibility
-            setTimeout(() => { if(deptChart) deptChart.resize(); if(priorityChart) priorityChart.resize(); }, 100);
+            setTimeout(() => { if(deptChart) deptChart.resize(); if(priorityChart) priorityChart.resize(); }, 120);
         });
     });
 
-    document.getElementById('refreshAllBtn').addEventListener('click', async () => {
-        await loadAllData();
-    });
-
-    // initial load
     loadAllData();
-    setInterval(() => { loadAllData(); }, 60000); // auto-refresh every minute
+    setInterval(() => loadAllData(), 70000);
 </script>
 </body>
 </html>
