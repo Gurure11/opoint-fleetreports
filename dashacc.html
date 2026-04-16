@@ -639,6 +639,7 @@
                 <table id="incidentTable">
                     <thead>
                         <tr>
+                            <th>Timestamp</th>
                             <th>Date</th>
                             <th>Time</th>
                             <th>Vehicle</th>
@@ -648,13 +649,15 @@
                             <th>Cost Center</th>
                             <th>Driver</th>
                             <th>Phone</th>
+                            <th>Description</th>
                             <th>At Fault</th>
                             <th>Image</th>
+                            <th>Extra Fields</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
                         <tr>
-                            <td colspan="11" style="text-align: center; padding: 50px;">
+                            <td colspan="14" style="text-align: center; padding: 50px;">
                                 <i class="fas fa-spinner fa-pulse"></i> Loading data...
                             </td>
                         </tr>
@@ -667,7 +670,7 @@
     <script>
         // CONFIGURATION - Replace with your deployed URL
         const CONFIG = {
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbxIEi_xjOgwVzrxPvNFBjWnH8E9Uz27r-qGheR5h2WztW8JQMP5saJoodmaRRmJyvFBBw/exec', // Replace with your Apps Script URL
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbzSBvkMC8d25IYTA3ypMucNL_0fn429lZMXSmTx-v7pKipom3LiJOprToQ6jDOyj6M53A/exec', // Replace with your Apps Script URL
             SHEET_ID: '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI',
             SHEET_NAME: 'Onpoint Incident Fleet Report'
         };
@@ -795,7 +798,9 @@
                     allIncidents = data.data;
                     filteredIncidents = [...allIncidents];
                     
+                    const fieldCount = Array.isArray(data.fields) ? data.fields.length : 0;
                     document.getElementById('recordCount').innerHTML = `📊 ${allIncidents.length} records`;
+                    document.getElementById('debugMessage').innerHTML = `Loaded ${allIncidents.length} rows · ${fieldCount} sheet fields`;
                     
                     populateFilters();
                     updateDashboard();
@@ -1019,34 +1024,48 @@
             });
         }
 
+        function getExtraFields(inc) {
+            const ignore = new Set(['Timestamp','Date','Time','VehicleReg','Location','AccidentType','Department','CostCenter','DriverName','DriverPhone','Description','AtFault','ReportedToMetro','DrunkenDriving','ImageDriveUrl','RowNumber','raw']);
+            const source = inc.raw && typeof inc.raw === 'object' ? inc.raw : inc;
+            return Object.keys(source).filter(key => !ignore.has(key) && String(source[key] || '').trim() !== '').map(key => `${key}: ${source[key]}`);
+        }
+
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
             if (filteredIncidents.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 50px;">No incidents found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 50px;">No incidents found</td></tr>';
                 return;
             }
             
             filteredIncidents.slice(0, 50).forEach(inc => {
                 const row = tbody.insertRow();
+                const extraFields = getExtraFields(inc);
+                const atFaultValue = inc.AtFault || '';
+                const atFaultBadge = atFaultValue
+                    ? `<span class="${atFaultValue === 'Yes' ? 'badge-yes' : 'badge-no'}">${atFaultValue}</span>`
+                    : '<span style="color:#999;">N/A</span>';
                 row.innerHTML = `
+                    <td>${inc.Timestamp || ''}</td>
                     <td>${inc.Date || ''}</td>
                     <td>${inc.Time || ''}</td>
                     <td><strong>${inc.VehicleReg || ''}</strong></td>
-                    <td>${(inc.Location || '').substring(0, 30)}${inc.Location && inc.Location.length > 30 ? '...' : ''}</td>
+                    <td>${inc.Location || ''}</td>
                     <td>${inc.AccidentType || ''}</td>
                     <td>${inc.Department || ''}</td>
-                    <td>${(inc.CostCenter || '').substring(0, 15)}</td>
+                    <td>${inc.CostCenter || ''}</td>
                     <td>${inc.DriverName || ''}</td>
                     <td>${inc.DriverPhone || ''}</td>
-                    <td><span class="${inc.AtFault === 'Yes' ? 'badge-yes' : 'badge-no'}">${inc.AtFault || 'No'}</span></td>
+                    <td>${inc.Description || ''}</td>
+                    <td>${atFaultBadge}</td>
                     <td>
                         ${inc.ImageDriveUrl ? 
                             `<a href="${inc.ImageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> View</a>` : 
                             '<span style="color:#999;">No image</span>'
                         }
                     </td>
+                    <td>${extraFields.length ? extraFields.map(v => `<div>${v}</div>`).join('') : '<span style="color:#999;">None</span>'}</td>
                 `;
             });
         }
@@ -1057,10 +1076,11 @@
                 return;
             }
             
-            const headers = ['Date', 'Time', 'Vehicle', 'Location', 'Type', 'Department', 'Cost Center', 'Driver', 'Phone', 'At Fault'];
+            const headers = ['Timestamp','Date', 'Time', 'Vehicle', 'Location', 'Type', 'Department', 'Cost Center', 'Driver', 'Phone', 'Description', 'At Fault', 'Image Link', 'Extra Fields'];
             const rows = filteredIncidents.map(inc => [
-                inc.Date, inc.Time, inc.VehicleReg, inc.Location, inc.AccidentType,
-                inc.Department, inc.CostCenter, inc.DriverName, inc.DriverPhone, inc.AtFault
+                inc.Timestamp, inc.Date, inc.Time, inc.VehicleReg, inc.Location, inc.AccidentType,
+                inc.Department, inc.CostCenter, inc.DriverName, inc.DriverPhone, inc.Description, inc.AtFault, inc.ImageDriveUrl,
+                getExtraFields(inc).join(' | ')
             ]);
             
             const csv = [headers, ...rows].map(row => row.map(c => `"${c || ''}"`).join(',')).join('\n');
