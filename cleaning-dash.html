@@ -371,7 +371,7 @@
     const FIELD_SHEET_NAME = 'Fields';
 
     function getCleaningCsvUrl() {
-        return `https://docs.google.com/spreadsheets/d/${CLEANING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(CLEANING_SHEET_NAME)}`;
+        return 'https://script.google.com/macros/s/AKfycbxoe4sInvaKStTACVabjGgQMExVEep4HktbK1DN7BCvpjuF9xLe1cGfwPtMKohdkB8n/exec?action=getCleaningCsv';
     }
     
     function getFieldCsvUrl() {
