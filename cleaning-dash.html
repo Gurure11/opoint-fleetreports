@@ -359,23 +359,33 @@
         </div>
     </div>
 </div>
-<footer>© Onpoint Group · Data from Cleaning Reports (exact headers) + Field Maintenance — Last sync: <span id="lastSyncTime">—</span></footer>
+<footer>© Onpoint Group · Data from Google Sheet tabs: Cleaning Report + Fields — Last sync: <span id="lastSyncTime">—</span></footer>
 
 <script>
     // ============================================================
     // CONFIGURATION - Google Sheets IDs
     // ============================================================
-    const CLEANING_SHEET_ID = '1ogeECC3RIlGRnKI4ttmWOFSCt4m_6opEizIVVTdyerI';
-    const CLEANING_SHEET_NAME = 'Cleaning Reports';
-    const FIELD_SHEET_ID = '1ogeECC3RIlGRnKI4ttmWOFSCt4m_6opEizIVVTdyerI';
-    const FIELD_SHEET_NAME = 'Fields';
+    const GOOGLE_SHEET_ID = '1ogeECC3RIlGRnKI4ttmWOFSCt4m_6opEizIVVTdyerI';
+    const CLEANING_TAB_NAME = 'Cleaning Report';
+    const FIELD_TAB_NAME = 'Fields';
+
+    // Paste your deployed Google Apps Script Web App URL here after deployment.
+    const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby4PYC14y_CUEPfeHeF_e_Lz2o-GiNpHUV_1lukC-HL2Vl8wrAHpnfTGckzocWKfXw/exec';
+
+    function getSheetCsvUrl(tabName) {
+        if (!APPS_SCRIPT_WEB_APP_URL || APPS_SCRIPT_WEB_APP_URL === 'https://script.google.com/macros/s/AKfycby4PYC14y_CUEPfeHeF_e_Lz2o-GiNpHUV_1lukC-HL2Vl8wrAHpnfTGckzocWKfXw/exec') {
+            // Fallback for publicly shared sheets. Apps Script is recommended because it avoids CORS/share issues.
+            return `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+        }
+        return `${APPS_SCRIPT_WEB_APP_URL}?action=getSheetCsv&tab=${encodeURIComponent(tabName)}`;
+    }
 
     function getCleaningCsvUrl() {
-        return 'https://script.google.com/macros/s/AKfycbyG76RiF5L4o4b-XH5i2xHOHQ_jLuZJzKU3q6HLvYBW24ZSmcZphFdkZN0tzwBILpU/exec?action=getCleaningCsv';
+        return getSheetCsvUrl(CLEANING_TAB_NAME);
     }
     
     function getFieldCsvUrl() {
-        return `https://docs.google.com/spreadsheets/d/${FIELD_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(FIELD_SHEET_NAME)}`;
+        return getSheetCsvUrl(FIELD_TAB_NAME);
     }
 
     let cleaningData = [];      // raw parsed objects with exact column headers
@@ -434,7 +444,7 @@
 
     async function fetchSheetData(csvUrl) {
         try {
-            const response = await fetch(csvUrl);
+            const response = await fetch(csvUrl, { cache: 'no-store' });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const csvText = await response.text();
             return parseCSV(csvText);
