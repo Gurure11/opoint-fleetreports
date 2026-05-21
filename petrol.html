@@ -570,7 +570,61 @@
                 align-items: stretch;
             }
         }
-    </style>
+    
+        .submission-image-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #eef2ff;
+            color: #4f46e5;
+            text-decoration: none;
+            border: 1px solid #c7d2fe;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .submission-image-icon:hover {
+            background: #4f46e5;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 99999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .image-modal img {
+            max-width: 95%;
+            max-height: 95%;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 42px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+</style>
 </head>
 <body>
     <div class="container">
@@ -1399,7 +1453,7 @@
                     <td>${entry.CostCenter || ''}</td>
                     <td>${entry.Department || ''}</td>
                     <td>${entry.Notes || ''}</td>
-                    <td>${entry.SubmissionID || ''}</td>
+                    <td>${createSubmissionImageIcon(entry.SubmissionID || '')}</td>
                     <td>${entry.Status || ''}</td>
                 `;
             });
@@ -1473,5 +1527,60 @@
             }, 2000);
         }
     </script>
+
+    <div class="image-modal" id="imageModal">
+        <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
+        <img id="modalImage" src="" alt="Submission Image">
+    </div>
+
+<script>
+
+    function createSubmissionImageIcon(imageUrl) {
+        if (!imageUrl || imageUrl.trim() === '') return '-';
+
+        const safeUrl = imageUrl.trim();
+
+        const isImage =
+            safeUrl.includes('.jpg') ||
+            safeUrl.includes('.jpeg') ||
+            safeUrl.includes('.png') ||
+            safeUrl.includes('.gif') ||
+            safeUrl.includes('drive.google.com') ||
+            safeUrl.includes('googleusercontent');
+
+        if (!isImage) {
+            return safeUrl;
+        }
+
+        return `
+            <a class="submission-image-icon"
+               href="${safeUrl}"
+               target="_blank"
+               rel="noopener noreferrer"
+               title="Open Image Link">
+                🖼️
+            </a>
+        `;
+    }
+
+
+    function openImageModal(url) {
+        document.getElementById('modalImage').src = url;
+        document.getElementById('imageModal').style.display = 'flex';
+    }
+
+    function closeImageModal() {
+        document.getElementById('imageModal').style.display = 'none';
+        document.getElementById('modalImage').src = '';
+    }
+
+    window.addEventListener('click', function(e) {
+        const modal = document.getElementById('imageModal');
+        if (e.target === modal) {
+            closeImageModal();
+        }
+    });
+</script>
+
 </body>
 </html>
