@@ -2,849 +2,255 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle Handover Dashboard | OnPoint Fleet</title>
-    
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- DataTables -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Vehicle Handover/Takeover | OnPoint OnTime Fleet</title>
     <style>
+        /* === STYLES === */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
 
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            position: relative;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.1"><path d="M10 50 Q 30 30, 50 50 T 90 50" stroke="white" fill="none" stroke-width="2"/><circle cx="20" cy="40" r="3" fill="white"/><circle cx="80" cy="60" r="3" fill="white"/></svg>');
-            background-size: 100px 100px;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .dashboard-container {
-            max-width: 1600px;
+        .container {
+            max-width: 600px;
             margin: 0 auto;
-            position: relative;
-            z-index: 1;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
 
-        .dashboard-header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 30px;
-            padding: 25px 30px;
-            margin-bottom: 25px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            border: 1px solid rgba(255,255,255,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .logo-icon {
-            width: 60px;
-            height: 60px;
+        .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             color: white;
-            font-size: 30px;
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            padding: 30px 20px;
+            text-align: center;
         }
 
-        .header-title h1 {
+        .header h1 {
             font-size: 24px;
-            color: #333;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .header-title p {
-            color: #666;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .sync-status {
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-size: 13px;
+            margin-bottom: 10px;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
-        .sync-status.offline {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .logout-btn {
-            background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(225, 29, 72, 0.3);
-        }
-
-        .logout-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(225, 29, 72, 0.4);
-        }
-
-        .debug-bar {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            border-radius: 15px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            color: #856404;
-            font-size: 13px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .test-btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .kpi-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 25px;
-            padding: 25px;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
-            border: 1px solid rgba(255,255,255,0.5);
-            transition: transform 0.3s ease;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .kpi-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .kpi-header i {
-            font-size: 32px;
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
-            padding: 10px;
-            border-radius: 15px;
-        }
-
-        .kpi-label {
+        .header p {
             font-size: 14px;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            opacity: 0.9;
         }
 
-        .kpi-value {
-            font-size: 36px;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 5px;
+        .form-section {
+            padding: 20px;
+            border-bottom: 1px solid #eef2f6;
         }
 
-        .kpi-trend {
-            font-size: 13px;
-            color: #10b981;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .filters-section {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 25px;
-            padding: 25px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(255,255,255,0.5);
-        }
-
-        .filters-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .filters-header h3 {
+        .form-section h2 {
             font-size: 18px;
             color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 10px;
         }
 
-        .record-count {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 600;
+        .form-section h2 i {
+            margin-right: 10px;
+            color: #667eea;
         }
 
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+        .form-group {
+            margin-bottom: 20px;
         }
 
-        .filter-group {
-            position: relative;
-        }
-
-        .filter-group label {
+        .form-group label {
             display: block;
             margin-bottom: 8px;
-            font-size: 13px;
-            font-weight: 600;
             color: #555;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
+            font-size: 14px;
+            font-weight: 500;
         }
 
-        .filter-group input,
-        .filter-group select {
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #eef2f6;
-            border-radius: 15px;
+            border-radius: 10px;
             font-size: 14px;
             transition: all 0.3s;
-            background: white;
+            background: #f8fafc;
         }
 
-        .filter-group input:focus,
-        .filter-group select:focus {
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             outline: none;
             border-color: #667eea;
+            background: white;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .date-range {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
         }
 
-        .date-range input {
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        .radio-option {
             flex: 1;
+            min-width: 80px;
         }
 
-        .filter-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 20px;
+        .radio-option input[type="radio"] {
+            display: none;
         }
 
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 30px;
-            font-weight: 600;
+        .radio-option label {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            background: #f8fafc;
+            border: 2px solid #eef2f6;
+            border-radius: 10px;
             cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .radio-option input[type="radio"]:checked + label {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        .checkbox-item {
+            position: relative;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            display: none;
+        }
+
+        .checkbox-item label {
+            display: block;
+            text-align: center;
+            padding: 15px;
+            background: #f8fafc;
+            border: 2px solid #eef2f6;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .checkbox-item input[type="checkbox"]:checked + label {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .photo-upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .photo-upload-area:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .photo-upload-area input[type="file"] {
+            display: none;
+        }
+
+        .photo-upload-area label {
+            display: block;
+            cursor: pointer;
+        }
+
+        .photo-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #eef2f6;
+        }
+
+        .abnormality-item {
+            background: #fff9c4;
+            border-left: 4px solid #fbc02d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .abnormality-item textarea {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            border: 2px solid #eef2f6;
+            border-radius: 8px;
             font-size: 14px;
         }
 
-        .btn-primary {
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
 
-        .btn-primary:hover {
+        .submit-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-secondary {
-            background: #eef2f6;
-            color: #555;
+        .submit-btn:active {
+            transform: translateY(0);
         }
 
-        .btn-secondary:hover {
-            background: #e2e8f0;
-        }
-
-        .btn-success {
-            background: #10b981;
-            color: white;
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4);
-        }
-
-        .charts-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .chart-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 25px;
-            padding: 25px;
-            border: 1px solid rgba(255,255,255,0.5);
-        }
-
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .chart-header h4 {
-            font-size: 16px;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        canvas {
-            width: 100% !important;
-            height: 250px !important;
-        }
-
-        /* Enhanced Table Styles */
-        .table-section {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border-radius: 25px;
-            padding: 25px;
-            border: 1px solid rgba(255,255,255,0.5);
-            margin-bottom: 25px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-        }
-
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 15px;
-            padding: 0 10px;
-        }
-
-        .table-header h2 {
-            font-size: 22px;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 700;
-        }
-
-        .table-header h2 i {
-            color: #667eea;
-            font-size: 24px;
-        }
-
-        .table-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .table-actions .btn {
-            padding: 10px 20px;
-            font-size: 13px;
-        }
-
-        /* Modern Table Design */
-        .table-container {
-            overflow-x: auto;
-            border-radius: 20px;
-            border: 1px solid #edf2f7;
-            background: white;
-            max-height: 600px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #667eea #e2e8f0;
-        }
-
-        .table-container::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        .table-container::-webkit-scrollbar-track {
-            background: #e2e8f0;
-            border-radius: 10px;
-        }
-
-        .table-container::-webkit-scrollbar-thumb {
-            background: #667eea;
-            border-radius: 10px;
-        }
-
-        .table-container::-webkit-scrollbar-thumb:hover {
-            background: #764ba2;
-        }
-
-        #handoverTable {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            font-size: 13px;
-            min-width: 1600px;
-        }
-
-        #handoverTable thead {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        #handoverTable thead tr {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        #handoverTable thead th {
-            color: white;
-            padding: 16px 12px;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            text-align: left;
-            white-space: nowrap;
-            border-right: 1px solid rgba(255,255,255,0.2);
-        }
-
-        #handoverTable thead th:last-child {
-            border-right: none;
-        }
-
-        #handoverTable tbody tr {
-            background: white;
-            transition: all 0.2s ease;
-            border-bottom: 1px solid #edf2f7;
-        }
-
-        #handoverTable tbody tr:hover {
-            background: #f7fafc;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-            position: relative;
-            z-index: 5;
-        }
-
-        #handoverTable tbody td {
-            padding: 14px 12px;
-            color: #2d3748;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: middle;
-            line-height: 1.5;
-        }
-
-        /* Cell-specific styling */
-        #handoverTable tbody td:first-child {
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            color: #718096;
-            font-weight: 500;
-        }
-
-        #handoverTable tbody td:nth-child(2),
-        #handoverTable tbody td:nth-child(3) {
-            font-weight: 600;
-            color: #2d3748;
-            white-space: nowrap;
-        }
-
-        #handoverTable tbody td:nth-child(4) {
-            font-weight: 600;
-            color: #1a202c;
-        }
-
-        #handoverTable tbody td:nth-child(5),
-        #handoverTable tbody td:nth-child(6) {
-            color: #4a5568;
-            font-size: 12px;
-        }
-
-        /* Badge styles */
-        .badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 600;
-            text-align: center;
-            min-width: 80px;
-        }
-
-        .badge-handover {
-            background: linear-gradient(135deg, #667eea20, #764ba220);
-            color: #667eea;
-            border: 1px solid #667eea40;
-        }
-
-        .badge-takeover {
-            background: linear-gradient(135deg, #10b98120, #05966920);
-            color: #059669;
-            border: 1px solid #10b98140;
-        }
-
-        /* Vehicle reg badge */
-        .vehicle-badge {
-            background: #f7fafc;
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-weight: 600;
-            color: #2d3748;
-            border: 1px solid #e2e8f0;
-            display: inline-block;
-            font-size: 12px;
-        }
-
-        /* Image gallery styles */
-        .image-gallery {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .image-thumb {
-            width: 45px;
-            height: 45px;
-            border-radius: 10px;
-            object-fit: cover;
-            cursor: pointer;
-            border: 2px solid white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-
-        .image-thumb:hover {
-            transform: scale(2.5);
-            z-index: 100;
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-            border-color: #667eea;
-        }
-
-        .image-thumb-error {
-            background: #f7fafc;
-            border: 1px dashed #cbd5e0;
-        }
-
-        /* Image link button */
-        .image-link-btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            border: 1px solid white;
-        }
-
-        .image-link-btn:hover {
-            background: #764ba2;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .image-link-btn i {
-            font-size: 12px;
-        }
-
-        .image-link-btn.drive {
-            background: #4285F4;
-        }
-
-        .image-link-btn.drive:hover {
-            background: #3367D6;
-        }
-
-        .image-link-btn img {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-        }
-
-        .no-image {
-            color: #a0aec0;
-            font-size: 11px;
-            font-style: italic;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            background: #f7fafc;
-            border-radius: 20px;
-        }
-
-        /* Tooltip */
-        [data-tooltip] {
-            position: relative;
-            cursor: help;
-        }
-
-        [data-tooltip]:before {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 6px 12px;
-            background: #2d3748;
-            color: white;
-            font-size: 11px;
-            border-radius: 6px;
-            white-space: nowrap;
-            display: none;
-            z-index: 1000;
-        }
-
-        [data-tooltip]:hover:before {
-            display: block;
-        }
-
-        /* Damage indicator */
-        .damage-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .damage-yes {
-            background: #fed7d7;
-            color: #c53030;
-        }
-
-        .damage-no {
-            background: #c6f6d5;
-            color: #22543d;
-        }
-
-        /* Data highlights */
-        .highlight {
-            font-weight: 700;
-            color: #2d3748;
-        }
-
-        .text-muted {
-            color: #718096;
-            font-size: 11px;
-        }
-
-        /* Loading state */
-        .table-loading {
-            text-align: center;
-            padding: 60px !important;
-            color: #718096;
-            font-size: 14px;
-        }
-
-        .table-loading i {
-            font-size: 30px;
-            color: #667eea;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        /* Empty state */
-        .table-empty {
-            text-align: center;
-            padding: 60px !important;
-            color: #a0aec0;
-        }
-
-        .table-empty i {
-            font-size: 40px;
-            color: #cbd5e0;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.95);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            max-width: 90%;
-            max-height: 80vh;
-            border-radius: 10px;
-            border: 3px solid white;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            background: rgba(0,0,0,0.5);
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            z-index: 2001;
-        }
-
-        .close-modal:hover {
-            background: rgba(255,255,255,0.2);
-            transform: scale(1.1);
-        }
-
-        .modal-actions {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 40px;
-            font-size: 14px;
-            display: flex;
-            gap: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .modal-actions a {
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 15px;
-            border-radius: 30px;
-            transition: all 0.3s;
-        }
-
-        .modal-actions a:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        /* Loading Overlay */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -852,17 +258,16 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
-            z-index: 3000;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 1000;
             justify-content: center;
             align-items: center;
             flex-direction: column;
-            backdrop-filter: blur(5px);
         }
 
         .loading-spinner {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             border: 5px solid #f3f3f3;
             border-top: 5px solid #667eea;
             border-radius: 50%;
@@ -875,910 +280,655 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Notification */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
+        .success-message {
+            display: none;
+            background: #4caf50;
+            color: white;
+            padding: 15px;
             border-radius: 10px;
-            background: white;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            z-index: 4000;
+            text-align: center;
+            margin-bottom: 20px;
         }
 
-        .notification.show {
-            transform: translateX(0);
+        .error-message {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
         }
 
-        .notification.success {
-            border-left: 4px solid #10b981;
+        .datetime-group {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
         }
 
-        .notification.error {
-            border-left: 4px solid #f43f5e;
-        }
-
-        .notification.warning {
-            border-left: 4px solid #ffc107;
-        }
-
-        @media (max-width: 768px) {
-            .charts-row {
+        @media (max-width: 480px) {
+            .form-row {
                 grid-template-columns: 1fr;
             }
             
-            .filter-grid {
+            .radio-group {
+                flex-direction: column;
+            }
+            
+            .checkbox-group {
                 grid-template-columns: 1fr;
             }
             
-            .date-range {
-                flex-direction: column;
+            .container {
+                margin: 10px;
+                border-radius: 15px;
             }
-            
-            .dashboard-header {
-                flex-direction: column;
-                align-items: flex-start;
+            .home{
+                color: blue;
+                margin-right: 100px;
+                font-size: 15px;
+                text-align: center;
             }
-            
-            .header-actions {
-                width: 100%;
-                flex-direction: column;
-            }
-            
-            .modal-actions {
-                flex-direction: column;
-                gap: 10px;
-                bottom: 20px;
-            }
-            
-            .image-thumb:hover {
-                transform: scale(1.5);
+            .home:hover{
+                color: grey;
+                cursor: pointer;
+                transition: 0.7s;
+                opacity: 0.8;
             }
         }
-    </style>
+    
+        .add-option-btn{
+            margin-top:10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color:white;
+            border:none;
+            padding:10px 14px;
+            border-radius:10px;
+            font-size:13px;
+            font-weight:600;
+            cursor:pointer;
+            transition:0.3s;
+            width:100%;
+        }
+
+        .add-option-btn:hover{
+            opacity:0.9;
+            transform:translateY(-1px);
+        }
+
+</style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Vehicle Handover/Takeover Report</h1>
+            <p>OnPoint OnTime Fleet Solutions</p>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            ✅ Form submitted successfully! A copy has been sent to fleet@onpointontime.co.za
+        </div>
+        <div class="error-message" id="errorMessage">❌ Submission failed. Please try again.</div>
+
+        <form id="vehicleForm" onsubmit="return false;">
+            <!-- Employee Information Section -->
+            <div class="form-section">
+                <h2><i>👤</i> Employee Information</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name and Surname *</label>
+                        <select id="employeeName" required>
+    <option value="">Select Name & Surname...</option>
+    <option value="Retselisitsoe Mohapi">Retselisitsoe Mohapi</option>
+    <option value="George Rusere">George Rusere</option>
+    <option value="Nyasha Marira">Nyasha Marira</option>
+    <option value="Trymore Mtizwa">Trymore Mtizwa</option>
+    <option value="Brian Mugiya">Brian Mugiya</option>
+    <option value="Peter Nong">Peter Nong</option>
+    <option value="Nicholas Dambiranwa">Nicholas Dambiranwa</option>
+    <option value="Curious Sixpense">Curious Sixpense</option>
+    <option value="Clifonce Matewe">Clifonce Matewe</option>
+    <option value="Moeketsi Tshabalala">Moeketsi Tshabalala</option>
+    <option value="Elias Mashiane">Elias Mashiane</option>
+    <option value="Leah Phiri">Leah Phiri</option>
+    <option value="Lungile Soni">Lungile Soni</option>
+    <option value="Washington Musiiwa">Washington Musiiwa</option>
+    <option value="Donald Tawengwa">Donald Tawengwa</option>
+    <option value="Washington Madauka">Washington Madauka</option>
+    <option value="Before Simonne">Before Simonne</option>
+    <option value="Happison Mupanedengu">Happison Mupanedengu</option>
+    <option value="William Mahlo">William Mahlo</option>
+    <option value="Pride Nyoni">Pride Nyoni</option>
+    <option value="Petros Mosekidi">Petros Mosekidi</option>
+    <option value="Tonderai Matsikire">Tonderai Matsikire</option>
+    <option value="Adelaide Dimingo">Adelaide Dimingo</option>
+    <option value="Tumelo Mhlongo">Tumelo Mhlongo</option>
+    <option value="Sabelo Zulu">Sabelo Zulu</option>
+    <option value="Tsitsi Dube">Tsitsi Dube</option>
+    <option value="Starnley Vaningwa">Starnley Vaningwa</option>
+    <option value="Philip Shambare">Philip Shambare</option>
+    <option value="Graham Tsuro">Graham Tsuro</option>
+    <option value="Meshellum Mugabe">Meshellum Mugabe</option>
+    <option value="Tafadzwa Magejo">Tafadzwa Magejo</option>
+    <option value="Trust Bhila">Trust Bhila</option>
+    <option value="Moses Magutse">Moses Magutse</option>
+    <option value="Kudakwashe Madzikangava">Kudakwashe Madzikangava</option>
+    <option value="Andrew Moloisane">Andrew Moloisane</option>
+    <option value="Zivai Magwaza">Zivai Magwaza</option>
+    <option value="Brian Nkomo">Brian Nkomo</option>
+    <option value="Joshuwa Paradzai">Joshuwa Paradzai</option>
+    <option value="Goodwill Rakgoko">Goodwill Rakgoko</option>
+    <option value="Johanne Hendriks">Johanne Hendriks</option>
+    <option value="Claudius Gomo">Claudius Gomo</option>
+    <option value="Patience Chipundo">Patience Chipundo</option>
+    <option value="Siyanda Dlamini">Siyanda Dlamini</option>
+    <option value="Vusi Mabena">Vusi Mabena</option>
+    <option value="Ronald Musengwa">Ronald Musengwa</option>
+    <option value="Neo Mogatusi">Neo Mogatusi</option>
+    <option value="Mqondisi Ndlovu">Mqondisi Ndlovu</option>
+    <option value="Govern Paradzai">Govern Paradzai</option>
+    <option value="Dickens Magwaza">Dickens Magwaza</option>
+    <option value="Kgomotso Letsoalo">Kgomotso Letsoalo</option>
+    <option value="Nametso Bokoane">Nametso Bokoane</option>
+    <option value="Phumzile Cindi">Phumzile Cindi</option>
+    <option value="Sydney Ngwenya">Sydney Ngwenya</option>
+    <option value="Bheki Makhwanazi">Bheki Makhwanazi</option>
+    <option value="Ntsako Mathe">Ntsako Mathe</option>
+    <option value="Bongile Cuba">Bongile Cuba</option>
+    <option value="Moses Mashatola">Moses Mashatola</option>
+    <option value="Tony Takabvakure">Tony Takabvakure</option>
+    <option value="Timothy Wadzema">Timothy Wadzema</option>
+    <option value="Rayman Mugaramanja">Rayman Mugaramanja</option>
+</select>
+                        <button type="button" class="add-option-btn" onclick="addNewOption('employeeName', 'Enter new employee name and surname:')">
+                            ➕ Add New Name
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>Employee Number *</label>
+                        <input type="text" id="employeeNumber" placeholder="EMP001" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Contact Cell *</label>
+                        <input type="tel" id="idNumber" placeholder="+27 71 234 5678" required>
+                    </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <select id="department">
+                        <option value="">Select Department</option>
+                        <option value="Logistics">Logistics</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Management">Management</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Vehicle Information Section -->
+            <div class="form-section">
+                <h2><i>🚙</i> Vehicle Information</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vehicle Registration *</label>
+                        <select id="vehicleReg" required>
+                            <option value="">Select Vehicle Registration...</option>
+                            <option value="LH83NTGP">LH83NTGP</option>
+                            <option value="HZ00XWGP">HZ00XWGP</option>
+                            <option value="HK60TXGP">HK60TXGP</option>
+                            <option value="HK60TRGP">HK60TRGP</option>
+                            <option value="HN03JZGP">HN03JZGP</option>
+                            <option value="LD72VRGP">LD72VRGP</option>
+                            <option value="LD72VKGP">LD72VKGP</option>
+                            <option value="KZ14DYGP">KZ14DYGP</option>
+                            <option value="MJ53VVGP">MJ53VVGP</option>
+                            <option value="MF72JPGP">MF72JPGP</option>
+                            <option value="MH18HLGP">MH18HLGP</option>
+                            <option value="MH18HPGP">MH18HPGP</option>
+                            <option value="MJ22MJGP">MJ22MJGP</option>
+                            <option value="JD12LMGP">JD12LMGP</option>
+                            <option value="JV09TWGP">JV09TWGP</option>
+                            <option value="LD45TFGP">LD45TFGP</option>
+                            <option value="MG47YRGP">MG47YRGP</option>
+                            <option value="CW15XZGP">CW15XZGP</option>
+                            <option value="YBR245GP">YBR245GP</option>
+                            <option value="LN30PNGP">LN30PNGP</option>
+                            <option value="LX67YSGP">LX67YSGP</option>
+                            <option value="LD27RXGP">LD27RXGP</option>
+                            <option value="JN01DGGP">JN01DGGP</option>
+                            <option value="LW46XCGP">LW46XCGP</option>
+                            <option value="LP17TVGP">LP17TVGP</option>
+                            <option value="BZ89VHGP">BZ89VHGP</option>
+                            <option value="DZ53XBGP">DZ53XBGP</option>
+                            <option value="KP98PDGP">KP98PDGP</option>
+                            <option value="KL60NJGP">KL60NJGP</option>
+                            <option value="JP41CHGP">JP41CHGP</option>
+                            <option value="JB41MPGP">JB41MPGP</option>
+                            <option value="LS77SJGP">LS77SJGP</option>
+                            <option value="MH47SRGP">MH47SRGP</option>
+                            <option value="HX96RVGP">HX96RVGP</option>
+                            <option value="KK19DDGP">KK19DDGP</option>
+                            <option value="KR76PYGP">KR76PYGP</option>
+                            <option value="KT74WDGP">KT74WDGP</option>
+                            <option value="KP56BVGP">KP56BVGP</option>
+                            <option value="RTH651GP">RTH651GP</option>
+                            <option value="JX95DNGP">JX95DNGP</option>
+                            <option value="HN23FWGP">HN23FWGP</option>
+                            <option value="LP28LYGP">LP28LYGP</option>
+                            <option value="KJ96FZGP">KJ96FZGP</option>
+                            <option value="HV09VKGP">HV09VKGP</option>
+                            <option value="JD95XGGP">JD95XGGP</option>
+                            <option value="JT31YRGP">JT31YRGP</option>
+                            <option value="KP33HDGP">KP33HDGP</option>
+                            <option value="JF10CSGP">JF10CSGP</option>
+                            <option value="HP34WKGP">HP34WKGP</option>
+                            <option value="KN47CFGP">KN47CFGP</option>
+                            <option value="LS85RVGP">LS85RVGP</option>
+                            <option value="LP00HKGP">LP00HKGP</option>
+                            <option value="FY37DDGP">FY37DDGP</option>
+                            <option value="FW95WXGP">FW95WXGP</option>
+                            <option value="LM52NWGP">LM52NWGP</option>
+                            <option value="HM80WZGP">HM80WZGP</option>
+                            <option value="KK57HSGP">KK57HSGP</option>
+                            <option value="HG00HPGP">HG00HPGP</option>
+                            <option value="JJ42MZGP">JJ42MZGP</option>
+                            <option value="LN12MTGP">LN12MTGP</option>
+                            <option value="HG00JMGP">HG00JMGP</option>
+                            <option value="HM68TLGP">HM68TLGP</option>
+                            <option value="KP18GMGP">KP18GMGP</option>
+                            <option value="LF33HXGP">LF33HXGP</option>
+                            <option value="FN34BVGP">FN34BVGP</option>
+                            <option value="HK67KZGP">HK67KZGP</option>
+                            <option value="HK67LDGP">HK67LDGP</option>
+                            <option value="KK68RFGP">KK68RFGP</option>
+                            <option value="HH32LSGP">HH32LSGP</option>
+                            <option value="KD94SSGP">KD94SSGP</option>
+                            <option value="KF60VWGP">KF60VWGP</option>
+                            <option value="KT41KTGP">KT41KTGP</option>
+                            <option value="KT53WZGP">KT53WZGP</option>
+                            <option value="HG75GMGP">HG75GMGP</option>
+                            <option value="LK76BGGP">LK76BGGP</option>
+                            <option value="MK85PWGP">MK85PWGP</option>
+                        </select>
+                        <button type="button" class="add-option-btn" onclick="addNewOption('vehicleReg', 'Enter new vehicle registration:')">
+                            ➕ Add Vehicle Registration
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>Vehicle Model</label>
+                        <input type="text" id="vehicleModel" placeholder="Toyota Hilux 2023">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Current Mileage *</label>
+                        <input type="number" id="mileage" placeholder="45000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Next Service Due</label>
+                        <input type="text" id="serviceDue" placeholder="50000 km">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Handover/Takeover Type -->
+            <div class="form-section">
+                <h2><i>🔄</i> Handover/Takeover Type</h2>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" name="handoverType" id="handover" value="Handover" checked>
+                        <label for="handover">Handover</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="handoverType" id="takeover" value="Takeover">
+                        <label for="takeover">Takeover</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fuel Gauge Position -->
+            <div class="form-section">
+                <h2><i>⛽</i> Fuel Gauge Position</h2>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="empty" value="Empty">
+                        <label for="empty">Empty</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="quarter" value="1/4">
+                        <label for="quarter">1/4</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="half" value="1/2" checked>
+                        <label for="half">1/2</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="threeQuarter" value="3/4">
+                        <label for="threeQuarter">3/4</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="full" value="Full">
+                        <label for="full">Full</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- General Handover/Takeover Checklist -->
+            <div class="form-section">
+                <h2><i>✓</i> General Handover/Takeover Checklist</h2>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="keys" value="Keys">
+                        <label for="keys">🔑 Keys</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="license" value="License Disk">
+                        <label for="license">📄 License Disk</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="spareTire" value="Spare Tire">
+                        <label for="spareTire">🛞 Spare Tire</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="jack" value="Jack">
+                        <label for="jack">🔧 Jack</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="triangle" value="Warning Triangle">
+                        <label for="triangle">⚠️ Warning Triangle</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="firstAid" value="First Aid Kit">
+                        <label for="firstAid">🩺 First Aid Kit</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="fireExtinguisher" value="Fire Extinguisher">
+                        <label for="fireExtinguisher">🧯 Fire Extinguisher</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="fuelCard" value="Fuel Card">
+                        <label for="fuelCard">💳 Fuel Card</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Abnormalities and Photo Uploads -->
+            <div class="form-section">
+                <h2><i>📸</i> Abnormalities / Damage Report</h2>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Please document any dents, scratches, or abnormalities</p>
+                
+                <!-- Photo Upload Area -->
+                <div class="photo-upload-area" id="photoUploadArea">
+                    <input type="file" id="vehiclePhotos" accept="image/*" multiple capture="environment">
+                    <label for="vehiclePhotos">
+                        <div style="font-size: 40px; margin-bottom: 10px;">📷</div>
+                        <div style="font-weight: 600; margin-bottom: 5px;">Tap to take photos</div>
+                        <div style="font-size: 12px; color: #888;">Upload images of any damage or abnormalities</div>
+                    </label>
+                </div>
+
+                <!-- Photo Preview -->
+                <div class="photo-preview" id="photoPreview"></div>
+
+                <!-- Abnormality Description -->
+                <div class="abnormality-item">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">Damage/Abnormality Description</label>
+                    <textarea id="abnormalityDesc" rows="3" placeholder="Please describe any dents, scratches, or other issues..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Location of Damage (if applicable)</label>
+                    <select id="damageLocation">
+                        <option value="">Select location</option>
+                        <option value="Front Bumper">Front Bumper</option>
+                        <option value="Rear Bumper">Rear Bumper</option>
+                        <option value="Driver Side">Driver Side</option>
+                        <option value="Passenger Side">Passenger Side</option>
+                        <option value="Hood">Hood</option>
+                        <option value="Trunk">Trunk</option>
+                        <option value="Roof">Roof</option>
+                        <option value="Wheels/Tires">Wheels/Tires</option>
+                        <option value="Windshield">Windshield</option>
+                        <option value="Interior">Interior</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Date and Time -->
+            <div class="form-section">
+                <h2><i>⏰</i> Date & Time</h2>
+                <div class="datetime-group">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date *</label>
+                            <input type="date" id="handoverDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Time *</label>
+                            <input type="time" id="handoverTime" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Notes -->
+            <div class="form-section">
+                <h2><i>📝</i> Additional Notes</h2>
+                <div class="form-group">
+                    <textarea id="additionalNotes" rows="3" placeholder="Any additional information or comments..."></textarea>
+                </div>
+            </div>
+
+            <!-- Home Link and Submit Button -->
+            <div style="padding: 20px; text-align: center;">
+                <a href="index.html" class="home" style="color: #667eea; text-decoration: none; display: inline-block; margin-bottom: 15px;">🏠 Home Page</a>
+                <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">
+                    📧 Send Report to fleet@onpointontime.co.za
+                </button>
+            </div>
+        </form>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
-        <div style="color: #333; font-weight: 600;">Loading dashboard data...</div>
-    </div>
-
-    <!-- Notification -->
-    <div class="notification" id="notification">
-        <i class="fas fa-check-circle" id="notificationIcon"></i>
-        <span id="notificationMessage">Notification</span>
-    </div>
-
-    <!-- Image Modal -->
-    <div id="imageModal" class="modal" onclick="closeModal()">
-        <span class="close-modal" onclick="closeModal()">&times;</span>
-        <img class="modal-content" id="modalImage" onclick="event.stopPropagation()" alt="Vehicle damage image">
-        <div class="modal-actions" id="modalActions">
-            <a href="#" id="modalDownloadLink" target="_blank">
-                <i class="fas fa-download"></i> Download
-            </a>
-            <a href="#" id="modalOpenLink" target="_blank">
-                <i class="fas fa-external-link-alt"></i> Open in Drive
-            </a>
-        </div>
-    </div>
-
-    <div class="dashboard-container">
-        <!-- Header -->
-        <div class="dashboard-header">
-            <div class="logo-section">
-                <div class="logo-icon">
-                    <i class="fas fa-truck"></i>
-                </div>
-                <div class="header-title">
-                    <h1>Vehicle Handover Dashboard</h1>
-                    <p>
-                        <i class="fas fa-map-marker-alt" style="color: #667eea;"></i>
-                        OnPoint OnTime Fleet Solutions
-                        <i class="fas fa-circle" style="font-size: 6px; margin: 0 8px;"></i>
-                        <span id="lastUpdate">Loading...</span>
-                    </p>
-                </div>
-            </div>
-            <div class="header-actions">
-                <div class="sync-status" id="syncStatus">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <span>Checking connection...</span>
-                </div>
-                <a href="index.html" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
-            </div>
-        </div>
-
-        <!-- Debug Bar -->
-        <div class="debug-bar" id="debugBar">
-            <div>
-                <i class="fas fa-info-circle"></i>
-                <span id="debugMessage">Initializing connection to Google Sheets...</span>
-            </div>
-            <button class="test-btn" onclick="testConnection()">
-                <i class="fas fa-vial"></i> Test Connection
-            </button>
-        </div>
-
-        <!-- KPI Cards -->
-        <div class="kpi-grid" id="kpiCards">
-            <div class="kpi-card">
-                <div class="kpi-header">
-                    <span class="kpi-label">Loading</span>
-                    <i class="fas fa-spinner fa-pulse"></i>
-                </div>
-                <div class="kpi-value">...</div>
-                <div class="kpi-trend">Please wait</div>
-            </div>
-        </div>
-
-        <!-- Filters Section -->
-        <div class="filters-section">
-            <div class="filters-header">
-                <h3>
-                    <i class="fas fa-filter" style="color: #667eea;"></i>
-                    Search & Filter Handovers
-                </h3>
-                <span class="record-count" id="recordCount">0 records</span>
-            </div>
-            <div class="filter-grid">
-                <div class="filter-group">
-                    <label><i class="fas fa-calendar"></i> Date Range</label>
-                    <div class="date-range">
-                        <input type="date" id="startDate">
-                        <span>to</span>
-                        <input type="date" id="endDate">
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-user"></i> Employee Name</label>
-                    <input type="text" id="employeeFilter" placeholder="Search by employee...">
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-id-card"></i> Employee Number</label>
-                    <input type="text" id="empNumberFilter" placeholder="Search by employee #...">
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-truck"></i> Vehicle Reg</label>
-                    <input type="text" id="vehicleFilter" placeholder="Search by registration...">
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-building"></i> Department</label>
-                    <select id="departmentFilter">
-                        <option value="all">All Departments</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-gas-pump"></i> Handover Type</label>
-                    <select id="typeFilter">
-                        <option value="all">All Types</option>
-                        <option value="Handover">Handover</option>
-                        <option value="Takeover">Takeover</option>
-                    </select>
-                </div>
-            </div>
-            <div class="filter-actions">
-                <button class="btn btn-secondary" onclick="resetFilters()">
-                    <i class="fas fa-undo"></i> Reset
-                </button>
-                <button class="btn btn-primary" onclick="applyFilters()">
-                    <i class="fas fa-search"></i> Apply Filters
-                </button>
-                <button class="btn btn-success" onclick="exportToExcel()">
-                    <i class="fas fa-file-excel"></i> Export Excel
-                </button>
-                <button class="btn btn-primary" onclick="refreshData()">
-                    <i class="fas fa-sync-alt"></i> Refresh Data
-                </button>
-            </div>
-        </div>
-
-        <!-- Charts Row -->
-        <div class="charts-row">
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h4><i class="fas fa-chart-pie" style="color: #667eea;"></i> Handovers by Department</h4>
-                    <button class="btn btn-secondary" style="padding: 5px 10px;" onclick="exportChart('deptChart', 'dept_handovers')">
-                        <i class="fas fa-download"></i>
-                    </button>
-                </div>
-                <canvas id="deptChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h4><i class="fas fa-chart-line" style="color: #667eea;"></i> Weekly Handover Trend</h4>
-                    <button class="btn btn-secondary" style="padding: 5px 10px;" onclick="exportChart('trendChart', 'handover_trend')">
-                        <i class="fas fa-download"></i>
-                    </button>
-                </div>
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Table Section -->
-        <div class="table-section">
-            <div class="table-header">
-                <h2>
-                    <i class="fas fa-clipboard-list" style="color: #667eea;"></i>
-                    Vehicle Handover Records
-                </h2>
-                <div class="table-actions">
-                    <button class="btn btn-secondary" onclick="printTable()">
-                        <i class="fas fa-print"></i> Print
-                    </button>
-                </div>
-            </div>
-            
-            <div class="table-container">
-                <table id="handoverTable">
-                    <thead>
-                        <tr>
-                            <th>Submission ID</th>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Employee Name</th>
-                            <th>Employee #</th>
-                            <th>ID Number</th>
-                            <th>Department</th>
-                            <th>Vehicle Reg</th>
-                            <th>Model</th>
-                            <th>Mileage</th>
-                            <th>Service Due</th>
-                            <th>Type</th>
-                            <th>Fuel Level</th>
-                            <th>Checklist</th>
-                            <th>Damage Desc</th>
-                            <th>Damage Location</th>
-                            <th>Additional Notes</th>
-                            <th>Photos</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr>
-                            <td colspan="18" class="table-loading">
-                                <i class="fas fa-spinner fa-pulse"></i>
-                                <div>Loading data...</div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <div style="color: #333; font-weight: 600;">Sending report...</div>
     </div>
 
     <script>
-        // ============================================
-        // CONFIGURATION - UPDATE THIS WITH YOUR DEPLOYED URL
-        // ============================================
+        // Configuration
         const CONFIG = {
-            // IMPORTANT: Replace this URL with your actual deployed Google Apps Script URL
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbxFQyaLFuPO-SO7zeJ9XLhBMH4bxO7XeUj5TgDIwZvY8FMbKQ2rijZaA0gMXH-PXaDS/exec',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbxfbfFdl1mD5DSL-UBZIwmWj0lKmdlMGSk_0aTGM52GPfUBZDuSqrW4XYzNg45yi8IXrw/exec',
             SHEET_ID: '1vBDeyPBy3LLYg0EM2OFgceI3deVFhXL2Nr-IpdveZoU',
+            DRIVE_FOLDER_ID: '13BuqOSAdUlfZJIm36A_R3mbF4HwHCfZY',
             SHEET_NAME: 'Vehicle Handovers',
-            DRIVE_FOLDER_ID: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
+            EMAIL_RECIPIENT: 'fleet@onpointontime.co.za'
         };
 
-        // Global variables
-        let allHandovers = [];
-        let filteredHandovers = [];
-        let deptChart, trendChart;
-        let dataTable;
-
-        // Initialize
-        window.onload = function() {
-            setDefaultDates();
-            testConnection();
-        };
-
-        function setDefaultDates() {
-            const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        // Set default date and time
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('handoverDate').value = today;
             
-            document.getElementById('startDate').value = formatDateForInput(firstDay);
-            document.getElementById('endDate').value = formatDateForInput(lastDay);
-        }
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('handoverTime').value = `${hours}:${minutes}`;
+        });
 
-        function formatDateForInput(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            const icon = document.getElementById('notificationIcon');
-            const messageEl = document.getElementById('notificationMessage');
+        // Photo upload preview
+        document.getElementById('vehiclePhotos').addEventListener('change', function(e) {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
             
-            icon.className = type === 'success' ? 'fas fa-check-circle' : 
-                            type === 'error' ? 'fas fa-exclamation-circle' : 
-                            'fas fa-exclamation-triangle';
-            
-            notification.className = `notification ${type}`;
-            messageEl.textContent = message;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-
-        function setLoading(show) {
-            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
-        }
-
-        function updateSyncStatus(status, message) {
-            const syncEl = document.getElementById('syncStatus');
-            const debugEl = document.getElementById('debugMessage');
-            
-            if (status === 'online') {
-                syncEl.className = 'sync-status';
-                syncEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> <span>Connected to Google Sheets</span>';
-                debugEl.innerHTML = message || 'Connected successfully';
-            } else {
-                syncEl.className = 'sync-status offline';
-                syncEl.innerHTML = '<i class="fas fa-cloud-offline"></i> <span>Using Demo Data</span>';
-                debugEl.innerHTML = message || 'Using demo data - check connection';
+            for(let i = 0; i < this.files.length; i++) {
+                const file = this.files[i];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'preview-image';
+                    preview.appendChild(img);
+                }
+                
+                reader.readAsDataURL(file);
             }
+        });
+
+        // Convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    const base64String = reader.result.split(',')[1];
+                    resolve({
+                        name: file.name,
+                        type: file.type,
+                        data: base64String
+                    });
+                };
+                reader.onerror = error => reject(error);
+            });
         }
 
-        // Test API connection
-        async function testConnection() {
-            setLoading(true);
-            const debugEl = document.getElementById('debugMessage');
-            debugEl.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Testing connection...';
-            
-            try {
-                const testUrl = `${CONFIG.GAS_URL}?action=test&_=${Date.now()}`;
-                console.log('Testing connection to:', testUrl);
-                
-                const response = await fetch(testUrl, {
-                    method: 'GET',
-                    mode: 'cors',
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+        // Submit form function
+        async function submitForm() {
+            // Validate required fields
+            const requiredFields = ['employeeName', 'employeeNumber', 'idNumber', 'vehicleReg', 'mileage', 'handoverDate', 'handoverTime'];
+            for(let field of requiredFields) {
+                if(!document.getElementById(field).value.trim()) {
+                    alert(`Please fill in all required fields`);
+                    return;
                 }
-                
-                const data = await response.json();
-                console.log('Test response:', data);
-                
-                if (data.success) {
-                    updateSyncStatus('online', `Connected to sheet: ${data.sheetName}`);
-                    loadHandovers();
-                } else {
-                    throw new Error(data.error || 'API returned error');
-                }
-            } catch (error) {
-                console.error('Connection test failed:', error);
-                updateSyncStatus('offline', `Connection failed: ${error.message}`);
-                showNotification('Cannot connect to Google Sheets. Using demo data.', 'warning');
-                generateDemoData();
-                setLoading(false);
             }
-        }
 
-        // Load handovers from Google Sheets
-        async function loadHandovers() {
+            // Show loading overlay
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('errorMessage').style.display = 'none';
+
             try {
-                const url = `${CONFIG.GAS_URL}?action=getHandovers&_=${Date.now()}`;
-                console.log('Loading handovers from:', url);
+                // Get checklist items
+                const checklistItems = Array.from(document.querySelectorAll('input[name="checklist"]:checked')).map(cb => cb.value);
                 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    mode: 'cors',
-                    headers: { 'Accept': 'application/json' }
+                // Prepare form data
+                const formData = {
+                    sheetId: CONFIG.SHEET_ID,
+                    driveFolderId: CONFIG.DRIVE_FOLDER_ID,
+                    sheetName: CONFIG.SHEET_NAME,
+                    emailRecipient: CONFIG.EMAIL_RECIPIENT,
+                    
+                    employeeName: document.getElementById('employeeName').value,
+                    employeeNumber: document.getElementById('employeeNumber').value,
+                    idNumber: document.getElementById('idNumber').value,
+                    department: document.getElementById('department').value || 'Not Specified',
+                    
+                    vehicleReg: document.getElementById('vehicleReg').value,
+                    vehicleModel: document.getElementById('vehicleModel').value || 'Not Specified',
+                    mileage: document.getElementById('mileage').value,
+                    serviceDue: document.getElementById('serviceDue').value || 'Not Specified',
+                    
+                    handoverType: document.querySelector('input[name="handoverType"]:checked')?.value || 'Handover',
+                    fuelLevel: document.querySelector('input[name="fuelLevel"]:checked')?.value || '1/2',
+                    checklist: checklistItems.join(', ') || 'None',
+                    
+                    abnormalityDesc: document.getElementById('abnormalityDesc').value || 'None',
+                    damageLocation: document.getElementById('damageLocation').value || 'Not Applicable',
+                    
+                    handoverDate: document.getElementById('handoverDate').value,
+                    handoverTime: document.getElementById('handoverTime').value,
+                    
+                    additionalNotes: document.getElementById('additionalNotes').value || 'None',
+                    
+                    submissionTimestamp: new Date().toISOString(),
+                    submissionId: 'HND-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                    
+                    photos: []
+                };
+
+                // Convert photos to base64
+                const photoInput = document.getElementById('vehiclePhotos');
+                if (photoInput.files.length > 0) {
+                    for (let i = 0; i < photoInput.files.length; i++) {
+                        const file = photoInput.files[i];
+                        const base64Photo = await fileToBase64(file);
+                        formData.photos.push(base64Photo);
+                    }
+                }
+
+                // Send to Google Apps Script
+                const response = await fetch(CONFIG.GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Use no-cors for Google Apps Script
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
                 });
+
+                // Show success message
+                document.getElementById('successMessage').style.display = 'block';
+                document.getElementById('errorMessage').style.display = 'none';
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('Received data:', data);
-                
-                if (data.success && data.data) {
-                    allHandovers = data.data;
-                    filteredHandovers = [...allHandovers];
+                // Auto-hide success message after 5 seconds
+                setTimeout(() => {
+                    document.getElementById('successMessage').style.display = 'none';
+                }, 5000);
+
+                // Reset form
+                if(confirm('Form submitted successfully! A copy has been sent to fleet@onpointontime.co.za\n\nWould you like to reset the form for another entry?')) {
+                    document.getElementById('vehicleForm').reset();
+                    document.getElementById('handoverDate').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('handoverTime').value = 
+                        `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`;
+                    document.getElementById('photoPreview').innerHTML = '';
                     
-                    document.getElementById('recordCount').innerHTML = `${allHandovers.length} records`;
-                    document.getElementById('lastUpdate').innerHTML = new Date().toLocaleString();
-                    
-                    populateFilters();
-                    updateDashboard();
-                    showNotification(`Loaded ${allHandovers.length} handover records from Google Sheets`, 'success');
-                } else {
-                    throw new Error(data.error || 'No data received');
+                    document.getElementById('handover').checked = true;
+                    document.getElementById('half').checked = true;
                 }
+
             } catch (error) {
-                console.error('Error loading handovers:', error);
-                showNotification('Error loading data. Using demo data.', 'error');
-                generateDemoData();
+                console.error('Submission error:', error);
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('errorMessage').innerText = `❌ Submission failed: ${error.message}`;
             } finally {
-                setLoading(false);
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('submitBtn').disabled = false;
             }
         }
 
-        // Generate demo data
-        function generateDemoData() {
-            const departments = ['Logistics', 'Sales', 'Management', 'Maintenance', 'Operations'];
-            const vehicles = ['CA 123-456', 'CY 789-012', 'FJ 345-678', 'GP 901-234', 'KZN 567-890'];
-            const employees = ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown'];
-            
-            allHandovers = [];
-            
-            for (let i = 0; i < 20; i++) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const handoverType = i % 2 === 0 ? 'Handover' : 'Takeover';
-                
-                allHandovers.push({
-                    submissionId: `DEMO-${Date.now()}-${i}`,
-                    timestamp: date.toISOString(),
-                    date: date.toISOString().split('T')[0],
-                    time: `${String(8 + i % 10).padStart(2, '0')}:${String(i * 3 % 60).padStart(2, '0')}`,
-                    employeeName: employees[i % employees.length],
-                    employeeNumber: `EMP${String(100 + i).padStart(3, '0')}`,
-                    idNumber: `900101 ${String(5000 + i).padStart(4, '0')} 089`,
-                    department: departments[i % departments.length],
-                    vehicleReg: vehicles[i % vehicles.length],
-                    vehicleModel: 'Toyota Hilux 2023',
-                    mileage: 45000 + i * 100,
-                    serviceDue: '50000 km',
-                    handoverType: handoverType,
-                    fuelLevel: ['Empty', '1/4', '1/2', '3/4', 'Full'][i % 5],
-                    checklistItems: 'Keys, License Disk, Spare Tire, Jack',
-                    damageDescription: i % 3 === 0 ? 'Small scratch on front bumper' : '',
-                    damageLocation: i % 3 === 0 ? 'Front Bumper' : '',
-                    additionalNotes: i % 4 === 0 ? 'Please check tire pressure' : '',
-                    photoLinks: i % 3 === 0 ? 'https://drive.google.com/file/d/1234567890/view' : '',
-                    folderId: CONFIG.DRIVE_FOLDER_ID
-                });
+
+        function addNewOption(selectId, message) {
+            const select = document.getElementById(selectId);
+            const newValue = prompt(message);
+
+            if (newValue && newValue.trim() !== '') {
+                const cleanValue = selectId === 'vehicleReg'
+                    ? newValue.trim().toUpperCase()
+                    : newValue.trim();
+
+                const exists = Array.from(select.options).some(
+                    option => option.value.toUpperCase() === cleanValue.toUpperCase()
+                );
+
+                if (!exists) {
+                    const option = document.createElement('option');
+                    option.value = cleanValue;
+                    option.text = cleanValue;
+                    select.appendChild(option);
+                }
+
+                select.value = cleanValue;
             }
-            
-            filteredHandovers = [...allHandovers];
-            document.getElementById('recordCount').innerHTML = `${allHandovers.length} records (Demo)`;
-            document.getElementById('lastUpdate').innerHTML = new Date().toLocaleString() + ' (Demo)';
-            populateFilters();
-            updateDashboard();
-            setLoading(false);
         }
 
-        // Populate filter dropdowns
-        function populateFilters() {
-            const departments = [...new Set(allHandovers.map(h => h.department).filter(d => d))];
-            const deptFilter = document.getElementById('departmentFilter');
-            
-            deptFilter.innerHTML = '<option value="all">All Departments</option>';
-            departments.sort().forEach(dept => {
-                deptFilter.innerHTML += `<option value="${dept}">${dept}</option>`;
-            });
-        }
 
-        // Apply filters
-        function applyFilters() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const employee = document.getElementById('employeeFilter').value.toLowerCase();
-            const empNumber = document.getElementById('empNumberFilter').value.toLowerCase();
-            const vehicle = document.getElementById('vehicleFilter').value.toLowerCase();
-            const department = document.getElementById('departmentFilter').value;
-            const type = document.getElementById('typeFilter').value;
-            
-            filteredHandovers = allHandovers.filter(h => {
-                let match = true;
-                
-                if (startDate && endDate) {
-                    match = match && h.date >= startDate && h.date <= endDate;
-                }
-                if (employee) {
-                    match = match && (h.employeeName || '').toLowerCase().includes(employee);
-                }
-                if (empNumber) {
-                    match = match && (h.employeeNumber || '').toLowerCase().includes(empNumber);
-                }
-                if (vehicle) {
-                    match = match && (h.vehicleReg || '').toLowerCase().includes(vehicle);
-                }
-                if (department !== 'all') {
-                    match = match && h.department === department;
-                }
-                if (type !== 'all') {
-                    match = match && h.handoverType === type;
-                }
-                
-                return match;
-            });
-            
-            document.getElementById('recordCount').innerHTML = `${filteredHandovers.length} records`;
-            updateDashboard();
-            showNotification(`Found ${filteredHandovers.length} records`, 'success');
-        }
-
-        function resetFilters() {
-            setDefaultDates();
-            document.getElementById('employeeFilter').value = '';
-            document.getElementById('empNumberFilter').value = '';
-            document.getElementById('vehicleFilter').value = '';
-            document.getElementById('departmentFilter').value = 'all';
-            document.getElementById('typeFilter').value = 'all';
-            
-            filteredHandovers = [...allHandovers];
-            document.getElementById('recordCount').innerHTML = `${filteredHandovers.length} records`;
-            updateDashboard();
-            showNotification('Filters reset', 'info');
-        }
-
-        function refreshData() {
-            setLoading(true);
-            testConnection();
-        }
-
-        // Update dashboard
-        function updateDashboard() {
-            updateKPIs();
-            updateCharts();
-            updateTable();
-        }
-
-        function updateKPIs() {
-            const total = filteredHandovers.length;
-            const handovers = filteredHandovers.filter(h => h.handoverType === 'Handover').length;
-            const takeovers = filteredHandovers.filter(h => h.handoverType === 'Takeover').length;
-            const withDamage = filteredHandovers.filter(h => h.damageDescription && h.damageDescription !== '' && h.damageDescription !== 'None').length;
-            
-            const totalMileage = filteredHandovers.reduce((sum, h) => sum + (parseInt(h.mileage) || 0), 0);
-            const avgMileage = total > 0 ? Math.round(totalMileage / total) : 0;
-            
-            document.getElementById('kpiCards').innerHTML = `
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <span class="kpi-label">Total Handovers</span>
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                    <div class="kpi-value">${total}</div>
-                    <div class="kpi-trend"><i class="fas fa-chart-line"></i> All time</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <span class="kpi-label">Handovers</span>
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                    <div class="kpi-value">${handovers}</div>
-                    <div class="kpi-trend">${total ? ((handovers/total)*100).toFixed(1) : 0}% of total</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <span class="kpi-label">Takeovers</span>
-                        <i class="fas fa-arrow-left"></i>
-                    </div>
-                    <div class="kpi-value">${takeovers}</div>
-                    <div class="kpi-trend">${total ? ((takeovers/total)*100).toFixed(1) : 0}% of total</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <span class="kpi-label">Damage Reports</span>
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div class="kpi-value">${withDamage}</div>
-                    <div class="kpi-trend">${total ? ((withDamage/total)*100).toFixed(1) : 0}% of vehicles</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <span class="kpi-label">Avg Mileage</span>
-                        <i class="fas fa-tachometer-alt"></i>
-                    </div>
-                    <div class="kpi-value">${avgMileage.toLocaleString()}</div>
-                    <div class="kpi-trend">km per vehicle</div>
-                </div>
-            `;
-        }
-
-        function updateCharts() {
-            // Department Chart
-            const deptCtx = document.getElementById('deptChart').getContext('2d');
-            if (deptChart) deptChart.destroy();
-            
-            const deptCounts = {};
-            filteredHandovers.forEach(h => {
-                const dept = h.department || 'Unknown';
-                deptCounts[dept] = (deptCounts[dept] || 0) + 1;
-            });
-            
-            deptChart = new Chart(deptCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(deptCounts),
-                    datasets: [{
-                        data: Object.values(deptCounts),
-                        backgroundColor: [
-                            '#667eea', '#764ba2', '#f43f5e', '#10b981', '#f59e0b', '#6366f1'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-
-            // Trend Chart
-            const trendCtx = document.getElementById('trendChart').getContext('2d');
-            if (trendChart) trendChart.destroy();
-            
-            const last7Days = [];
-            const handoverCounts = [];
-            const takeoverCounts = [];
-            
-            for (let i = 6; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const dateStr = date.toISOString().split('T')[0];
-                last7Days.push(dateStr.substring(5));
-                
-                const dayHandovers = filteredHandovers.filter(h => 
-                    h.date === dateStr && h.handoverType === 'Handover'
-                ).length;
-                const dayTakeovers = filteredHandovers.filter(h => 
-                    h.date === dateStr && h.handoverType === 'Takeover'
-                ).length;
-                
-                handoverCounts.push(dayHandovers);
-                takeoverCounts.push(dayTakeovers);
-            }
-            
-            trendChart = new Chart(trendCtx, {
-                type: 'line',
-                data: {
-                    labels: last7Days,
-                    datasets: [
-                        {
-                            label: 'Handovers',
-                            data: handoverCounts,
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Takeovers',
-                            data: takeoverCounts,
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, stepSize: 1 } }
-                }
-            });
-        }
-
-        // FIXED: updateTable function with improved image handling
-        function updateTable() {
-            const tbody = document.getElementById('tableBody');
-            
-            if (filteredHandovers.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="18" class="table-empty">
-                            <i class="fas fa-folder-open"></i>
-                            <div>No handover records found</div>
-                            <small style="color: #a0aec0; margin-top: 10px; display: block;">Try adjusting your filters</small>
-                        </td>
-                    </tr>`;
-                return;
-            }
-            
-            let html = '';
-            filteredHandovers.slice(0, 100).forEach((h, index) => {
-                // Parse photo links
-                let photoHtml = '<div class="image-gallery">';
-                
-                if (h.photoLinks && h.photoLinks.trim() !== '') {
-                    const photoUrls = h.photoLinks.split(',').map(url => url.trim()).filter(url => url);
-                    
-                    if (photoUrls.length > 0) {
-                        photoUrls.forEach((url, idx) => {
-                            // Extract Google Drive file ID if it's a Drive URL
-                            let displayUrl = url;
-                            let isDriveUrl = url.includes('drive.google.com') || url.includes('drive.google');
-                            
-                            if (isDriveUrl) {
-                                const fileIdMatch = url.match(/[-\w]{25,}/);
-                                if (fileIdMatch) {
-                                    const fileId = fileIdMatch[0];
-                                    displayUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400-h400`;
-                                }
-                            }
-                            
-                            photoHtml += `
-                                <div style="position: relative; display: inline-block;">
-                                    <img src="${displayUrl}" 
-                                         class="image-thumb" 
-                                         onclick="showImage('${url}')" 
-                                         title="Photo ${idx + 1}"
-                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/45x45/667eea/ffffff?text=Photo'; this.classList.add('image-thumb-error');">
-                                    <a href="${url}" target="_blank" class="image-link-btn drive" title="Open in Google Drive" style="position: absolute; bottom: -5px; right: -5px; padding: 3px; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; justify-content: center;">
-                                        <i class="fas fa-external-link-alt"></i>
-                                    </a>
-                                </div>`;
-                        });
-                    } else {
-                        photoHtml += '<span class="no-image"><i class="fas fa-times-circle"></i> No images</span>';
-                    }
-                } else {
-                    photoHtml += '<span class="no-image"><i class="fas fa-times-circle"></i> No images</span>';
-                }
-                
-                photoHtml += '</div>';
-                
-                // Format mileage with commas
-                const mileage = h.mileage ? Number(h.mileage).toLocaleString() : '';
-                
-                // Determine damage status
-                const hasDamage = h.damageDescription && h.damageDescription !== '' && h.damageDescription !== 'None' && h.damageDescription !== 'N/A';
-                const damageClass = hasDamage ? 'damage-yes' : 'damage-no';
-                const damageText = hasDamage ? 'Yes' : 'No';
-                
-                // Truncate long text
-                const checklist = h.checklistItems || '';
-                const checklistDisplay = checklist.length > 25 ? checklist.substring(0, 25) + '…' : checklist;
-                
-                const damageDesc = h.damageDescription || '';
-                const damageDisplay = damageDesc.length > 20 ? damageDesc.substring(0, 20) + '…' : damageDesc;
-                
-                const notes = h.additionalNotes || '';
-                const notesDisplay = notes.length > 20 ? notes.substring(0, 20) + '…' : notes;
-                
-                html += `
-                    <tr>
-                        <td><span class="text-muted" data-tooltip="${h.submissionId || 'N/A'}">${(h.submissionId || 'N/A').substring(0, 12)}${h.submissionId && h.submissionId.length > 12 ? '…' : ''}</span></td>
-                        <td><span class="highlight">${h.date || ''}</span></td>
-                        <td>${h.time || ''}</td>
-                        <td><strong>${h.employeeName || ''}</strong></td>
-                        <td><span class="text-muted">${h.employeeNumber || ''}</span></td>
-                        <td><span class="text-muted">${h.idNumber ? h.idNumber.substring(0, 8) + '…' : ''}</span></td>
-                        <td><span class="badge" style="background: #f7fafc; color: #2d3748;">${h.department || ''}</span></td>
-                        <td><span class="vehicle-badge">${h.vehicleReg || ''}</span></td>
-                        <td>${h.vehicleModel || ''}</td>
-                        <td><strong>${mileage}</strong></td>
-                        <td><span class="text-muted">${h.serviceDue || ''}</span></td>
-                        <td><span class="badge ${h.handoverType === 'Handover' ? 'badge-handover' : 'badge-takeover'}">${h.handoverType || ''}</span></td>
-                        <td><span class="badge" style="background: #fef3c7; color: #92400e;">${h.fuelLevel || ''}</span></td>
-                        <td><span data-tooltip="${checklist}">${checklistDisplay}</span></td>
-                        <td>
-                            <span class="damage-indicator ${damageClass}" data-tooltip="${damageDesc}">
-                                <i class="fas fa-${hasDamage ? 'exclamation-triangle' : 'check-circle'}"></i>
-                                ${damageText}
-                            </span>
-                        </td>
-                        <td><span class="text-muted">${h.damageLocation || ''}</span></td>
-                        <td><span data-tooltip="${notes}">${notesDisplay}</span></td>
-                        <td>${photoHtml}</td>
-                    </tr>
-                `;
-            });
-            
-            tbody.innerHTML = html;
-        }
-
-        // FIXED: showImage function with improved Drive URL handling
-        function showImage(url) {
-            const modal = document.getElementById('imageModal');
-            const modalImg = document.getElementById('modalImage');
-            const modalDownloadLink = document.getElementById('modalDownloadLink');
-            const modalOpenLink = document.getElementById('modalOpenLink');
-            
-            if (!url) return;
-            
-            let imageUrl = url;
-            let originalUrl = url;
-            
-            // Handle Google Drive URLs
-            if (url.includes('drive.google.com') || url.includes('drive.google')) {
-                const fileIdMatch = url.match(/[-\w]{25,}/);
-                if (fileIdMatch) {
-                    const fileId = fileIdMatch[0];
-                    // Use the thumbnail URL for better loading
-                    imageUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800-h800`;
-                    originalUrl = `https://drive.google.com/file/d/${fileId}/view`;
-                }
-            }
-            
-            modalImg.src = imageUrl;
-            modalDownloadLink.href = originalUrl;
-            modalOpenLink.href = originalUrl;
-            modal.style.display = 'flex';
-            
-            // Add error handling for the modal image
-            modalImg.onerror = function() {
-                this.src = 'https://via.placeholder.com/800x600/667eea/ffffff?text=Image+Not+Available';
-            };
-        }
-
-        function closeModal() {
-            document.getElementById('imageModal').style.display = 'none';
-        }
-
-        // Export functions
-        function exportToExcel() {
-            if (filteredHandovers.length === 0) {
-                showNotification('No data to export', 'error');
-                return;
-            }
-            
-            const headers = [
-                'Submission ID', 'Date', 'Time', 'Employee Name', 'Employee Number', 'ID Number',
-                'Department', 'Vehicle Registration', 'Vehicle Model', 'Mileage', 'Service Due',
-                'Handover Type', 'Fuel Level', 'Checklist Items', 'Damage Description',
-                'Damage Location', 'Additional Notes', 'Photo Links', 'Folder ID'
-            ];
-            
-            const rows = filteredHandovers.map(h => [
-                h.submissionId, h.date, h.time, h.employeeName, h.employeeNumber, h.idNumber,
-                h.department, h.vehicleReg, h.vehicleModel, h.mileage, h.serviceDue,
-                h.handoverType, h.fuelLevel, h.checklistItems, h.damageDescription,
-                h.damageLocation, h.additionalNotes, h.photoLinks, h.folderId
-            ]);
-            
-            const csv = [headers, ...rows].map(row => 
-                row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')
-            ).join('\n');
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `handovers_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            showNotification('Export completed', 'success');
-        }
-
-        function exportChart(chartId, filename) {
-            const canvas = document.getElementById(chartId);
-            const link = document.createElement('a');
-            link.download = `${filename}_${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        function printTable() {
-            window.print();
-        }
-
-        // Make functions globally available
-        window.showImage = showImage;
-        window.closeModal = closeModal;
-        window.testConnection = testConnection;
-        window.applyFilters = applyFilters;
-        window.resetFilters = resetFilters;
-        window.refreshData = refreshData;
-        window.exportToExcel = exportToExcel;
-        window.exportChart = exportChart;
-        window.printTable = printTable;
+        // Make function globally available
+        window.submitForm = submitForm;
     </script>
 </body>
 </html>
