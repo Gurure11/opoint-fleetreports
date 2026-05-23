@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Hand Overs Dashboard</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+    }
+
+    header {
+      background: #1f2937;
+      color: #fff;
+      padding: 20px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .loading,
+    .error,
+    .filters,
+    .cards,
+    .charts,
+    .table-wrap {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .error {
+      display: none;
+      background: #fff7ed;
+      border-left: 5px solid #f97316;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    select,
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: #f9fafb;
+      border-left: 5px solid #2563eb;
+      border-radius: 10px;
+      padding: 15px;
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .card p {
+      margin: 8px 0 0;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 25px;
+    }
+
+    .chart-box {
+      min-height: 360px;
+    }
+
+    .chart-box h3,
+    .table-wrap h3 {
+      margin-top: 0;
+    }
+
+    canvas {
+      max-height: 320px;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+      max-height: 560px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+      white-space: nowrap;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #1f2937;
+      color: white;
+    }
+
+    a.photo-link {
+      color: #2563eb;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: underline;
+      display: inline-block;
+      margin-right: 8px;
+      margin-bottom: 4px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      padding: 24px;
+    }
+
+    .modal-content {
+      background: white;
+      max-width: 1100px;
+      max-height: 90vh;
+      margin: 0 auto;
+      border-radius: 12px;
+      padding: 16px;
+      overflow: auto;
+      position: relative;
+    }
+
+    .close-modal {
+      position: sticky;
+      top: 0;
+      float: right;
+      background: #dc2626;
+      color: white;
+      width: auto;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .photo-frame {
+      width: 100%;
+      height: 75vh;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .photo-image {
+      display: block;
+      max-width: 100%;
+      max-height: 75vh;
+      margin: 0 auto;
+      border-radius: 8px;
+    }
+
+    .modal-actions {
+      margin-bottom: 10px;
+    }
+
+    .modal-actions a {
+      color: #2563eb;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Vehicle Hand Overs Dashboard</h1>
+  </header>
+
+  <div class="container">
+    <div id="loadingMessage" class="loading">Loading Google Sheet data...</div>
+    <div id="errorMessage" class="error"></div>
+
+    <div class="filters">
+      <div>
+        <label for="departmentFilter">Department</label>
+        <select id="departmentFilter">
+          <option value="">All Departments</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="employeeFilter">Employee Name</label>
+        <select id="employeeFilter">
+          <option value="">All Employees</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="vehicleFilter">Vehicle Registration</label>
+        <select id="vehicleFilter">
+          <option value="">All Vehicles</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="handoverTypeFilter">Handover Type</label>
+        <select id="handoverTypeFilter">
+          <option value="">All Types</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="fromDate">From Date</label>
+        <input type="date" id="fromDate">
+      </div>
+
+      <div>
+        <label for="toDate">To Date</label>
+        <input type="date" id="toDate">
+      </div>
+
+      <div style="display:flex; align-items:end;">
+        <button type="button" onclick="resetFilters()">Reset Filters</button>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Total Hand Overs</h3>
+        <p id="totalHandovers">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Unique Vehicles</h3>
+        <p id="uniqueVehicles">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Unique Employees</h3>
+        <p id="uniqueEmployees">0</p>
+      </div>
+
+      <div class="card">
+        <h3>With Damage Notes</h3>
+        <p id="damageCount">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Service Due Records</h3>
+        <p id="serviceDueCount">0</p>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-box">
+        <h3>Hand Overs by Department</h3>
+        <canvas id="departmentChart"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <h3>Hand Overs by Type</h3>
+        <canvas id="typeChart"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <h3>Hand Overs by Vehicle</h3>
+        <canvas id="vehicleChart"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <h3>Monthly Hand Overs</h3>
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <h3>Vehicle Hand Over Records</h3>
+      <div class="table-scroll">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="photoModal" class="modal" onclick="closePhotoModalOnBackdrop(event)">
+    <div class="modal-content">
+      <button class="close-modal" type="button" onclick="closePhotoModal()">Close</button>
+      <div class="modal-actions">
+        <a id="openPhotoNewTab" href="#" target="_blank" rel="noopener">Open photo in new tab</a>
+      </div>
+      <div id="photoPreview"></div>
+    </div>
+  </div>
+
+  <script>
+    /*
+      Replace this with your deployed Google Apps Script Web App URL.
+      Example:
+      const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
+    */
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0E416VfmFQxfiA89diREMjoPXDnw_TqSUyxIqeus5VM_uYYjg0oOVuJHcAruAfL161g/exec";
+
+    let handoverData = [];
+    let filteredData = [];
+
+    let departmentChart;
+    let typeChart;
+    let vehicleChart;
+    let monthlyChart;
+
+    const headings = [
+      "Submission ID",
+      "Timestamp",
+      "Date",
+      "Time",
+      "Employee Name",
+      "Employee Number",
+      "ID Number",
+      "Department",
+      "Vehicle Registration",
+      "Vehicle Model",
+      "Mileage",
+      "Service Due",
+      "Handover Type",
+      "Fuel Level",
+      "Checklist Items",
+      "Damage Description",
+      "Damage Location",
+      "Additional Notes",
+      "Photo Links",
+      "Folder ID"
+    ];
+
+    function loadData() {
+      if (!SCRIPT_URL || SCRIPT_URL.includes("PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE")) {
+        showError("Please replace SCRIPT_URL in the HTML with your deployed Google Apps Script Web App URL.");
+        document.getElementById("loadingMessage").style.display = "none";
+        return;
+      }
+
+      const callbackName = "handleVehicleHandovers_" + Date.now();
+      const script = document.createElement("script");
+
+      window[callbackName] = function(data) {
+        try {
+          handleVehicleHandovers(data);
+        } finally {
+          delete window[callbackName];
+          script.remove();
+        }
+      };
+
+      script.src = SCRIPT_URL + "?callback=" + callbackName + "&cacheBust=" + Date.now();
+
+      script.onerror = function() {
+        showError("Failed to load Google Sheet data. Check your Apps Script deployment and make sure access is set to Anyone.");
+        document.getElementById("loadingMessage").style.display = "none";
+      };
+
+      document.body.appendChild(script);
+    }
+
+    function handleVehicleHandovers(data) {
+      if (!Array.isArray(data)) {
+        showError("Apps Script did not return a valid data array.");
+        document.getElementById("loadingMessage").style.display = "none";
+        return;
+      }
+
+      handoverData = data;
+      filteredData = data;
+
+      populateFilters();
+      attachFilterEvents();
+      renderDashboard();
+
+      document.getElementById("loadingMessage").style.display = "none";
+    }
+
+    function showError(message) {
+      const errorBox = document.getElementById("errorMessage");
+      errorBox.textContent = message;
+      errorBox.style.display = "block";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function toNumber(value) {
+      if (value === null || value === undefined || value === "") return 0;
+      return Number(String(value).replace(/[,\s]/g, "")) || 0;
+    }
+
+    function normalizeDate(value) {
+      if (!value) return null;
+
+      const date = new Date(value);
+      if (!isNaN(date)) return date;
+
+      const parts = String(value).split(/[\/\-]/);
+      if (parts.length === 3) {
+        const possibleDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        if (!isNaN(possibleDate)) return possibleDate;
+      }
+
+      return null;
+    }
+
+    function hasDamage(row) {
+      return Boolean(String(row["Damage Description"] || "").trim())
+        || Boolean(String(row["Damage Location"] || "").trim());
+    }
+
+    function isServiceDue(row) {
+      const value = String(row["Service Due"] || "").trim().toLowerCase();
+      return value === "yes"
+        || value === "due"
+        || value === "true"
+        || value === "service due";
+    }
+
+    function populateFilters() {
+      populateSelect("departmentFilter", "Department", "All Departments");
+      populateSelect("employeeFilter", "Employee Name", "All Employees");
+      populateSelect("vehicleFilter", "Vehicle Registration", "All Vehicles");
+      populateSelect("handoverTypeFilter", "Handover Type", "All Types");
+    }
+
+    function populateSelect(selectId, field, defaultLabel) {
+      const select = document.getElementById(selectId);
+      select.innerHTML = "";
+
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = defaultLabel;
+      select.appendChild(defaultOption);
+
+      const values = [...new Set(handoverData.map(row => row[field]).filter(Boolean))].sort();
+
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    }
+
+    function attachFilterEvents() {
+      document.getElementById("departmentFilter").addEventListener("change", applyFilters);
+      document.getElementById("employeeFilter").addEventListener("change", applyFilters);
+      document.getElementById("vehicleFilter").addEventListener("change", applyFilters);
+      document.getElementById("handoverTypeFilter").addEventListener("change", applyFilters);
+      document.getElementById("fromDate").addEventListener("change", applyFilters);
+      document.getElementById("toDate").addEventListener("change", applyFilters);
+    }
+
+    function applyFilters() {
+      const department = document.getElementById("departmentFilter").value;
+      const employee = document.getElementById("employeeFilter").value;
+      const vehicle = document.getElementById("vehicleFilter").value;
+      const handoverType = document.getElementById("handoverTypeFilter").value;
+      const fromDate = document.getElementById("fromDate").value ? new Date(document.getElementById("fromDate").value) : null;
+      const toDate = document.getElementById("toDate").value ? new Date(document.getElementById("toDate").value) : null;
+
+      if (toDate) {
+        toDate.setHours(23, 59, 59, 999);
+      }
+
+      filteredData = handoverData.filter(row => {
+        const rowDate = normalizeDate(row["Date"]);
+
+        return (!department || row["Department"] === department)
+          && (!employee || row["Employee Name"] === employee)
+          && (!vehicle || row["Vehicle Registration"] === vehicle)
+          && (!handoverType || row["Handover Type"] === handoverType)
+          && (!fromDate || (rowDate && rowDate >= fromDate))
+          && (!toDate || (rowDate && rowDate <= toDate));
+      });
+
+      renderDashboard();
+    }
+
+    function resetFilters() {
+      document.getElementById("departmentFilter").value = "";
+      document.getElementById("employeeFilter").value = "";
+      document.getElementById("vehicleFilter").value = "";
+      document.getElementById("handoverTypeFilter").value = "";
+      document.getElementById("fromDate").value = "";
+      document.getElementById("toDate").value = "";
+
+      filteredData = handoverData;
+      renderDashboard();
+    }
+
+    function renderDashboard() {
+      renderCards();
+      renderCharts();
+      renderTable();
+    }
+
+    function renderCards() {
+      const vehicles = new Set(filteredData.map(row => row["Vehicle Registration"]).filter(Boolean));
+      const employees = new Set(filteredData.map(row => row["Employee Name"]).filter(Boolean));
+      const damageRows = filteredData.filter(hasDamage);
+      const serviceDueRows = filteredData.filter(isServiceDue);
+
+      document.getElementById("totalHandovers").textContent = filteredData.length;
+      document.getElementById("uniqueVehicles").textContent = vehicles.size;
+      document.getElementById("uniqueEmployees").textContent = employees.size;
+      document.getElementById("damageCount").textContent = damageRows.length;
+      document.getElementById("serviceDueCount").textContent = serviceDueRows.length;
+    }
+
+    function groupCount(data, field) {
+      const grouped = {};
+
+      data.forEach(row => {
+        const label = row[field] || "Unknown";
+        grouped[label] = (grouped[label] || 0) + 1;
+      });
+
+      return grouped;
+    }
+
+    function groupByMonth(data) {
+      const grouped = {};
+
+      data.forEach(row => {
+        const date = normalizeDate(row["Date"]);
+        if (!date) return;
+
+        const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        grouped[month] = (grouped[month] || 0) + 1;
+      });
+
+      return Object.keys(grouped)
+        .sort()
+        .reduce((obj, key) => {
+          obj[key] = grouped[key];
+          return obj;
+        }, {});
+    }
+
+    function renderCharts() {
+      departmentChart = drawChart(
+        departmentChart,
+        "departmentChart",
+        "bar",
+        groupCount(filteredData, "Department"),
+        "Hand Overs"
+      );
+
+      typeChart = drawChart(
+        typeChart,
+        "typeChart",
+        "pie",
+        groupCount(filteredData, "Handover Type"),
+        "Hand Overs"
+      );
+
+      vehicleChart = drawChart(
+        vehicleChart,
+        "vehicleChart",
+        "bar",
+        groupCount(filteredData, "Vehicle Registration"),
+        "Hand Overs"
+      );
+
+      monthlyChart = drawChart(
+        monthlyChart,
+        "monthlyChart",
+        "line",
+        groupByMonth(filteredData),
+        "Hand Overs"
+      );
+    }
+
+    function drawChart(existingChart, canvasId, type, groupedData, label) {
+      if (existingChart) existingChart.destroy();
+
+      const labels = Object.keys(groupedData);
+      const values = Object.values(groupedData);
+
+      return new Chart(document.getElementById(canvasId), {
+        type,
+        data: {
+          labels,
+          datasets: [{
+            label,
+            data: values,
+            borderWidth: 2,
+            tension: 0.25
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: type === "pie"
+            }
+          },
+          scales: type === "pie"
+            ? {}
+            : {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    precision: 0
+                  }
+                }
+              }
+        }
+      });
+    }
+
+    function splitPhotoLinks(value) {
+      if (!value) return [];
+
+      return String(value)
+        .split(/[\n,;]/)
+        .map(link => link.trim())
+        .filter(link => link.startsWith("http"));
+    }
+
+    function makePhotoLinks(value) {
+      const links = splitPhotoLinks(value);
+
+      if (!links.length) {
+        return "";
+      }
+
+      return links.map((link, index) => {
+        const safeLink = escapeHtml(link);
+        return `<a class="photo-link" onclick="openPhotoModal('${encodeURIComponent(link)}')">View Photo ${index + 1}</a>`;
+      }).join("");
+    }
+
+    function openPhotoModal(encodedUrl) {
+      const url = decodeURIComponent(encodedUrl);
+      const modal = document.getElementById("photoModal");
+      const preview = document.getElementById("photoPreview");
+      const openNewTab = document.getElementById("openPhotoNewTab");
+
+      openNewTab.href = url;
+
+      const imageUrl = convertGoogleDriveUrl(url);
+      const lowerUrl = url.toLowerCase();
+
+      if (
+        lowerUrl.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/)
+        || imageUrl !== url
+      ) {
+        preview.innerHTML = `<img class="photo-image" src="${escapeHtml(imageUrl)}" alt="Vehicle hand over photo">`;
+      } else {
+        preview.innerHTML = `<iframe class="photo-frame" src="${escapeHtml(url)}"></iframe>`;
+      }
+
+      modal.style.display = "block";
+    }
+
+    function convertGoogleDriveUrl(url) {
+      const match = String(url).match(/\/d\/([^/]+)/) || String(url).match(/[?&]id=([^&]+)/);
+
+      if (match && match[1]) {
+        return "https://drive.google.com/uc?export=view&id=" + match[1];
+      }
+
+      return url;
+    }
+
+    function closePhotoModal() {
+      document.getElementById("photoModal").style.display = "none";
+      document.getElementById("photoPreview").innerHTML = "";
+    }
+
+    function closePhotoModalOnBackdrop(event) {
+      if (event.target.id === "photoModal") {
+        closePhotoModal();
+      }
+    }
+
+    function renderTable() {
+      const tableHead = document.getElementById("tableHead");
+      const tableBody = document.getElementById("tableBody");
+
+      tableHead.innerHTML = `
+        <tr>
+          ${headings.map(heading => `<th>${escapeHtml(heading)}</th>`).join("")}
+        </tr>
+      `;
+
+      tableBody.innerHTML = filteredData.map(row => `
+        <tr>
+          ${headings.map(heading => {
+            if (heading === "Photo Links") {
+              return `<td>${makePhotoLinks(row[heading])}</td>`;
+            }
+
+            return `<td>${escapeHtml(row[heading])}</td>`;
+          }).join("")}
+        </tr>
+      `).join("");
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
