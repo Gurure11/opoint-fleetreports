@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Onpoint Group School | Interactive Learning Platform</title>
+  <!-- Google Fonts & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(145deg, #f4f7fc 0%, #eef2f5 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* main app container */
+    .app-container {
+      max-width: 1400px;
+      width: 100%;
+      background: white;
+      border-radius: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    /* header branding */
+    .brand-header {
+      background: #0b2b40;
+      padding: 1rem 2rem;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .logo h1 {
+      font-weight: 700;
+      font-size: 1.7rem;
+      letter-spacing: -0.3px;
+    }
+    .logo p {
+      font-size: 0.8rem;
+      opacity: 0.85;
+    }
+    .user-welcome {
+      background: rgba(255,255,255,0.15);
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-weight: 500;
+    }
+
+    /* main layout: sidebar + content */
+    .dashboard {
+      display: flex;
+      flex-wrap: wrap;
+      min-height: 70vh;
+    }
+    .sidebar {
+      width: 280px;
+      background: #f8fafc;
+      border-right: 1px solid #e2e8f0;
+      padding: 2rem 1.2rem;
+    }
+    .content-area {
+      flex: 1;
+      padding: 2rem;
+      background: #ffffff;
+    }
+
+    /* lesson cards grid */
+    .lessons-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.8rem;
+      margin-top: 1.5rem;
+    }
+    .lesson-card {
+      background: white;
+      border-radius: 1.2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+      transition: 0.2s;
+      border: 1px solid #eef2f6;
+      overflow: hidden;
+    }
+    .lesson-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1);
+    }
+    .lesson-thumb {
+      background: #1e293b;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2.5rem;
+    }
+    .lesson-info {
+      padding: 1.2rem 1.2rem 1.5rem;
+    }
+    .lesson-title {
+      font-weight: 700;
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      color: #0f172a;
+    }
+    .lesson-desc {
+      font-size: 0.85rem;
+      color: #475569;
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+    .btn-start {
+      background: #0f3b4c;
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.2s;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-start:hover {
+      background: #1f5e74;
+      transform: scale(1.02);
+    }
+    .video-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-container {
+      background: #000;
+      width: 85%;
+      max-width: 1000px;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+    .video-container iframe {
+      width: 100%;
+      height: 500px;
+      border: none;
+    }
+    .close-vid {
+      position: absolute;
+      top: 12px;
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      font-size: 28px;
+      border: none;
+      cursor: pointer;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+    }
+    /* login & register forms */
+    .auth-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .auth-card {
+      background: white;
+      width: 420px;
+      max-width: 90%;
+      border-radius: 32px;
+      padding: 2rem;
+      box-shadow: 0 25px 40px rgba(0,0,0,0.3);
+    }
+    .auth-card h2 {
+      margin-bottom: 1.5rem;
+      color: #0b2b40;
+    }
+    .auth-card input {
+      width: 100%;
+      padding: 12px 16px;
+      margin: 10px 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 28px;
+      font-size: 1rem;
+    }
+    .auth-card button {
+      width: 100%;
+      background: #0f3b4c;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 40px;
+      font-weight: 600;
+      margin-top: 12px;
+      cursor: pointer;
+    }
+    .toggle-auth {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 0.85rem;
+      color: #2563eb;
+      cursor: pointer;
+    }
+    .admin-badge {
+      background: #e2e8f0;
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: #1e293b;
+    }
+    .admin-panel {
+      background: #f1f5f9;
+      margin-bottom: 2rem;
+      padding: 1.2rem;
+      border-radius: 1rem;
+      border-left: 5px solid #0f3b4c;
+    }
+    .admin-panel h3 {
+      margin-bottom: 12px;
+    }
+    .admin-panel input, .admin-panel textarea {
+      width: 100%;
+      margin: 6px 0;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #cbd5e1;
+    }
+    .admin-panel button {
+      background: #0b2b40;
+      margin-top: 8px;
+    }
+    .sheet-info {
+      background: #fef9e3;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      border-radius: 28px;
+      margin-top: 12px;
+    }
+    @media (max-width: 720px) {
+      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
+      .dashboard { flex-direction: column; }
+    }
+    .logout-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 30px;
+      cursor: pointer;
+    }
+    .loading {
+      text-align: center;
+      padding: 3rem;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .auth-tab {
+      flex: 1;
+      border: none;
+      padding: 10px;
+      border-radius: 30px;
+      cursor: pointer;
+      background: #e2e8f0;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    .auth-tab.active {
+      background: #0f3b4c;
+      color: #ffffff;
+    }
+    .auth-note {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 10px;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    .auth-status {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 20px;
+      background: #fef9e3;
+      color: #0f172a;
+      font-size: 0.82rem;
+      text-align: center;
+    }
+
+    .progress-wrap {
+      background: #e2e8f0;
+      border-radius: 999px;
+      height: 12px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #0f3b4c;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .small-muted {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 6px;
+    }
+    .stats-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 30px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container" id="appRoot">
+  <!-- dynamic rendering via JS -->
+</div>
+
+<script>
+  // ======================= CONFIGURATION =========================
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyM_jHfx9UBBWPLWh5epiqbGKLswpN5EYvDWXDYAdGd3fmljhQOxC3hmlRJxNjkjSKP/exec";
+  const SHEET_ID = "1a7DzlDW_VLVZIZuvqW4_q3euqxDW264aU-A4QQj4wYQ";
+  const API_KEY = "";
+
+  const REQUIRED_TABS = {
+    USERS: ["USER_ID", "FULL_NAME", "USERNAME", "EMAIL", "PASSWORD", "ROLE", "STATUS", "DATE_CREATED"],
+    Courses: ["COURSE_ID", "COURSE_NAME", "DESCRIPTION", "CATEGORY", "PRICE", "ACCESS", "THUMBNAIL", "CREATED_BY", "DATE_CREATED"],
+    Topics: ["TOPIC_ID", "COURSE_ID", "TITLE", "DESCRIPTION", "ORDER", "DATE_CREATED"],
+    LESSONS: ["LESSON_ID", "COURSE_ID", "TOPIC_ID", "TITLE", "DESCRIPTION", "CONTENT", "VIDEO_LINK", "CREATED_BY", "DATE_CREATED"],
+    Questions: ["QUESTION_ID", "LESSON_ID", "COURSE_ID", "QUESTION", "OPTION_A", "OPTION_B", "OPTION_C", "OPTION_D", "ANSWER", "DATE_CREATED"],
+    Assignments: ["ASSIGNMENT_ID", "COURSE_ID", "LESSON_ID", "TITLE", "INSTRUCTIONS", "DUE_DATE", "DATE_CREATED"],
+    VIDEO_UPLOADS: ["VIDEO_ID", "LESSON_ID", "COURSE_ID", "TITLE", "VIDEO_LINK", "UPLOADED_BY", "DATE_CREATED"],
+    Enrollments: ["ENROLLMENT_ID", "USER_ID", "COURSE_ID", "STATUS", "REQUESTED_AT", "APPROVED_AT"],
+    Progress: ["PROGRESS_ID", "USER_ID", "COURSE_ID", "LESSON_ID", "STATUS", "SCORE", "COMPLETED_AT"]
+  };
+
+  // Login enabled. Roles: ADMIN and TEACHER can upload lessons. STUDENT can learn and track progress.
+  let currentUser = null;
+  let lessonsList = [];
+  let studentProgress = [];
+  let progressSummary = [];
+  let allUsers = [];
+  let setupComplete = false;
+  let setupError = "";
+
+  function api(action, params = {}) {
+    return new Promise((resolve, reject) => {
+      if (!SCRIPT_URL || !SCRIPT_URL.includes("/exec")) {
+        reject(new Error("CONFIG_ERROR: Apps Script URL is missing or invalid."));
+        return;
+      }
+
+      const callbackName = "jsonp_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+      const query = new URLSearchParams({
+        action,
+        callback: callbackName,
+        sheetId: SHEET_ID,
+        ...params,
+        _ts: Date.now()
+      });
+
+      const script = document.createElement("script");
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("TIMEOUT_ERROR: Apps Script did not respond within 30 seconds."));
+      }, 30000);
+
+      function cleanup() {
+        clearTimeout(timeout);
+        try { delete window[callbackName]; } catch(e) { window[callbackName] = undefined; }
+        try { script.remove(); } catch(e) {}
+      }
+
+      window[callbackName] = function(data) {
+        cleanup();
+        if (data && data.success === false) {
+          const message = (data.message || "Apps Script returned an error.");
+          const code = data.code || "SCRIPT_ERROR";
+          reject(new Error(code === "UNKNOWN_ACTION" ? "Apps Script is missing this action. Paste and deploy the updated Apps Script, then update the SCRIPT_URL if Google gives you a new URL. Details: " + message : code + ": " + message));
+        } else {
+          resolve(data || { success: true });
+        }
+      };
+
+      script.onerror = function() {
+        cleanup();
+        reject(new Error("CONNECTION_ERROR: Could not load the Apps Script endpoint."));
+      };
+
+      script.src = SCRIPT_URL + "?" + query.toString();
+      document.body.appendChild(script);
+    });
+  }
+
+  async function initialiseSheets() {
+    setConnectionStatus("checking", "Generating Google Sheet tabs and headings...");
+
+    try {
+      // This action writes the tabs/headings in the Apps Script, flushes the changes,
+      // then verifies the spreadsheet before returning success.
+      const result = await api("forceSetupSheets");
+
+      const verify = await api("verifySetup");
+      if (!verify || verify.success !== true) {
+        throw new Error((verify && verify.message) ? verify.message : "Tabs/headings verification failed.");
+      }
+
+      setupComplete = true;
+      setupError = "";
+
+      const created = Array.isArray(result.created) && result.created.length ? ` Created: ${result.created.join(", ")}.` : "";
+      const updated = Array.isArray(result.updated) && result.updated.length ? ` Headings checked: ${result.updated.join(", ")}.` : "";
+      const verified = Array.isArray(verify.verifiedTabs) ? ` Verified ${verify.verifiedTabs.length} tabs.` : "";
+
+      setConnectionStatus("connected", "Connected. Sheet tabs and headings are ready." + created + updated + verified);
+      return true;
+    } catch (error) {
+      setupComplete = false;
+      setupError = error.message || String(error);
+      setConnectionStatus("error", "Connected URL responded, but sheet setup failed: " + setupError + " Make sure you pasted the new Apps Script code, saved it, deployed a new Web App version, and set Execute as: Me.");
+      return false;
+    }
+  }
+
+  function setConnectionStatus(state, message) {
+    const el = document.getElementById("connectionStatus");
+    if (!el) return;
+    const icon = state === "connected" ? "✅" : state === "error" ? "⚠️" : "⏳";
+    const colour = state === "connected" ? "#dcfce7" : state === "error" ? "#fee2e2" : "#fef9e3";
+    el.style.background = colour;
+    el.innerHTML = `${icon} ${escapeHtml(message)}`;
+  }
+
+  async function fetchSheetTab(tabName) {
+    try {
+      // Prefer Apps Script because it can read private sheets and avoids API-key sharing issues.
+      const actionMap = {
+        LESSONS: "getLessons",
+        COURSES: "getCourses",
+        TOPICS: "getTopics",
+        QUESTIONS: "getQuestions",
+        ASSIGNMENTS: "getAssignments",
+        VIDEO_UPLOADS: "getVideoUploads"
+      };
+      const action = actionMap[tabName] || "getTab";
+      const data = await api(action, { tabName });
+      const rows = data.lessons || data.courses || data.topics || data.questions || data.assignments || data.videos || data.rows || data.data || [];
+      if (Array.isArray(rows)) return rows;
+      return [];
+    } catch (scriptError) {
+      console.warn("Apps Script read failed, trying public Sheets API:", scriptError.message);
+      try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tabName)}?key=${API_KEY}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`FETCH_ERROR: Sheet ${tabName} returned HTTP ${resp.status}.`);
+        const data = await resp.json();
+        const rows = data.values || [];
+        if (rows.length < 2) return [];
+        const headers = rows[0];
+        return rows.slice(1).map(row => {
+          const obj = {};
+          headers.forEach((h, idx) => { obj[h] = row[idx] || ""; });
+          return obj;
+        });
+      } catch (apiError) {
+        setConnectionStatus("error", apiError.message || String(apiError));
+        return [];
+      }
+    }
+  }
+
+  async function addLessonToSheet(lesson) {
+    try {
+      await api("addLesson", { lesson: JSON.stringify(lesson) });
+      alert("Lesson added to Google Sheet.");
+      await loadLessons();
+      return true;
+    } catch (firstError) {
+      try {
+        await api("createLesson", {
+          lessonId: lesson.LESSON_ID,
+          courseId: lesson.COURSE_ID,
+          title: lesson.TITLE,
+          description: lesson.DESCRIPTION,
+          content: lesson.CONTENT || lesson.DESCRIPTION,
+          videoLink: lesson.VIDEO_LINK,
+          createdBy: lesson.CREATED_BY
+        });
+        alert("Lesson added to Google Sheet.");
+        await loadLessons();
+        return true;
+      } catch (secondError) {
+        alert(secondError.message || firstError.message || "Could not save lesson.");
+        return false;
+      }
+    }
+  }
+
+  async function loadLessons() {
+    const lessons = await fetchSheetTab("LESSONS");
+
+    lessonsList = lessons.map((l, index) => {
+      const lessonId = getField(l, ["LESSON_ID", "LessonId", "ID", "id"]) || String(index + 1);
+      const rawVideo = getField(l, ["VIDEO_LINK", "VideoLink", "videoLink", "VIDEO URL", "VIDEO_URL", "Link", "LINK"]);
+
+      return {
+        id: lessonId,
+        courseId: getField(l, ["COURSE_ID", "CourseId", "courseId"]),
+        title: getField(l, ["TITLE", "Title", "Lesson", "lessonTitle"]) || "Untitled Lesson",
+        desc: getField(l, ["DESCRIPTION", "Description", "CONTENT", "Content"]) || "No description",
+        videoLink: rawVideo
+      };
+    });
+
+    if (currentUser && currentUser.role === "STUDENT") {
+      await loadStudentProgress();
+    }
+
+    if (currentUser && (currentUser.role === "ADMIN" || currentUser.role === "TEACHER")) {
+      await loadProgressSummary();
+    }
+
+    updateLessonsDOM();
+  }
+
+  async function loadStudentProgress() {
+    if (!currentUser) return;
+    try {
+      const data = await api("getProgress", { userId: currentUser.USER_ID || currentUser.userId });
+      studentProgress = data.progress || data.rows || [];
+    } catch (error) {
+      studentProgress = [];
+      console.warn("Could not load student progress:", error.message);
+    }
+  }
+
+  async function loadProgressSummary() {
+    try {
+      const data = await api("getProgressSummary");
+      progressSummary = data.students || [];
+      allUsers = data.users || [];
+    } catch (error) {
+      progressSummary = [];
+      allUsers = [];
+      console.warn("Could not load progress summary:", error.message);
+    }
+  }
+
+  function getStudentProgressPercent() {
+    if (!currentUser || !lessonsList.length) return 0;
+    const done = new Set(
+      studentProgress
+        .filter(p => String(getField(p, ["STATUS", "Status", "status"])).toUpperCase() === "DONE" || String(getField(p, ["STATUS", "Status", "status"])).toUpperCase() === "COMPLETED")
+        .map(p => String(getField(p, ["LESSON_ID", "LessonId", "lessonId"])))
+    );
+    return Math.round((done.size / lessonsList.length) * 100);
+  }
+
+  function isLessonDone(lessonId) {
+    return studentProgress.some(p =>
+      String(getField(p, ["LESSON_ID", "LessonId", "lessonId"])) === String(lessonId) &&
+      ["DONE", "COMPLETED"].includes(String(getField(p, ["STATUS", "Status", "status"])).toUpperCase())
+    );
+  }
+
+  async function markLessonDone(lessonId, courseId) {
+    if (!currentUser) return;
+    try {
+      await api("saveProgress", {
+        userId: currentUser.USER_ID || currentUser.userId,
+        courseId: courseId || "",
+        lessonId,
+        status: "DONE",
+        score: "100"
+      });
+      await loadStudentProgress();
+      updateLessonsDOM();
+    } catch (error) {
+      alert(error.message || "Could not save progress.");
+    }
+  }
+
+
+  function setAuthStatus(message, state = "checking") {
+    const el = document.getElementById("authStatus");
+    if (!el) return;
+
+    el.style.display = "block";
+    el.textContent = message;
+
+    if (state === "success") {
+      el.style.background = "#dcfce7";
+      el.style.color = "#14532d";
+    } else if (state === "error") {
+      el.style.background = "#fee2e2";
+      el.style.color = "#7f1d1d";
+    } else {
+      el.style.background = "#fef9e3";
+      el.style.color = "#0f172a";
+    }
+  }
+
+  function setAuthButtonsDisabled(disabled) {
+    const loginBtn = document.getElementById("loginBtn");
+    const registerBtn = document.getElementById("registerBtn");
+
+    if (loginBtn) {
+      loginBtn.disabled = disabled;
+      loginBtn.textContent = disabled ? "Synchronising..." : "Login";
+    }
+
+    if (registerBtn) {
+      registerBtn.disabled = disabled;
+      registerBtn.textContent = disabled ? "Synchronising..." : "Register & Start Learning";
+    }
+  }
+
+  async function loginUser() {
+    const emailOrUsername = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+
+    if (!emailOrUsername || !password) {
+      alert("Email/username and password required.");
+      return;
+    }
+
+    setAuthStatus("Synchronising login with Google Sheet...", "checking");
+    setAuthButtonsDisabled(true);
+
+    try {
+      const data = await api("loginUser", { emailOrUsername, password });
+      currentUser = normaliseUser(data.user);
+      setAuthStatus("Login successful.", "success");
+      alert("Login successful. Welcome " + (currentUser.FULL_NAME || currentUser.EMAIL || "back") + ".");
+      renderApp();
+    } catch (error) {
+      const msg = error.message || "Login failed.";
+      setAuthStatus(msg, "error");
+      alert("Login failed: " + msg);
+    } finally {
+      setAuthButtonsDisabled(false);
+    }
+  }
+
+  async function registerStudent() {
+    const fullName = document.getElementById("regFullName").value.trim();
+    const username = document.getElementById("regUsername").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value.trim();
+
+    if (!fullName || !username || !email || !password) {
+      alert("Please complete all registration fields.");
+      return;
+    }
+
+    setAuthStatus("Synchronising registration with Google Sheet...", "checking");
+    setAuthButtonsDisabled(true);
+
+    try {
+      const data = await api("registerUser", {
+        fullName,
+        username,
+        email,
+        password,
+        role: "STUDENT"
+      });
+      currentUser = normaliseUser(data.user);
+      setAuthStatus("Registration successful.", "success");
+      alert("Registration successful. Welcome " + (currentUser.FULL_NAME || currentUser.EMAIL || "student") + ".");
+      renderApp();
+    } catch (error) {
+      const msg = error.message || "Registration failed.";
+      setAuthStatus(msg, "error");
+      alert("Registration failed: " + msg);
+    } finally {
+      setAuthButtonsDisabled(false);
+    }
+  }
+
+  function logoutUser() {
+    currentUser = null;
+    studentProgress = [];
+    progressSummary = [];
+    allUsers = [];
+    renderApp();
+  }
+
+  function normaliseUser(user) {
+    user = user || {};
+    const role = String(user.ROLE || user.role || "STUDENT").toUpperCase();
+    return {
+      ...user,
+      USER_ID: user.USER_ID || user.userId || "",
+      FULL_NAME: user.FULL_NAME || user.fullName || "",
+      USERNAME: user.USERNAME || user.username || "",
+      EMAIL: user.EMAIL || user.email || "",
+      ROLE: role,
+      role,
+      isAdmin: role === "ADMIN"
+    };
+  }
+
+  function toggleAuthMode(mode) {
+    const loginBox = document.getElementById("loginBox");
+    const registerBox = document.getElementById("registerBox");
+    if (!loginBox || !registerBox) return;
+    loginBox.style.display = mode === "login" ? "block" : "none";
+    registerBox.style.display = mode === "register" ? "block" : "none";
+  }
+
+  function renderAuthOverlay() {
+    return `
+      <div class="auth-overlay">
+        <div class="auth-card">
+          <div id="loginBox">
+            <h2>Login</h2>
+            <input id="loginEmail" type="text" placeholder="Email or username" />
+            <input id="loginPassword" type="password" placeholder="Password" />
+            <button id="loginBtn" onclick="loginUser()">Login</button>
+            <div class="toggle-auth" onclick="toggleAuthMode('register')">Student? Register here</div>
+          </div>
+
+          <div id="registerBox" style="display:none;">
+            <h2>Student Registration</h2>
+            <input id="regFullName" type="text" placeholder="Full name" />
+            <input id="regUsername" type="text" placeholder="Username" />
+            <input id="regEmail" type="email" placeholder="Email" />
+            <input id="regPassword" type="password" placeholder="Password" />
+            <button id="registerBtn" onclick="registerStudent()">Register & Start Learning</button>
+            <div class="toggle-auth" onclick="toggleAuthMode('login')">Already registered? Login</div>
+          </div>
+
+          <div id="authStatus" class="auth-status"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStudentPanel() {
+    const percent = getStudentProgressPercent();
+    const doneCount = studentProgress.filter(p => ["DONE", "COMPLETED"].includes(String(getField(p, ["STATUS", "Status", "status"])).toUpperCase())).length;
+
+    return `
+      <div class="admin-panel" style="margin-top:1rem;">
+        <h3><i class="fas fa-chart-line"></i> My Learning Progress</h3>
+        <div class="progress-wrap"><div class="progress-bar" style="width:${percent}%;"></div></div>
+        <strong>${percent}% Complete</strong>
+        <div class="small-muted">${doneCount} of ${lessonsList.length} lessons completed.</div>
+      </div>
+    `;
+  }
+
+  function renderTeacherAdminStats() {
+    const studentCount = progressSummary.length || allUsers.filter(u => String(getField(u, ["ROLE", "Role", "role"])).toUpperCase() === "STUDENT").length;
+    const rows = progressSummary.length ? progressSummary.map(s => `
+      <div class="stats-card">
+        <strong>${escapeHtml(s.fullName || s.email || s.username || "Student")}</strong>
+        <div class="progress-wrap"><div class="progress-bar" style="width:${Number(s.percent || 0)}%;"></div></div>
+        <div class="small-muted">${Number(s.percent || 0)}% complete | ${s.completed || 0}/${s.totalLessons || lessonsList.length} lessons</div>
+      </div>
+    `).join("") : `<div class="small-muted">No student progress recorded yet.</div>`;
+
+    return `
+      <div class="admin-panel" style="margin-top:1rem;">
+        <h3><i class="fas fa-users"></i> Student Enrolment & Progress</h3>
+        <strong>${studentCount}</strong> enrolled student(s)
+        ${rows}
+      </div>
+    `;
+  }
+
+  
+  function renderApp() {
+    const root = document.getElementById("appRoot");
+
+    if (!currentUser) {
+      root.innerHTML = renderAuthOverlay();
+      return;
+    }
+
+    root.innerHTML = renderDashboard();
+    attachDashboardEvents();
+    initialiseSheets()
+      .then((ok) => { if (ok) loadLessons(); else updateLessonsDOM(); })
+      .catch(() => updateLessonsDOM());
+  }
+
+  function renderDashboard() {
+    const role = String(currentUser?.role || currentUser?.ROLE || "STUDENT").toUpperCase();
+    const isAdmin = role === "ADMIN";
+    const isTeacher = role === "TEACHER";
+    const canUpload = isAdmin || isTeacher;
+    return `
+      <div class="brand-header">
+        <div class="logo"><h1>📘 Onpoint Group School</h1><p>Interactive E-Learning</p></div>
+        <div style="display:flex; gap:12px; align-items:center;">
+          <span class="user-welcome"><i class="fas fa-user-graduate"></i> ${escapeHtml(currentUser.FULL_NAME || currentUser.EMAIL || currentUser.email || "User")} <span class="admin-badge">${role}</span></span>
+          <button class="logout-btn" onclick="logoutUser()">Logout</button>
+        </div>
+      </div>
+      <div class="dashboard">
+        <div class="sidebar">
+          <h3><i class="fas fa-book-open"></i> Learning Hub</h3>
+          <p style="margin: 1rem 0;">Free video lessons. Click start to watch.</p>
+          <div id="connectionStatus" class="sheet-info">⏳ Checking Google Sheet connection...</div>
+          <button id="setupSheetsBtn" style="width:100%; margin-top:10px; background:#0b2b40; color:white; border:none; padding:10px; border-radius:30px; font-weight:600; cursor:pointer;">Generate / Repair Sheet Tabs & Headings</button>
+          ${role === "STUDENT" ? renderStudentPanel() : ""}
+          ${canUpload ? renderTeacherAdminStats() : ""}
+          ${canUpload ? `
+            <div class="admin-panel" style="margin-top:1rem;">
+              <h3><i class="fas fa-upload"></i> Admin Upload Video</h3>
+              <input type="text" id="lessonTitle" placeholder="Lesson Title" />
+              <textarea id="lessonDesc" rows="2" placeholder="Short description"></textarea>
+              <input type="text" id="videoLink" placeholder="Google Drive Video Link (or any shareable link)" />
+              <button id="addLessonBtn"><i class="fas fa-save"></i> Save Lesson</button>
+            </div>
+          ` : ''}
+          <div class="sheet-info"><i class="fab fa-google"></i> Sheet ID: ${SHEET_ID}<br>Tabs auto-created: LESSONS, TOPICS, QUESTIONS, ASSIGNMENTS, VIDEO_UPLOADS, USERS</div>
+        </div>
+        <div class="content-area">
+          <h2>📺 Available Lessons</h2>
+          <div id="lessonsListContainer" class="lessons-grid">
+            <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Loading lessons...</div>
+          </div>
+        </div>
+      </div>
+      <div id="videoModal" class="video-modal">
+        <div class="video-container">
+          <button class="close-vid" id="closeModalBtn">&times;</button>
+          <iframe id="lessonIframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+      </div>
+    `;
+  }
+
+  function attachDashboardEvents() {
+    const setupSheetsBtn = document.getElementById("setupSheetsBtn");
+    if (setupSheetsBtn) {
+      setupSheetsBtn.onclick = async () => {
+        const ok = await initialiseSheets();
+        if (ok) await loadLessons();
+      };
+    }
+
+    const addBtn = document.getElementById("addLessonBtn");
+    if (addBtn) {
+      addBtn.onclick = async () => {
+        const title = document.getElementById("lessonTitle").value.trim();
+        const desc = document.getElementById("lessonDesc").value.trim();
+        const videoLink = document.getElementById("videoLink").value.trim();
+        if (!title || !videoLink) { alert("Title and video link required"); return; }
+
+        const now = new Date().toISOString();
+        const lessonId = "LSN_" + Date.now();
+        const newLesson = {
+          LESSON_ID: lessonId,
+          COURSE_ID: "",
+          TOPIC_ID: "",
+          TITLE: title,
+          DESCRIPTION: desc,
+          CONTENT: desc,
+          VIDEO_LINK: videoLink,
+          CREATED_BY: currentUser?.FULL_NAME || currentUser?.EMAIL || "Admin",
+          DATE_CREATED: now,
+          VIDEO_ID: "VID_" + Date.now(),
+          UPLOADED_BY: currentUser?.FULL_NAME || currentUser?.EMAIL || "Admin"
+        };
+
+        const saved = await addLessonToSheet(newLesson);
+        if (saved) {
+          document.getElementById("lessonTitle").value = "";
+          document.getElementById("lessonDesc").value = "";
+          document.getElementById("videoLink").value = "";
+        }
+      };
+    }
+
+    window.startLesson = (videoUrl) => {
+      if (!videoUrl) {
+        alert("No video link found. Please make sure this lesson row has a VIDEO_LINK value in the LESSONS tab.");
+        return;
+      }
+
+      let embedUrl = String(videoUrl).trim();
+
+      function extractYouTubeId(urlText) {
+        try {
+          const url = new URL(urlText);
+
+          if (url.hostname.includes("youtu.be")) {
+            return url.pathname.replace("/", "").split("?")[0];
+          }
+
+          if (url.hostname.includes("youtube.com")) {
+            if (url.pathname === "/watch") {
+              return url.searchParams.get("v") || "";
+            }
+
+            if (url.pathname.includes("/shorts/")) {
+              return url.pathname.split("/shorts/")[1].split("/")[0].split("?")[0];
+            }
+
+            if (url.pathname.includes("/embed/")) {
+              return url.pathname.split("/embed/")[1].split("/")[0].split("?")[0];
+            }
+
+            if (url.pathname.includes("/live/")) {
+              return url.pathname.split("/live/")[1].split("/")[0].split("?")[0];
+            }
+          }
+        } catch (e) {
+          const match = String(urlText).match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{6,})/);
+          return match ? match[1] : "";
+        }
+
+        return "";
+      }
+
+      // Google Drive share links must use /preview inside iframe.
+      if (embedUrl.includes("drive.google.com")) {
+        const match = embedUrl.match(/\/d\/([^/]+)/) || embedUrl.match(/[?&]id=([^&]+)/);
+        if (match) embedUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+
+      // YouTube refuses normal watch/share URLs in iframes.
+      // Convert every supported YouTube URL to the official embed URL.
+      if (embedUrl.includes("youtube.com") || embedUrl.includes("youtu.be")) {
+        const videoId = extractYouTubeId(embedUrl);
+
+        if (!videoId) {
+          alert("This YouTube link could not be read. Please use a normal YouTube video link.");
+          return;
+        }
+
+        embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
+      }
+
+      const modal = document.getElementById("videoModal");
+      const iframe = document.getElementById("lessonIframe");
+
+      iframe.src = embedUrl;
+      modal.style.display = "flex";
+    };
+
+    const closeModal = document.getElementById("closeModalBtn");
+    if (closeModal) closeModal.onclick = closeVideoModal;
+    window.onclick = (e) => { if(e.target === document.getElementById("videoModal")) closeVideoModal(); };
+  }
+
+  function closeVideoModal() {
+    const modal = document.getElementById("videoModal");
+    const iframe = document.getElementById("lessonIframe");
+    if (modal) modal.style.display = "none";
+    if (iframe) iframe.src = "";
+  }
+
+  function updateLessonsDOM() {
+    const container = document.getElementById("lessonsListContainer");
+    if (!container) return;
+    if (!lessonsList.length) {
+      container.innerHTML = `<div class="loading">📭 No lessons yet. Admin can add videos.</div>`;
+      return;
+    }
+    container.innerHTML = lessonsList.map(lesson => `
+      <div class="lesson-card">
+        <div class="lesson-thumb"><i class="fas fa-play-circle"></i></div>
+        <div class="lesson-info">
+          <div class="lesson-title">${escapeHtml(lesson.title)}</div>
+          <div class="lesson-desc">${escapeHtml(lesson.desc || "No description")}</div>
+          <button class="btn-start" data-video="${escapeAttr(lesson.videoLink || "")}"><i class="fas fa-play"></i> Start Lesson</button>
+          ${String(currentUser?.role || currentUser?.ROLE || "").toUpperCase() === "STUDENT" ? `
+            <button class="btn-secondary btn-done" data-lesson="${escapeAttr(lesson.id)}" data-course="${escapeAttr(lesson.courseId || "")}">
+              ${isLessonDone(lesson.id) ? "✅ Done" : "Mark Done"}
+            </button>
+          ` : ""}
+        </div>
+      </div>
+    `).join("");
+
+    document.querySelectorAll(".btn-start").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const videoUrl = btn.getAttribute("data-video");
+        if (window.startLesson) window.startLesson(videoUrl);
+      });
+    });
+
+    document.querySelectorAll(".btn-done").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        await markLessonDone(btn.getAttribute("data-lesson"), btn.getAttribute("data-course"));
+      });
+    });
+  }
+
+  function getField(row, names) {
+    if (!row) return "";
+    for (const name of names) {
+      if (row[name] !== undefined && row[name] !== null && String(row[name]).trim() !== "") return row[name];
+    }
+    return "";
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str).replace(/[&<>]/g, m => ({"&":"&amp;", "<":"&lt;", ">":"&gt;"}[m]));
+  }
+
+  function escapeAttr(str) {
+    if (!str) return "";
+    return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  }
+
+  renderApp();
+  console.log("Platform ready. Login removed. Connected to Apps Script:", SCRIPT_URL);
+</script>
+</body>
+</html>
