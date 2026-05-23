@@ -300,6 +300,11 @@
       </div>
 
       <div class="card">
+        <h3>Total Fuel by Cost Center</h3>
+        <p id="totalFuelCostCenter">R0.00</p>
+      </div>
+
+      <div class="card">
         <h3>Grand Total</h3>
         <p id="grandTotal">R0.00</p>
       </div>
@@ -324,6 +329,11 @@
       <div class="chart-box">
         <h3>Fuel Total by Department</h3>
         <canvas id="departmentChart"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <h3>Fuel Total by Cost Center</h3>
+        <canvas id="costCenterChart"></canvas>
       </div>
 
       <div class="chart-box">
@@ -371,6 +381,7 @@
     let filteredData = [];
 
     let departmentChart;
+    let costCenterChart;
     let driverChart;
     let vehicleChart;
     let monthlyChart;
@@ -582,12 +593,14 @@
 
     function renderCards() {
       const totalFuel = filteredData.reduce((sum, row) => sum + toNumber(row["Fuel Total"]), 0);
+      const totalFuelCostCenter = filteredData.reduce((sum, row) => sum + toNumber(row["Fuel Total"]), 0);
       const grandTotal = filteredData.reduce((sum, row) => sum + toNumber(row["Grand Total"]), 0);
       const totalLiters = filteredData.reduce((sum, row) => sum + toNumber(row["Liters"]), 0);
       const totalKm = filteredData.reduce((sum, row) => sum + toNumber(row["KM Traveled"]), 0);
       const avgKmLiter = totalLiters > 0 ? totalKm / totalLiters : 0;
 
       document.getElementById("totalFuel").textContent = formatCurrency(totalFuel);
+      document.getElementById("totalFuelCostCenter").textContent = formatCurrency(totalFuelCostCenter);
       document.getElementById("grandTotal").textContent = formatCurrency(grandTotal);
       document.getElementById("totalLiters").textContent = totalLiters.toFixed(2);
       document.getElementById("totalKm").textContent = totalKm.toFixed(2);
@@ -633,6 +646,14 @@
         "departmentChart",
         "bar",
         groupSum(filteredData, "Department", "Fuel Total"),
+        "Fuel Total"
+      );
+
+      costCenterChart = drawChart(
+        costCenterChart,
+        "costCenterChart",
+        "bar",
+        groupSum(filteredData, "Cost Center", "Fuel Total"),
         "Fuel Total"
       );
 
