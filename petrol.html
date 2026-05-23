@@ -1,239 +1,630 @@
-<script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbz4KG-bp7x8TD24iQBefT9iQ99t0n9oiilks_UrK0hkZSfvoB0VDRbJqXqoDLGN7hmR/exec";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuel Log Dashboard</title>
 
-  let fuelData = [];
-  let filteredData = [];
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  let departmentChart;
-  let driverChart;
-  let vehicleChart;
-  let monthlyChart;
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-  const headings = [
-    "Timestamp", "Date", "Driver", "Vehicle", "ER Number", "Merchant",
-    "Odo Start", "Odo Finish", "Fuel Type", "Price/L", "Liters",
-    "Fuel Total", "Lubrication", "Lube Cost", "Tolls", "Toll Total",
-    "Grand Total", "Cost Center", "Department", "Notes", "KM Traveled",
-    "KM/Liter", "Submission ID", "Status", "Photo Link"
-  ];
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f6f8;
+      color: #222;
+    }
 
-  async function loadData() {
-    try {
-      const response = await fetch(API_URL);
-      fuelData = await response.json();
+    header {
+      background: #1f2937;
+      color: white;
+      padding: 20px;
+    }
 
-      filteredData = fuelData;
+    h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+
+    h3 {
+      margin-top: 0;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .notice {
+      background: #fff7ed;
+      border-left: 5px solid #f97316;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .filters,
+    .cards,
+    .charts,
+    .table-wrap {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    select,
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+    }
+
+    button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: #f9fafb;
+      border-radius: 10px;
+      padding: 15px;
+      border-left: 5px solid #2563eb;
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .card p {
+      margin: 8px 0 0;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 25px;
+    }
+
+    .chart-box {
+      min-height: 360px;
+    }
+
+    canvas {
+      background: white;
+      max-height: 320px;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+      max-height: 500px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #1f2937;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    a {
+      color: #2563eb;
+      font-weight: bold;
+    }
+
+    .loading {
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Fuel Log Dashboard</h1>
+  </header>
+
+  <div class="container">
+    <div id="loadingMessage" class="loading">Loading Google Sheet data...</div>
+    <div id="errorMessage" class="notice"></div>
+
+    <div class="filters">
+      <div>
+        <label for="departmentFilter">Department</label>
+        <select id="departmentFilter">
+          <option value="">All Departments</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="driverFilter">Driver</label>
+        <select id="driverFilter">
+          <option value="">All Drivers</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="regFilter">Reg Number / Vehicle / ER Number</label>
+        <select id="regFilter">
+          <option value="">All Vehicles</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="fromDate">From Date</label>
+        <input type="date" id="fromDate">
+      </div>
+
+      <div>
+        <label for="toDate">To Date</label>
+        <input type="date" id="toDate">
+      </div>
+
+      <div style="display:flex; align-items:end;">
+        <button type="button" onclick="resetFilters()">Reset Filters</button>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Total Fuel Cost</h3>
+        <p id="totalFuel">R0.00</p>
+      </div>
+
+      <div class="card">
+        <h3>Grand Total</h3>
+        <p id="grandTotal">R0.00</p>
+      </div>
+
+      <div class="card">
+        <h3>Total Liters</h3>
+        <p id="totalLiters">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Total KM</h3>
+        <p id="totalKm">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Average KM/Liter</h3>
+        <p id="avgKmLiter">0</p>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-box">
+        <h3>Fuel Total by Department</h3>
+        <canvas id="departmentChart"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <h3>Fuel Total by Driver</h3>
+        <canvas id="driverChart"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <h3>Fuel Liters by Vehicle / Reg</h3>
+        <canvas id="vehicleChart"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <h3>Monthly Grand Total</h3>
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <h3>Fuel Log Records</h3>
+      <div class="table-scroll">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbxOx2KAFQz6gooEQ06JhX72QU2AOj5Y2zwqvL2sefDmJozhAtatGCPCcJk1TNxNOVj7/exec";
+
+    let fuelData = [];
+    let filteredData = [];
+
+    let departmentChart;
+    let driverChart;
+    let vehicleChart;
+    let monthlyChart;
+
+    const headings = [
+      "Timestamp", "Date", "Driver", "Vehicle", "ER Number", "Merchant",
+      "Odo Start", "Odo Finish", "Fuel Type", "Price/L", "Liters",
+      "Fuel Total", "Lubrication", "Lube Cost", "Tolls", "Toll Total",
+      "Grand Total", "Cost Center", "Department", "Notes", "KM Traveled",
+      "KM/Liter", "Submission ID", "Status", "Photo Link"
+    ];
+
+    function loadData() {
+      const callbackName = "handleFuelData_" + Date.now();
+      const script = document.createElement("script");
+
+      window[callbackName] = function(data) {
+        try {
+          handleFuelData(data);
+        } finally {
+          delete window[callbackName];
+          script.remove();
+        }
+      };
+
+      script.src = API_URL + "?callback=" + callbackName + "&cacheBust=" + Date.now();
+
+      script.onerror = function() {
+        showError("Failed to load Google Sheet data. Check that your Apps Script is deployed as a Web App with access set to Anyone.");
+        document.getElementById("loadingMessage").style.display = "none";
+      };
+
+      document.body.appendChild(script);
+    }
+
+    function handleFuelData(data) {
+      if (!Array.isArray(data)) {
+        showError("The Apps Script did not return a valid data array.");
+        document.getElementById("loadingMessage").style.display = "none";
+        return;
+      }
+
+      fuelData = data;
+      filteredData = data;
 
       populateFilters();
+      attachFilterEvents();
       renderDashboard();
 
-    } catch (error) {
-      console.error("Error loading data:", error);
-      alert("Failed to load Google Sheet data.");
+      document.getElementById("loadingMessage").style.display = "none";
     }
-  }
 
-  loadData();
+    function showError(message) {
+      const errorBox = document.getElementById("errorMessage");
+      errorBox.textContent = message;
+      errorBox.style.display = "block";
+    }
 
-  function toNumber(value) {
-    if (!value) return 0;
-    return Number(String(value).replace(/[R,\s]/g, "")) || 0;
-  }
+    function toNumber(value) {
+      if (value === null || value === undefined || value === "") return 0;
+      return Number(String(value).replace(/[R,\s]/g, "")) || 0;
+    }
 
-  function formatCurrency(value) {
-    return "R" + Number(value || 0).toLocaleString("en-ZA", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  }
+    function formatCurrency(value) {
+      return "R" + Number(value || 0).toLocaleString("en-ZA", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
 
-  function populateFilters() {
-    populateSelect("departmentFilter", "Department");
-    populateSelect("driverFilter", "Driver");
-    populateSelect("regFilter", "ER Number");
+    function normalizeDate(value) {
+      if (!value) return null;
 
-    document.getElementById("departmentFilter").addEventListener("change", applyFilters);
-    document.getElementById("driverFilter").addEventListener("change", applyFilters);
-    document.getElementById("regFilter").addEventListener("change", applyFilters);
-    document.getElementById("fromDate").addEventListener("change", applyFilters);
-    document.getElementById("toDate").addEventListener("change", applyFilters);
-  }
+      const date = new Date(value);
+      if (!isNaN(date)) return date;
 
-  function populateSelect(id, field) {
-    const select = document.getElementById(id);
-    const values = [...new Set(fuelData.map(row => row[field]).filter(Boolean))].sort();
+      const parts = String(value).split(/[\/\-]/);
+      if (parts.length === 3) {
+        const possibleDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        if (!isNaN(possibleDate)) return possibleDate;
+      }
 
-    values.forEach(value => {
+      return null;
+    }
+
+    function getVehicleLabel(row) {
+      return row["ER Number"] || row["Vehicle"] || "Unknown";
+    }
+
+    function populateFilters() {
+      populateSelect("departmentFilter", "Department");
+      populateSelect("driverFilter", "Driver");
+      populateVehicleSelect();
+    }
+
+    function clearSelectOptions(selectId, defaultLabel) {
+      const select = document.getElementById(selectId);
+      select.innerHTML = "";
       const option = document.createElement("option");
-      option.value = value;
-      option.textContent = value;
+      option.value = "";
+      option.textContent = defaultLabel;
       select.appendChild(option);
-    });
-  }
+    }
 
-  function applyFilters() {
-    const department = document.getElementById("departmentFilter").value;
-    const driver = document.getElementById("driverFilter").value;
-    const reg = document.getElementById("regFilter").value;
-    const fromDate = document.getElementById("fromDate").value;
-    const toDate = document.getElementById("toDate").value;
+    function populateSelect(id, field) {
+      const labelMap = {
+        departmentFilter: "All Departments",
+        driverFilter: "All Drivers"
+      };
 
-    filteredData = fuelData.filter(row => {
-      const rowDate = row["Date"] ? new Date(row["Date"]) : null;
+      clearSelectOptions(id, labelMap[id] || "All");
 
-      return (!department || row["Department"] === department)
-        && (!driver || row["Driver"] === driver)
-        && (!reg || row["ER Number"] === reg || row["Vehicle"] === reg)
-        && (!fromDate || rowDate >= new Date(fromDate))
-        && (!toDate || rowDate <= new Date(toDate));
-    });
+      const select = document.getElementById(id);
+      const values = [...new Set(fuelData.map(row => row[field]).filter(Boolean))].sort();
 
-    renderDashboard();
-  }
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    }
 
-  function resetFilters() {
-    document.getElementById("departmentFilter").value = "";
-    document.getElementById("driverFilter").value = "";
-    document.getElementById("regFilter").value = "";
-    document.getElementById("fromDate").value = "";
-    document.getElementById("toDate").value = "";
+    function populateVehicleSelect() {
+      clearSelectOptions("regFilter", "All Vehicles");
 
-    filteredData = fuelData;
-    renderDashboard();
-  }
+      const select = document.getElementById("regFilter");
+      const values = [...new Set(fuelData.map(row => getVehicleLabel(row)).filter(Boolean))].sort();
 
-  function renderDashboard() {
-    renderCards();
-    renderCharts();
-    renderTable();
-  }
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    }
 
-  function renderCards() {
-    const totalFuel = filteredData.reduce((sum, row) => sum + toNumber(row["Fuel Total"]), 0);
-    const grandTotal = filteredData.reduce((sum, row) => sum + toNumber(row["Grand Total"]), 0);
-    const totalLiters = filteredData.reduce((sum, row) => sum + toNumber(row["Liters"]), 0);
-    const totalKm = filteredData.reduce((sum, row) => sum + toNumber(row["KM Traveled"]), 0);
-    const avgKmLiter = totalLiters > 0 ? totalKm / totalLiters : 0;
+    function attachFilterEvents() {
+      document.getElementById("departmentFilter").addEventListener("change", applyFilters);
+      document.getElementById("driverFilter").addEventListener("change", applyFilters);
+      document.getElementById("regFilter").addEventListener("change", applyFilters);
+      document.getElementById("fromDate").addEventListener("change", applyFilters);
+      document.getElementById("toDate").addEventListener("change", applyFilters);
+    }
 
-    document.getElementById("totalFuel").textContent = formatCurrency(totalFuel);
-    document.getElementById("grandTotal").textContent = formatCurrency(grandTotal);
-    document.getElementById("totalLiters").textContent = totalLiters.toFixed(2);
-    document.getElementById("totalKm").textContent = totalKm.toFixed(2);
-    document.getElementById("avgKmLiter").textContent = avgKmLiter.toFixed(2);
-  }
+    function applyFilters() {
+      const department = document.getElementById("departmentFilter").value;
+      const driver = document.getElementById("driverFilter").value;
+      const reg = document.getElementById("regFilter").value;
+      const fromDate = document.getElementById("fromDate").value ? new Date(document.getElementById("fromDate").value) : null;
+      const toDate = document.getElementById("toDate").value ? new Date(document.getElementById("toDate").value) : null;
 
-  function groupSum(data, labelField, valueField) {
-    const grouped = {};
+      if (toDate) {
+        toDate.setHours(23, 59, 59, 999);
+      }
 
-    data.forEach(row => {
-      const label = row[labelField] || "Unknown";
-      grouped[label] = (grouped[label] || 0) + toNumber(row[valueField]);
-    });
+      filteredData = fuelData.filter(row => {
+        const rowDate = normalizeDate(row["Date"]);
+        const vehicleLabel = getVehicleLabel(row);
 
-    return grouped;
-  }
+        return (!department || row["Department"] === department)
+          && (!driver || row["Driver"] === driver)
+          && (!reg || vehicleLabel === reg)
+          && (!fromDate || (rowDate && rowDate >= fromDate))
+          && (!toDate || (rowDate && rowDate <= toDate));
+      });
 
-  function groupByMonth(data) {
-    const grouped = {};
+      renderDashboard();
+    }
 
-    data.forEach(row => {
-      if (!row["Date"]) return;
+    function resetFilters() {
+      document.getElementById("departmentFilter").value = "";
+      document.getElementById("driverFilter").value = "";
+      document.getElementById("regFilter").value = "";
+      document.getElementById("fromDate").value = "";
+      document.getElementById("toDate").value = "";
 
-      const date = new Date(row["Date"]);
-      if (isNaN(date)) return;
+      filteredData = fuelData;
+      renderDashboard();
+    }
 
-      const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      grouped[month] = (grouped[month] || 0) + toNumber(row["Grand Total"]);
-    });
+    function renderDashboard() {
+      renderCards();
+      renderCharts();
+      renderTable();
+    }
 
-    return grouped;
-  }
+    function renderCards() {
+      const totalFuel = filteredData.reduce((sum, row) => sum + toNumber(row["Fuel Total"]), 0);
+      const grandTotal = filteredData.reduce((sum, row) => sum + toNumber(row["Grand Total"]), 0);
+      const totalLiters = filteredData.reduce((sum, row) => sum + toNumber(row["Liters"]), 0);
+      const totalKm = filteredData.reduce((sum, row) => sum + toNumber(row["KM Traveled"]), 0);
+      const avgKmLiter = totalLiters > 0 ? totalKm / totalLiters : 0;
 
-  function renderCharts() {
-    departmentChart = drawChart(
-      departmentChart,
-      "departmentChart",
-      "bar",
-      groupSum(filteredData, "Department", "Fuel Total"),
-      "Fuel Total"
-    );
+      document.getElementById("totalFuel").textContent = formatCurrency(totalFuel);
+      document.getElementById("grandTotal").textContent = formatCurrency(grandTotal);
+      document.getElementById("totalLiters").textContent = totalLiters.toFixed(2);
+      document.getElementById("totalKm").textContent = totalKm.toFixed(2);
+      document.getElementById("avgKmLiter").textContent = avgKmLiter.toFixed(2);
+    }
 
-    driverChart = drawChart(
-      driverChart,
-      "driverChart",
-      "bar",
-      groupSum(filteredData, "Driver", "Fuel Total"),
-      "Fuel Total"
-    );
+    function groupSum(data, labelGetter, valueField) {
+      const grouped = {};
 
-    vehicleChart = drawChart(
-      vehicleChart,
-      "vehicleChart",
-      "bar",
-      groupSum(filteredData, "ER Number", "Liters"),
-      "Liters"
-    );
+      data.forEach(row => {
+        const label = typeof labelGetter === "function"
+          ? labelGetter(row)
+          : row[labelGetter] || "Unknown";
 
-    monthlyChart = drawChart(
-      monthlyChart,
-      "monthlyChart",
-      "line",
-      groupByMonth(filteredData),
-      "Grand Total"
-    );
-  }
+        grouped[label] = (grouped[label] || 0) + toNumber(row[valueField]);
+      });
 
-  function drawChart(existingChart, canvasId, type, groupedData, label) {
-    if (existingChart) existingChart.destroy();
+      return grouped;
+    }
 
-    const labels = Object.keys(groupedData);
-    const values = Object.values(groupedData);
+    function groupByMonth(data) {
+      const grouped = {};
 
-    return new Chart(document.getElementById(canvasId), {
-      type,
-      data: {
-        labels,
-        datasets: [{
-          label,
-          data: values,
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            display: true
-          }
+      data.forEach(row => {
+        const date = normalizeDate(row["Date"]);
+        if (!date) return;
+
+        const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        grouped[month] = (grouped[month] || 0) + toNumber(row["Grand Total"]);
+      });
+
+      return Object.keys(grouped)
+        .sort()
+        .reduce((obj, key) => {
+          obj[key] = grouped[key];
+          return obj;
+        }, {});
+    }
+
+    function renderCharts() {
+      departmentChart = drawChart(
+        departmentChart,
+        "departmentChart",
+        "bar",
+        groupSum(filteredData, "Department", "Fuel Total"),
+        "Fuel Total"
+      );
+
+      driverChart = drawChart(
+        driverChart,
+        "driverChart",
+        "bar",
+        groupSum(filteredData, "Driver", "Fuel Total"),
+        "Fuel Total"
+      );
+
+      vehicleChart = drawChart(
+        vehicleChart,
+        "vehicleChart",
+        "bar",
+        groupSum(filteredData, getVehicleLabel, "Liters"),
+        "Liters"
+      );
+
+      monthlyChart = drawChart(
+        monthlyChart,
+        "monthlyChart",
+        "line",
+        groupByMonth(filteredData),
+        "Grand Total"
+      );
+    }
+
+    function drawChart(existingChart, canvasId, type, groupedData, label) {
+      if (existingChart) existingChart.destroy();
+
+      const labels = Object.keys(groupedData);
+      const values = Object.values(groupedData);
+
+      return new Chart(document.getElementById(canvasId), {
+        type,
+        data: {
+          labels,
+          datasets: [{
+            label,
+            data: values,
+            borderWidth: 2,
+            tension: 0.25
+          }]
         },
-        scales: {
-          y: {
-            beginAtZero: true
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
           }
         }
-      }
-    });
-  }
+      });
+    }
 
-  function renderTable() {
-    const tableHead = document.getElementById("tableHead");
-    const tableBody = document.getElementById("tableBody");
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
-    tableHead.innerHTML = `
-      <tr>
-        ${headings.map(h => `<th>${h}</th>`).join("")}
-      </tr>
-    `;
+    function renderTable() {
+      const tableHead = document.getElementById("tableHead");
+      const tableBody = document.getElementById("tableBody");
 
-    tableBody.innerHTML = filteredData.map(row => `
-      <tr>
-        ${headings.map(h => {
-          if (h === "Photo Link" && row[h]) {
-            return `<td><a href="${row[h]}" target="_blank">View Photo</a></td>`;
-          }
-          return `<td>${row[h] ?? ""}</td>`;
-        }).join("")}
-      </tr>
-    `).join("");
-  }
-</script>
+      tableHead.innerHTML = `
+        <tr>
+          ${headings.map(h => `<th>${escapeHtml(h)}</th>`).join("")}
+        </tr>
+      `;
+
+      tableBody.innerHTML = filteredData.map(row => `
+        <tr>
+          ${headings.map(h => {
+            if (h === "Photo Link" && row[h]) {
+              const link = escapeHtml(row[h]);
+              return `<td><a href="${link}" target="_blank" rel="noopener">View Photo</a></td>`;
+            }
+
+            return `<td>${escapeHtml(row[h])}</td>`;
+          }).join("")}
+        </tr>
+      `).join("");
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
