@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Driver Performance | OnPoint OnTime Fleet</title>
+    <title>Vehicle Handover/Takeover | OnPoint OnTime Fleet</title>
     <style>
+        /* === STYLES === */
         * {
             margin: 0;
             padding: 0;
@@ -13,436 +14,243 @@
         }
 
         body {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 600px;
             margin: 0 auto;
             background: white;
-            border-radius: 30px;
-            box-shadow: 0 30px 70px rgba(0,0,0,0.3);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
         }
 
-        /* Header */
         .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 40px 30px;
+            padding: 30px 20px;
             text-align: center;
-            position: relative;
         }
 
         .header h1 {
-            font-size: 36px;
+            font-size: 24px;
             margin-bottom: 10px;
-            font-weight: 700;
-            letter-spacing: 1px;
+            font-weight: 600;
         }
 
         .header p {
-            font-size: 18px;
-            opacity: 0.95;
-            font-weight: 300;
+            font-size: 14px;
+            opacity: 0.9;
         }
 
-        .logo-icon {
-            font-size: 70px;
-            margin-bottom: 15px;
-        }
-
-        /* Date Range Selector */
-        .date-range {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
+        .form-section {
             padding: 20px;
-            background: #f8fafc;
             border-bottom: 1px solid #eef2f6;
-            flex-wrap: wrap;
         }
 
-        .date-input {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .date-input label {
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .date-input input {
-            padding: 10px 15px;
-            border: 2px solid #eef2f6;
-            border-radius: 10px;
-            font-size: 14px;
-        }
-
-        .generate-btn {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .generate-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
-        }
-
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            padding: 25px;
-            background: linear-gradient(135deg, #f8fafc 0%, #e9ecef 100%);
-        }
-
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: all 0.3s;
-            border-left: 5px solid #3498db;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        }
-
-        .stat-icon {
-            font-size: 40px;
-            margin-bottom: 15px;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #2c3e50;
-        }
-
-        .stat-trend {
-            font-size: 14px;
-            margin-top: 10px;
-            color: #27ae60;
-        }
-
-        /* Driver Selection */
-        .driver-section {
-            padding: 25px;
-            background: white;
-        }
-
-        .section-title {
-            font-size: 24px;
-            color: #2c3e50;
-            margin-bottom: 25px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 15px;
-        }
-
-        .section-title i {
-            margin-right: 15px;
-            font-size: 28px;
-            color: #3498db;
-        }
-
-        .driver-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .driver-card {
-            background: #f8fafc;
-            border: 2px solid #eef2f6;
-            border-radius: 20px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .driver-card:hover {
-            border-color: #3498db;
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(52, 152, 219, 0.15);
-        }
-
-        .driver-card.selected {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
-            border-color: transparent;
-        }
-
-        .driver-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .driver-avatar {
-            width: 60px;
-            height: 60px;
-            background: #3498db;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .driver-card.selected .driver-avatar {
-            background: white;
-            color: #3498db;
-        }
-
-        .driver-info h3 {
+        .form-section h2 {
             font-size: 18px;
-            margin-bottom: 5px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
         }
 
-        .driver-info p {
+        .form-section h2 i {
+            margin-right: 10px;
+            color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
             font-size: 14px;
-            opacity: 0.8;
+            font-weight: 500;
         }
 
-        .driver-stats {
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #eef2f6;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: #f8fafc;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        .radio-option {
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .radio-option input[type="radio"] {
+            display: none;
+        }
+
+        .radio-option label {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            background: #f8fafc;
+            border: 2px solid #eef2f6;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .radio-option input[type="radio"]:checked + label {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        .checkbox-item {
+            position: relative;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            display: none;
+        }
+
+        .checkbox-item label {
+            display: block;
+            text-align: center;
+            padding: 15px;
+            background: #f8fafc;
+            border: 2px solid #eef2f6;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .checkbox-item input[type="checkbox"]:checked + label {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .photo-upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .photo-upload-area:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .photo-upload-area input[type="file"] {
+            display: none;
+        }
+
+        .photo-upload-area label {
+            display: block;
+            cursor: pointer;
+        }
+
+        .photo-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             gap: 10px;
             margin-top: 15px;
         }
 
-        .driver-stat {
-            text-align: center;
-            padding: 10px;
-            background: white;
-            border-radius: 10px;
+        .preview-image {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #eef2f6;
         }
 
-        .driver-card.selected .driver-stat {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .driver-stat .value {
-            font-size: 20px;
-            font-weight: 700;
-            color: #2c3e50;
-        }
-
-        .driver-card.selected .driver-stat .value {
-            color: white;
-        }
-
-        .driver-stat .label {
-            font-size: 11px;
-            color: #666;
-        }
-
-        .driver-card.selected .driver-stat .label {
-            color: rgba(255,255,255,0.8);
-        }
-
-        /* Performance Metrics */
-        .metrics-section {
-            padding: 25px;
-            background: #f8fafc;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-
-        .metric-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-
-        .metric-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .abnormality-item {
+            background: #fff9c4;
+            border-left: 4px solid #fbc02d;
+            padding: 15px;
+            border-radius: 8px;
             margin-bottom: 15px;
         }
 
-        .metric-icon {
-            width: 40px;
-            height: 40px;
-            background: #e8f0fe;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #3498db;
-            font-size: 20px;
-        }
-
-        .metric-title {
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .metric-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #3498db;
-            margin-bottom: 5px;
-        }
-
-        .metric-target {
-            font-size: 13px;
-            color: #27ae60;
-        }
-
-        .progress-bar {
-            height: 8px;
-            background: #eef2f6;
-            border-radius: 4px;
-            margin-top: 10px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #3498db, #2c3e50);
-            border-radius: 4px;
-            width: 0%;
-        }
-
-        /* Detailed Performance Table */
-        .table-section {
-            padding: 25px;
-        }
-
-        .performance-table {
+        .abnormality-item textarea {
             width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-
-        .performance-table th {
-            background: #2c3e50;
-            color: white;
-            padding: 15px;
-            font-weight: 600;
+            margin-top: 10px;
+            padding: 10px;
+            border: 2px solid #eef2f6;
+            border-radius: 8px;
             font-size: 14px;
         }
 
-        .performance-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eef2f6;
-            font-size: 14px;
-        }
-
-        .performance-table tr:hover {
-            background: #f8fafc;
-        }
-
-        .rating-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .rating-excellent {
-            background: #27ae60;
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-        }
-
-        .rating-good {
-            background: #f39c12;
-            color: white;
-        }
-
-        .rating-average {
-            background: #e67e22;
-            color: white;
-        }
-
-        .rating-poor {
-            background: #e74c3c;
-            color: white;
-        }
-
-        /* Action Buttons */
-        .action-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            padding: 25px;
-            background: white;
-        }
-
-        .btn {
-            padding: 16px 28px;
             border: none;
             border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            margin-top: 20px;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-secondary {
-            background: white;
-            color: #2c3e50;
-            border: 2px solid #2c3e50;
+        .submit-btn:active {
+            transform: translateY(0);
         }
 
-        .btn-success {
-            background: #27ae60;
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(52, 152, 219, 0.3);
-        }
-
-        /* Loading Overlay */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -450,7 +258,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.9);
             z-index: 1000;
             justify-content: center;
             align-items: center;
@@ -458,10 +266,10 @@
         }
 
         .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 6px solid #f3f3f3;
-            border-top: 6px solid #3498db;
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 20px;
@@ -472,568 +280,655 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Messages */
         .success-message {
             display: none;
-            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            background: #4caf50;
             color: white;
-            padding: 20px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 10px;
             text-align: center;
-            margin: 20px;
-            font-size: 16px;
-            box-shadow: 0 10px 30px rgba(46, 204, 113, 0.3);
+            margin-bottom: 20px;
         }
 
         .error-message {
-            display: none;
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            background: #f44336;
             color: white;
-            padding: 20px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 10px;
             text-align: center;
-            margin: 20px;
-            font-size: 16px;
+            margin-bottom: 20px;
+            display: none;
         }
 
-        @media (max-width: 768px) {
-            .stats-grid {
+        .datetime-group {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 480px) {
+            .form-row {
                 grid-template-columns: 1fr;
             }
             
-            .driver-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-buttons {
-                grid-template-columns: 1fr;
-            }
-            
-            .date-range {
+            .radio-group {
                 flex-direction: column;
-                align-items: stretch;
+            }
+            
+            .checkbox-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            .home{
+                color: blue;
+                margin-right: 100px;
+                font-size: 15px;
+                text-align: center;
+            }
+            .home:hover{
+                color: grey;
+                cursor: pointer;
+                transition: 0.7s;
+                opacity: 0.8;
             }
         }
-    </style>
+    
+        .add-option-btn{
+            margin-top:10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color:white;
+            border:none;
+            padding:10px 14px;
+            border-radius:10px;
+            font-size:13px;
+            font-weight:600;
+            cursor:pointer;
+            transition:0.3s;
+            width:100%;
+        }
+
+        .add-option-btn:hover{
+            opacity:0.9;
+            transform:translateY(-1px);
+        }
+
+</style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
-            <div class="logo-icon">👤</div>
-            <h1>Driver Performance Dashboard</h1>
-            <p>OnPoint OnTime Fleet Solutions - Performance Analytics & Reporting</p>
+            <h1>🚗 Vehicle Handover/Takeover Report</h1>
+            <p>OnPoint OnTime Fleet Solutions</p>
         </div>
 
-        <!-- Messages -->
         <div class="success-message" id="successMessage">
-            ✅ Performance report generated successfully! Sent to fleet@onpointontime.co.za
+            ✅ Form submitted successfully! A copy has been sent to fleet@onpointontime.co.za
         </div>
-        <div class="error-message" id="errorMessage">❌ Operation failed. Please try again.</div>
+        <div class="error-message" id="errorMessage">❌ Submission failed. Please try again.</div>
 
-        <!-- Date Range Selector -->
-        <div class="date-range">
-            <div class="date-input">
-                <label>From:</label>
-                <input type="date" id="startDate">
-            </div>
-            <div class="date-input">
-                <label>To:</label>
-                <input type="date" id="endDate">
-            </div>
-            <button class="generate-btn" onclick="refreshData()">🔄 Refresh Data</button>
-        </div>
-
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">👥</div>
-                <div class="stat-label">Total Drivers</div>
-                <div class="stat-value" id="totalDrivers">24</div>
-                <div class="stat-trend">↑ 2 new this month</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">⛽</div>
-                <div class="stat-label">Avg Fuel Efficiency</div>
-                <div class="stat-value" id="avgFuelEfficiency">8.4 km/L</div>
-                <div class="stat-trend">↑ 0.3 vs last month</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">🛑</div>
-                <div class="stat-label">Safety Score</div>
-                <div class="stat-value" id="avgSafetyScore">94%</div>
-                <div class="stat-trend">↑ 2% improvement</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">📊</div>
-                <div class="stat-label">Total Trips</div>
-                <div class="stat-value" id="totalTrips">1,247</div>
-                <div class="stat-trend">This period</div>
-            </div>
-        </div>
-
-        <!-- Driver Selection -->
-        <div class="driver-section">
-            <div class="section-title">
-                <i>👤</i> Select Driver for Detailed Report
-            </div>
-            <div class="driver-grid" id="driverGrid">
-                <!-- Drivers will be loaded here dynamically -->
-            </div>
-        </div>
-
-        <!-- Performance Metrics -->
-        <div class="metrics-section">
-            <div class="section-title">
-                <i>📊</i> Performance Metrics - <span id="selectedDriverName">Select a driver</span>
-            </div>
-            <div class="metrics-grid" id="metricsGrid">
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">⛽</div>
-                        <div class="metric-title">Fuel Efficiency</div>
+        <form id="vehicleForm" onsubmit="return false;">
+            <!-- Employee Information Section -->
+            <div class="form-section">
+                <h2><i>👤</i> Employee Information</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name and Surname *</label>
+                        <select id="employeeName" required>
+    <option value="">Select Name & Surname...</option>
+    <option value="Retselisitsoe Mohapi">Retselisitsoe Mohapi</option>
+    <option value="George Rusere">George Rusere</option>
+    <option value="Nyasha Marira">Nyasha Marira</option>
+    <option value="Trymore Mtizwa">Trymore Mtizwa</option>
+    <option value="Brian Mugiya">Brian Mugiya</option>
+    <option value="Peter Nong">Peter Nong</option>
+    <option value="Nicholas Dambiranwa">Nicholas Dambiranwa</option>
+    <option value="Curious Sixpense">Curious Sixpense</option>
+    <option value="Clifonce Matewe">Clifonce Matewe</option>
+    <option value="Moeketsi Tshabalala">Moeketsi Tshabalala</option>
+    <option value="Elias Mashiane">Elias Mashiane</option>
+    <option value="Leah Phiri">Leah Phiri</option>
+    <option value="Lungile Soni">Lungile Soni</option>
+    <option value="Washington Musiiwa">Washington Musiiwa</option>
+    <option value="Donald Tawengwa">Donald Tawengwa</option>
+    <option value="Washington Madauka">Washington Madauka</option>
+    <option value="Before Simonne">Before Simonne</option>
+    <option value="Happison Mupanedengu">Happison Mupanedengu</option>
+    <option value="William Mahlo">William Mahlo</option>
+    <option value="Pride Nyoni">Pride Nyoni</option>
+    <option value="Petros Mosekidi">Petros Mosekidi</option>
+    <option value="Tonderai Matsikire">Tonderai Matsikire</option>
+    <option value="Adelaide Dimingo">Adelaide Dimingo</option>
+    <option value="Tumelo Mhlongo">Tumelo Mhlongo</option>
+    <option value="Sabelo Zulu">Sabelo Zulu</option>
+    <option value="Tsitsi Dube">Tsitsi Dube</option>
+    <option value="Starnley Vaningwa">Starnley Vaningwa</option>
+    <option value="Philip Shambare">Philip Shambare</option>
+    <option value="Graham Tsuro">Graham Tsuro</option>
+    <option value="Meshellum Mugabe">Meshellum Mugabe</option>
+    <option value="Tafadzwa Magejo">Tafadzwa Magejo</option>
+    <option value="Trust Bhila">Trust Bhila</option>
+    <option value="Moses Magutse">Moses Magutse</option>
+    <option value="Kudakwashe Madzikangava">Kudakwashe Madzikangava</option>
+    <option value="Andrew Moloisane">Andrew Moloisane</option>
+    <option value="Zivai Magwaza">Zivai Magwaza</option>
+    <option value="Brian Nkomo">Brian Nkomo</option>
+    <option value="Joshuwa Paradzai">Joshuwa Paradzai</option>
+    <option value="Goodwill Rakgoko">Goodwill Rakgoko</option>
+    <option value="Johanne Hendriks">Johanne Hendriks</option>
+    <option value="Claudius Gomo">Claudius Gomo</option>
+    <option value="Patience Chipundo">Patience Chipundo</option>
+    <option value="Siyanda Dlamini">Siyanda Dlamini</option>
+    <option value="Vusi Mabena">Vusi Mabena</option>
+    <option value="Ronald Musengwa">Ronald Musengwa</option>
+    <option value="Neo Mogatusi">Neo Mogatusi</option>
+    <option value="Mqondisi Ndlovu">Mqondisi Ndlovu</option>
+    <option value="Govern Paradzai">Govern Paradzai</option>
+    <option value="Dickens Magwaza">Dickens Magwaza</option>
+    <option value="Kgomotso Letsoalo">Kgomotso Letsoalo</option>
+    <option value="Nametso Bokoane">Nametso Bokoane</option>
+    <option value="Phumzile Cindi">Phumzile Cindi</option>
+    <option value="Sydney Ngwenya">Sydney Ngwenya</option>
+    <option value="Bheki Makhwanazi">Bheki Makhwanazi</option>
+    <option value="Ntsako Mathe">Ntsako Mathe</option>
+    <option value="Bongile Cuba">Bongile Cuba</option>
+    <option value="Moses Mashatola">Moses Mashatola</option>
+    <option value="Tony Takabvakure">Tony Takabvakure</option>
+    <option value="Timothy Wadzema">Timothy Wadzema</option>
+    <option value="Rayman Mugaramanja">Rayman Mugaramanja</option>
+</select>
+                        <button type="button" class="add-option-btn" onclick="addNewOption('employeeName', 'Enter new employee name and surname:')">
+                            ➕ Add New Name
+                        </button>
                     </div>
-                    <div class="metric-value" id="metricEfficiency">0.0</div>
-                    <div class="metric-target">Target: 8.5 km/L</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressEfficiency" style="width: 0%"></div>
+                    <div class="form-group">
+                        <label>Employee Number *</label>
+                        <input type="text" id="employeeNumber" placeholder="EMP001" required>
                     </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">🛑</div>
-                        <div class="metric-title">Safety Score</div>
+                <div class="form-group">
+                    <label>Contact Cell *</label>
+                        <input type="tel" id="idNumber" placeholder="+27 71 234 5678" required>
                     </div>
-                    <div class="metric-value" id="metricSafety">0%</div>
-                    <div class="metric-target">Target: 95%</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressSafety" style="width: 0%"></div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <select id="department">
+                        <option value="">Select Department</option>
+                        <option value="Logistics">Logistics</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Management">Management</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Vehicle Information Section -->
+            <div class="form-section">
+                <h2><i>🚙</i> Vehicle Information</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vehicle Registration *</label>
+                        <select id="vehicleReg" required>
+                            <option value="">Select Vehicle Registration...</option>
+                            <option value="LH83NTGP">LH83NTGP</option>
+                            <option value="HZ00XWGP">HZ00XWGP</option>
+                            <option value="HK60TXGP">HK60TXGP</option>
+                            <option value="HK60TRGP">HK60TRGP</option>
+                            <option value="HN03JZGP">HN03JZGP</option>
+                            <option value="LD72VRGP">LD72VRGP</option>
+                            <option value="LD72VKGP">LD72VKGP</option>
+                            <option value="KZ14DYGP">KZ14DYGP</option>
+                            <option value="MJ53VVGP">MJ53VVGP</option>
+                            <option value="MF72JPGP">MF72JPGP</option>
+                            <option value="MH18HLGP">MH18HLGP</option>
+                            <option value="MH18HPGP">MH18HPGP</option>
+                            <option value="MJ22MJGP">MJ22MJGP</option>
+                            <option value="JD12LMGP">JD12LMGP</option>
+                            <option value="JV09TWGP">JV09TWGP</option>
+                            <option value="LD45TFGP">LD45TFGP</option>
+                            <option value="MG47YRGP">MG47YRGP</option>
+                            <option value="CW15XZGP">CW15XZGP</option>
+                            <option value="YBR245GP">YBR245GP</option>
+                            <option value="LN30PNGP">LN30PNGP</option>
+                            <option value="LX67YSGP">LX67YSGP</option>
+                            <option value="LD27RXGP">LD27RXGP</option>
+                            <option value="JN01DGGP">JN01DGGP</option>
+                            <option value="LW46XCGP">LW46XCGP</option>
+                            <option value="LP17TVGP">LP17TVGP</option>
+                            <option value="BZ89VHGP">BZ89VHGP</option>
+                            <option value="DZ53XBGP">DZ53XBGP</option>
+                            <option value="KP98PDGP">KP98PDGP</option>
+                            <option value="KL60NJGP">KL60NJGP</option>
+                            <option value="JP41CHGP">JP41CHGP</option>
+                            <option value="JB41MPGP">JB41MPGP</option>
+                            <option value="LS77SJGP">LS77SJGP</option>
+                            <option value="MH47SRGP">MH47SRGP</option>
+                            <option value="HX96RVGP">HX96RVGP</option>
+                            <option value="KK19DDGP">KK19DDGP</option>
+                            <option value="KR76PYGP">KR76PYGP</option>
+                            <option value="KT74WDGP">KT74WDGP</option>
+                            <option value="KP56BVGP">KP56BVGP</option>
+                            <option value="RTH651GP">RTH651GP</option>
+                            <option value="JX95DNGP">JX95DNGP</option>
+                            <option value="HN23FWGP">HN23FWGP</option>
+                            <option value="LP28LYGP">LP28LYGP</option>
+                            <option value="KJ96FZGP">KJ96FZGP</option>
+                            <option value="HV09VKGP">HV09VKGP</option>
+                            <option value="JD95XGGP">JD95XGGP</option>
+                            <option value="JT31YRGP">JT31YRGP</option>
+                            <option value="KP33HDGP">KP33HDGP</option>
+                            <option value="JF10CSGP">JF10CSGP</option>
+                            <option value="HP34WKGP">HP34WKGP</option>
+                            <option value="KN47CFGP">KN47CFGP</option>
+                            <option value="LS85RVGP">LS85RVGP</option>
+                            <option value="LP00HKGP">LP00HKGP</option>
+                            <option value="FY37DDGP">FY37DDGP</option>
+                            <option value="FW95WXGP">FW95WXGP</option>
+                            <option value="LM52NWGP">LM52NWGP</option>
+                            <option value="HM80WZGP">HM80WZGP</option>
+                            <option value="KK57HSGP">KK57HSGP</option>
+                            <option value="HG00HPGP">HG00HPGP</option>
+                            <option value="JJ42MZGP">JJ42MZGP</option>
+                            <option value="LN12MTGP">LN12MTGP</option>
+                            <option value="HG00JMGP">HG00JMGP</option>
+                            <option value="HM68TLGP">HM68TLGP</option>
+                            <option value="KP18GMGP">KP18GMGP</option>
+                            <option value="LF33HXGP">LF33HXGP</option>
+                            <option value="FN34BVGP">FN34BVGP</option>
+                            <option value="HK67KZGP">HK67KZGP</option>
+                            <option value="HK67LDGP">HK67LDGP</option>
+                            <option value="KK68RFGP">KK68RFGP</option>
+                            <option value="HH32LSGP">HH32LSGP</option>
+                            <option value="KD94SSGP">KD94SSGP</option>
+                            <option value="KF60VWGP">KF60VWGP</option>
+                            <option value="KT41KTGP">KT41KTGP</option>
+                            <option value="KT53WZGP">KT53WZGP</option>
+                            <option value="HG75GMGP">HG75GMGP</option>
+                            <option value="LK76BGGP">LK76BGGP</option>
+                            <option value="MK85PWGP">MK85PWGP</option>
+                        </select>
+                        <button type="button" class="add-option-btn" onclick="addNewOption('vehicleReg', 'Enter new vehicle registration:')">
+                            ➕ Add Vehicle Registration
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>Vehicle Model</label>
+                        <input type="text" id="vehicleModel" placeholder="Toyota Hilux 2023">
                     </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">⏱️</div>
-                        <div class="metric-title">On-Time Delivery</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Current Mileage *</label>
+                        <input type="number" id="mileage" placeholder="45000" required>
                     </div>
-                    <div class="metric-value" id="metricOntime">0%</div>
-                    <div class="metric-target">Target: 98%</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressOntime" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">💰</div>
-                        <div class="metric-title">Cost per km</div>
-                    </div>
-                    <div class="metric-value" id="metricCost">R0.00</div>
-                    <div class="metric-target">Target: R2.50/km</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressCost" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">📏</div>
-                        <div class="metric-title">Idle Time</div>
-                    </div>
-                    <div class="metric-value" id="metricIdle">0%</div>
-                    <div class="metric-target">Target: {'<'}= 15%</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressIdle" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">🛞</div>
-                        <div class="metric-title">Hard Braking</div>
-                    </div>
-                    <div class="metric-value" id="metricBraking">0</div>
-                    <div class="metric-target">Events per 100km</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressBraking" style="width: 0%"></div>
+                    <div class="form-group">
+                        <label>Next Service Due</label>
+                        <input type="text" id="serviceDue" placeholder="50000 km">
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Detailed Performance Table -->
-        <div class="table-section">
-            <div class="section-title">
-                <i>📋</i> Detailed Trip History
+            <!-- Handover/Takeover Type -->
+            <div class="form-section">
+                <h2><i>🔄</i> Handover/Takeover Type</h2>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" name="handoverType" id="handover" value="Handover" checked>
+                        <label for="handover">Handover</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="handoverType" id="takeover" value="Takeover">
+                        <label for="takeover">Takeover</label>
+                    </div>
+                </div>
             </div>
-            <table class="performance-table" id="performanceTable">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Vehicle</th>
-                        <th>Distance (km)</th>
-                        <th>Fuel Used (L)</th>
-                        <th>Efficiency</th>
-                        <th>Safety Score</th>
-                        <th>Rating</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr>
-                        <td colspan="7" style="text-align: center;">Select a driver to view details</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
 
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <button class="btn btn-primary" onclick="generateDriverReport()">
-                📄 Generate Driver Report (PDF)
-            </button>
-            <button class="btn btn-success" onclick="sendReportToEmail()">
-                📧 Send Report to Fleet Manager
-            </button>
-            <button class="btn btn-secondary" onclick="exportToCSV()">
-                📊 Export to CSV
-            </button>
-        </div>
+            <!-- Fuel Gauge Position -->
+            <div class="form-section">
+                <h2><i>⛽</i> Fuel Gauge Position</h2>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="empty" value="Empty">
+                        <label for="empty">Empty</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="quarter" value="1/4">
+                        <label for="quarter">1/4</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="half" value="1/2" checked>
+                        <label for="half">1/2</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="threeQuarter" value="3/4">
+                        <label for="threeQuarter">3/4</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="fuelLevel" id="full" value="Full">
+                        <label for="full">Full</label>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Home Link -->
-        <div style="text-align: center; padding: 20px; background: #f8fafc;">
-            <a href="index.html" style="color: #2c3e50; text-decoration: none; font-weight: 600;">← Back to Dashboard</a>
-        </div>
+            <!-- General Handover/Takeover Checklist -->
+            <div class="form-section">
+                <h2><i>✓</i> General Handover/Takeover Checklist</h2>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="keys" value="Keys">
+                        <label for="keys">🔑 Keys</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="license" value="License Disk">
+                        <label for="license">📄 License Disk</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="spareTire" value="Spare Tire">
+                        <label for="spareTire">🛞 Spare Tire</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="jack" value="Jack">
+                        <label for="jack">🔧 Jack</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="triangle" value="Warning Triangle">
+                        <label for="triangle">⚠️ Warning Triangle</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="firstAid" value="First Aid Kit">
+                        <label for="firstAid">🩺 First Aid Kit</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="fireExtinguisher" value="Fire Extinguisher">
+                        <label for="fireExtinguisher">🧯 Fire Extinguisher</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="checklist" id="fuelCard" value="Fuel Card">
+                        <label for="fuelCard">💳 Fuel Card</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Abnormalities and Photo Uploads -->
+            <div class="form-section">
+                <h2><i>📸</i> Abnormalities / Damage Report</h2>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Please document any dents, scratches, or abnormalities</p>
+                
+                <!-- Photo Upload Area -->
+                <div class="photo-upload-area" id="photoUploadArea">
+                    <input type="file" id="vehiclePhotos" accept="image/*" multiple capture="environment">
+                    <label for="vehiclePhotos">
+                        <div style="font-size: 40px; margin-bottom: 10px;">📷</div>
+                        <div style="font-weight: 600; margin-bottom: 5px;">Tap to take photos</div>
+                        <div style="font-size: 12px; color: #888;">Upload images of any damage or abnormalities</div>
+                    </label>
+                </div>
+
+                <!-- Photo Preview -->
+                <div class="photo-preview" id="photoPreview"></div>
+
+                <!-- Abnormality Description -->
+                <div class="abnormality-item">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">Damage/Abnormality Description</label>
+                    <textarea id="abnormalityDesc" rows="3" placeholder="Please describe any dents, scratches, or other issues..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Location of Damage (if applicable)</label>
+                    <select id="damageLocation">
+                        <option value="">Select location</option>
+                        <option value="Front Bumper">Front Bumper</option>
+                        <option value="Rear Bumper">Rear Bumper</option>
+                        <option value="Driver Side">Driver Side</option>
+                        <option value="Passenger Side">Passenger Side</option>
+                        <option value="Hood">Hood</option>
+                        <option value="Trunk">Trunk</option>
+                        <option value="Roof">Roof</option>
+                        <option value="Wheels/Tires">Wheels/Tires</option>
+                        <option value="Windshield">Windshield</option>
+                        <option value="Interior">Interior</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Date and Time -->
+            <div class="form-section">
+                <h2><i>⏰</i> Date & Time</h2>
+                <div class="datetime-group">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date *</label>
+                            <input type="date" id="handoverDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Time *</label>
+                            <input type="time" id="handoverTime" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Notes -->
+            <div class="form-section">
+                <h2><i>📝</i> Additional Notes</h2>
+                <div class="form-group">
+                    <textarea id="additionalNotes" rows="3" placeholder="Any additional information or comments..."></textarea>
+                </div>
+            </div>
+
+            <!-- Home Link and Submit Button -->
+            <div style="padding: 20px; text-align: center;">
+                <a href="index.html" class="home" style="color: #667eea; text-decoration: none; display: inline-block; margin-bottom: 15px;">🏠 Home Page</a>
+                <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">
+                    📧 Send Report to fleet@onpointontime.co.za
+                </button>
+            </div>
+        </form>
     </div>
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
-        <div style="color: #333; font-weight: 600;">Processing...</div>
+        <div style="color: #333; font-weight: 600;">Sending report...</div>
     </div>
 
     <script>
         // Configuration
         const CONFIG = {
-            GAS_URL: 'https://script.google.com/macros/s/YOUR_APPS_SCRIPT_ID_HERE/exec',
-            SHEET_ID: 'YOUR_GOOGLE_SHEET_ID_HERE',
-            DRIVE_FOLDER_ID: 'YOUR_DRIVE_FOLDER_ID_HERE',
-            SHEET_NAME: 'Driver Performance',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbxfbfFdl1mD5DSL-UBZIwmWj0lKmdlMGSk_0aTGM52GPfUBZDuSqrW4XYzNg45yi8IXrw/exec',
+            SHEET_ID: '1vBDeyPBy3LLYg0EM2OFgceI3deVFhXL2Nr-IpdveZoU',
+            DRIVE_FOLDER_ID: '13BuqOSAdUlfZJIm36A_R3mbF4HwHCfZY',
+            SHEET_NAME: 'Vehicle Handovers',
             EMAIL_RECIPIENT: 'fleet@onpointontime.co.za'
         };
 
-        // Sample driver data (replace with actual data from Google Sheets)
-        const drivers = [
-            { id: 1, name: 'John Doe', employeeId: 'DRV001', department: 'Logistics', avatar: 'JD', efficiency: 8.7, safety: 96, trips: 45 },
-            { id: 2, name: 'Jane Smith', employeeId: 'DRV002', department: 'Sales', avatar: 'JS', efficiency: 8.2, safety: 92, trips: 38 },
-            { id: 3, name: 'Mike Johnson', employeeId: 'DRV003', department: 'Logistics', avatar: 'MJ', efficiency: 9.1, safety: 98, trips: 52 },
-            { id: 4, name: 'Sarah Williams', employeeId: 'DRV004', department: 'Management', avatar: 'SW', efficiency: 7.9, safety: 90, trips: 29 },
-            { id: 5, name: 'David Brown', employeeId: 'DRV005', department: 'Operations', avatar: 'DB', efficiency: 8.4, safety: 93, trips: 41 }
-        ];
-
-        let selectedDriver = null;
-
-        // Set default dates
+        // Set default date and time
         document.addEventListener('DOMContentLoaded', function() {
-            const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('handoverDate').value = today;
             
-            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
-            document.getElementById('endDate').value = today.toISOString().split('T')[0];
-            
-            loadDrivers();
-            loadStats();
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('handoverTime').value = `${hours}:${minutes}`;
         });
 
-        // Load drivers
-        function loadDrivers() {
-            const grid = document.getElementById('driverGrid');
-            grid.innerHTML = '';
+        // Photo upload preview
+        document.getElementById('vehiclePhotos').addEventListener('change', function(e) {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
             
-            drivers.forEach(driver => {
-                const card = document.createElement('div');
-                card.className = 'driver-card';
-                card.onclick = () => selectDriver(driver);
+            for(let i = 0; i < this.files.length; i++) {
+                const file = this.files[i];
+                const reader = new FileReader();
                 
-                card.innerHTML = `
-                    <div class="driver-header">
-                        <div class="driver-avatar">${driver.avatar}</div>
-                        <div class="driver-info">
-                            <h3>${driver.name}</h3>
-                            <p>${driver.department} | ID: ${driver.employeeId}</p>
-                        </div>
-                    </div>
-                    <div class="driver-stats">
-                        <div class="driver-stat">
-                            <div class="value">${driver.efficiency}</div>
-                            <div class="label">km/L</div>
-                        </div>
-                        <div class="driver-stat">
-                            <div class="value">${driver.safety}%</div>
-                            <div class="label">Safety</div>
-                        </div>
-                        <div class="driver-stat">
-                            <div class="value">${driver.trips}</div>
-                            <div class="label">Trips</div>
-                        </div>
-                        <div class="driver-stat">
-                            <div class="value">⭐</div>
-                            <div class="label">Rating</div>
-                        </div>
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
-        }
-
-        // Select driver
-        function selectDriver(driver) {
-            selectedDriver = driver;
-            
-            // Update UI
-            document.querySelectorAll('.driver-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            event.currentTarget.classList.add('selected');
-            
-            document.getElementById('selectedDriverName').textContent = driver.name;
-            
-            // Load driver metrics
-            loadDriverMetrics(driver);
-            loadDriverTrips(driver);
-        }
-
-        // Load driver metrics
-        function loadDriverMetrics(driver) {
-            // Simulate different metrics based on driver
-            const efficiency = driver.efficiency;
-            const safety = driver.safety;
-            const ontime = Math.min(98, 85 + Math.floor(Math.random() * 15));
-            const cost = (2.3 + Math.random() * 0.5).toFixed(2);
-            const idle = (10 + Math.floor(Math.random() * 10));
-            const braking = (2 + Math.floor(Math.random() * 5));
-            
-            document.getElementById('metricEfficiency').textContent = efficiency + ' km/L';
-            document.getElementById('progressEfficiency').style.width = (efficiency / 10 * 100) + '%';
-            
-            document.getElementById('metricSafety').textContent = safety + '%';
-            document.getElementById('progressSafety').style.width = safety + '%';
-            
-            document.getElementById('metricOntime').textContent = ontime + '%';
-            document.getElementById('progressOntime').style.width = ontime + '%';
-            
-            document.getElementById('metricCost').textContent = 'R' + cost;
-            document.getElementById('progressCost').style.width = (parseFloat(cost) / 3 * 100) + '%';
-            
-            document.getElementById('metricIdle').textContent = idle + '%';
-            document.getElementById('progressIdle').style.width = (100 - idle) + '%';
-            
-            document.getElementById('metricBraking').textContent = braking;
-            document.getElementById('progressBraking').style.width = (100 - (braking * 10)) + '%';
-        }
-
-        // Load driver trips
-        function loadDriverTrips(driver) {
-            const tbody = document.getElementById('tableBody');
-            
-            // Generate sample trips
-            const trips = [];
-            for (let i = 0; i < 5; i++) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                
-                const distance = 100 + Math.floor(Math.random() * 200);
-                const fuel = (distance / (driver.efficiency - 0.5 + Math.random())).toFixed(1);
-                const efficiency = (distance / fuel).toFixed(1);
-                const safety = Math.min(100, driver.safety - 5 + Math.floor(Math.random() * 10));
-                
-                let rating = 'Average';
-                let ratingClass = 'rating-average';
-                
-                if (safety >= 95) {
-                    rating = 'Excellent';
-                    ratingClass = 'rating-excellent';
-                } else if (safety >= 85) {
-                    rating = 'Good';
-                    ratingClass = 'rating-good';
-                } else if (safety >= 70) {
-                    rating = 'Average';
-                    ratingClass = 'rating-average';
-                } else {
-                    rating = 'Poor';
-                    ratingClass = 'rating-poor';
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'preview-image';
+                    preview.appendChild(img);
                 }
                 
-                trips.push(`
-                    <tr>
-                        <td>${date.toISOString().split('T')[0]}</td>
-                        <td>CA ${100 + i}-${456 + i}</td>
-                        <td>${distance}</td>
-                        <td>${fuel}</td>
-                        <td><strong>${efficiency}</strong></td>
-                        <td>${safety}%</td>
-                        <td><span class="rating-badge ${ratingClass}">${rating}</span></td>
-                    </tr>
-                `);
+                reader.readAsDataURL(file);
             }
-            
-            tbody.innerHTML = trips.join('');
-        }
+        });
 
-        // Load stats
-        function loadStats() {
-            document.getElementById('totalDrivers').textContent = drivers.length;
-            document.getElementById('avgFuelEfficiency').textContent = 
-                (drivers.reduce((sum, d) => sum + d.efficiency, 0) / drivers.length).toFixed(1) + ' km/L';
-            document.getElementById('avgSafetyScore').textContent = 
-                (drivers.reduce((sum, d) => sum + d.safety, 0) / drivers.length).toFixed(0) + '%';
-            document.getElementById('totalTrips').textContent = 
-                drivers.reduce((sum, d) => sum + d.trips, 0);
-        }
-
-        // Refresh data
-        function refreshData() {
-            showLoading();
-            setTimeout(() => {
-                hideLoading();
-                showSuccess('Data refreshed successfully!');
-            }, 1500);
-        }
-
-        // Generate driver report
-        async function generateDriverReport() {
-            if (!selectedDriver) {
-                alert('Please select a driver first');
-                return;
-            }
-            
-            showLoading();
-            
-            try {
-                // Prepare report data
-                const reportData = {
-                    driver: selectedDriver,
-                    startDate: document.getElementById('startDate').value,
-                    endDate: document.getElementById('endDate').value,
-                    metrics: {
-                        efficiency: document.getElementById('metricEfficiency').textContent,
-                        safety: document.getElementById('metricSafety').textContent,
-                        ontime: document.getElementById('metricOntime').textContent,
-                        cost: document.getElementById('metricCost').textContent,
-                        idle: document.getElementById('metricIdle').textContent,
-                        braking: document.getElementById('metricBraking').textContent
-                    },
-                    timestamp: new Date().toISOString(),
-                    reportId: 'DRP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase()
+        // Convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    const base64String = reader.result.split(',')[1];
+                    resolve({
+                        name: file.name,
+                        type: file.type,
+                        data: base64String
+                    });
                 };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Submit form function
+        async function submitForm() {
+            // Validate required fields
+            const requiredFields = ['employeeName', 'employeeNumber', 'idNumber', 'vehicleReg', 'mileage', 'handoverDate', 'handoverTime'];
+            for(let field of requiredFields) {
+                if(!document.getElementById(field).value.trim()) {
+                    alert(`Please fill in all required fields`);
+                    return;
+                }
+            }
+
+            // Show loading overlay
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('errorMessage').style.display = 'none';
+
+            try {
+                // Get checklist items
+                const checklistItems = Array.from(document.querySelectorAll('input[name="checklist"]:checked')).map(cb => cb.value);
                 
+                // Prepare form data
+                const formData = {
+                    sheetId: CONFIG.SHEET_ID,
+                    driveFolderId: CONFIG.DRIVE_FOLDER_ID,
+                    sheetName: CONFIG.SHEET_NAME,
+                    emailRecipient: CONFIG.EMAIL_RECIPIENT,
+                    
+                    employeeName: document.getElementById('employeeName').value,
+                    employeeNumber: document.getElementById('employeeNumber').value,
+                    idNumber: document.getElementById('idNumber').value,
+                    department: document.getElementById('department').value || 'Not Specified',
+                    
+                    vehicleReg: document.getElementById('vehicleReg').value,
+                    vehicleModel: document.getElementById('vehicleModel').value || 'Not Specified',
+                    mileage: document.getElementById('mileage').value,
+                    serviceDue: document.getElementById('serviceDue').value || 'Not Specified',
+                    
+                    handoverType: document.querySelector('input[name="handoverType"]:checked')?.value || 'Handover',
+                    fuelLevel: document.querySelector('input[name="fuelLevel"]:checked')?.value || '1/2',
+                    checklist: checklistItems.join(', ') || 'None',
+                    
+                    abnormalityDesc: document.getElementById('abnormalityDesc').value || 'None',
+                    damageLocation: document.getElementById('damageLocation').value || 'Not Applicable',
+                    
+                    handoverDate: document.getElementById('handoverDate').value,
+                    handoverTime: document.getElementById('handoverTime').value,
+                    
+                    additionalNotes: document.getElementById('additionalNotes').value || 'None',
+                    
+                    submissionTimestamp: new Date().toISOString(),
+                    submissionId: 'HND-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                    
+                    photos: []
+                };
+
+                // Convert photos to base64
+                const photoInput = document.getElementById('vehiclePhotos');
+                if (photoInput.files.length > 0) {
+                    for (let i = 0; i < photoInput.files.length; i++) {
+                        const file = photoInput.files[i];
+                        const base64Photo = await fileToBase64(file);
+                        formData.photos.push(base64Photo);
+                    }
+                }
+
                 // Send to Google Apps Script
                 const response = await fetch(CONFIG.GAS_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    mode: 'no-cors', // Use no-cors for Google Apps Script
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        action: 'generateReport',
-                        data: reportData
-                    })
+                    body: JSON.stringify(formData)
                 });
+
+                // Show success message
+                document.getElementById('successMessage').style.display = 'block';
+                document.getElementById('errorMessage').style.display = 'none';
                 
-                showSuccess('Report generated successfully! Check your email.');
-                
+                // Auto-hide success message after 5 seconds
+                setTimeout(() => {
+                    document.getElementById('successMessage').style.display = 'none';
+                }, 5000);
+
+                // Reset form
+                if(confirm('Form submitted successfully! A copy has been sent to fleet@onpointontime.co.za\n\nWould you like to reset the form for another entry?')) {
+                    document.getElementById('vehicleForm').reset();
+                    document.getElementById('handoverDate').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('handoverTime').value = 
+                        `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`;
+                    document.getElementById('photoPreview').innerHTML = '';
+                    
+                    document.getElementById('handover').checked = true;
+                    document.getElementById('half').checked = true;
+                }
+
             } catch (error) {
-                showError('Failed to generate report');
+                console.error('Submission error:', error);
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('errorMessage').innerText = `❌ Submission failed: ${error.message}`;
             } finally {
-                hideLoading();
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('submitBtn').disabled = false;
             }
         }
 
-        // Send report to email
-        async function sendReportToEmail() {
-            if (!selectedDriver) {
-                alert('Please select a driver first');
-                return;
-            }
-            
-            showLoading();
-            
-            try {
-                const reportData = {
-                    driver: selectedDriver,
-                    recipient: CONFIG.EMAIL_RECIPIENT,
-                    timestamp: new Date().toISOString()
-                };
-                
-                const response = await fetch(CONFIG.GAS_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'sendEmail',
-                        data: reportData
-                    })
-                });
-                
-                showSuccess('Report sent to fleet@onpointontime.co.za');
-                
-            } catch (error) {
-                showError('Failed to send email');
-            } finally {
-                hideLoading();
+
+        function addNewOption(selectId, message) {
+            const select = document.getElementById(selectId);
+            const newValue = prompt(message);
+
+            if (newValue && newValue.trim() !== '') {
+                const cleanValue = selectId === 'vehicleReg'
+                    ? newValue.trim().toUpperCase()
+                    : newValue.trim();
+
+                const exists = Array.from(select.options).some(
+                    option => option.value.toUpperCase() === cleanValue.toUpperCase()
+                );
+
+                if (!exists) {
+                    const option = document.createElement('option');
+                    option.value = cleanValue;
+                    option.text = cleanValue;
+                    select.appendChild(option);
+                }
+
+                select.value = cleanValue;
             }
         }
 
-        // Export to CSV
-        function exportToCSV() {
-            const rows = [];
-            rows.push(['Date', 'Vehicle', 'Distance (km)', 'Fuel Used (L)', 'Efficiency', 'Safety Score', 'Rating']);
-            
-            document.querySelectorAll('#tableBody tr').forEach(row => {
-                const rowData = [];
-                row.querySelectorAll('td').forEach(cell => {
-                    rowData.push(cell.textContent.trim());
-                });
-                if (rowData.length > 1) rows.push(rowData);
-            });
-            
-            const csv = rows.map(row => row.join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `driver_performance_${selectedDriver?.name || 'all'}.csv`;
-            a.click();
-        }
 
-        // UI Helpers
-        function showLoading() {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-        }
-
-        function hideLoading() {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-
-        function showSuccess(message) {
-            const successEl = document.getElementById('successMessage');
-            successEl.textContent = '✅ ' + message;
-            successEl.style.display = 'block';
-            document.getElementById('errorMessage').style.display = 'none';
-            
-            setTimeout(() => {
-                successEl.style.display = 'none';
-            }, 5000);
-        }
-
-        function showError(message) {
-            const errorEl = document.getElementById('errorMessage');
-            errorEl.textContent = '❌ ' + message;
-            errorEl.style.display = 'block';
-            document.getElementById('successMessage').style.display = 'none';
-            
-            setTimeout(() => {
-                errorEl.style.display = 'none';
-            }, 5000);
-        }
+        // Make function globally available
+        window.submitForm = submitForm;
     </script>
 </body>
 </html>
