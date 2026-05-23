@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onpoint Group - Fuel Management Dashboard</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>ONPOINT FLEET · mobile fuel log</title>
+    <!-- Google Font & Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- jsPDF and html2canvas for PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
@@ -13,1573 +17,1650 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
-
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-
-        /* Header */
-        .header {
-            background: white;
-            border-radius: 20px;
-            padding: 20px 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo-container img {
-            height: 50px;
-            width: auto;
-        }
-
-        .logo-container h1 {
-            font-size: 28px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .user-section {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: #f8f9fa;
-            padding: 8px 20px;
-            border-radius: 40px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 18px;
-        }
-
-        .logout-btn {
-            background: linear-gradient(135deg, #ff6b6b, #ee5253);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 40px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .logout-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(238, 82, 83, 0.3);
-        }
-
-        .sync-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .sync-status.online {
-            background: #43e97b20;
-            color: #43e97b;
-        }
-
-        .sync-status.offline {
-            background: #fa709a20;
-            color: #fa709a;
-        }
-
-        /* KPI Cards */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .kpi-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: linear-gradient(145deg, #0a1e2f 0%, #1f4a6e 100%);
+            padding: 1rem;
             position: relative;
-            overflow: hidden;
-            transition: transform 0.3s ease;
+            overflow-x: hidden;
+        }
+        
+        /* animated character background - hidden on very small devices */
+        .character-scene {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.5;
+        }
+        
+        @media (min-width: 768px) {
+            .character-scene {
+                opacity: 1;
+            }
+        }
+        
+        .fuel-mascot {
+            position: absolute;
+            bottom: 20px;
+            left: 3%;
+            width: 120px;
+            animation: float 4s ease-in-out infinite;
+            filter: drop-shadow(0 20px 15px #00000066);
+        }
+        
+        @media (max-width: 480px) {
+            .fuel-mascot {
+                width: 80px;
+                bottom: 10px;
+            }
+        }
+        
+        .lube-character {
+            position: absolute;
+            bottom: 40px;
+            right: 5%;
+            width: 100px;
+            animation: wobble 5s infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .lube-character {
+                display: none;
+            }
+        }
+        
+        .toll-character {
+            position: absolute;
+            top: 100px;
+            right: 10%;
+            width: 80px;
+            animation: drive 8s infinite linear;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            .toll-character {
+                display: none;
+            }
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        
+        @keyframes wobble {
+            0%,100%{ transform: translateX(0) rotate(0); }
+            25%{ transform: translateX(-10px) rotate(-5deg); }
+            75%{ transform: translateX(10px) rotate(5deg); }
+        }
+        
+        @keyframes drive {
+            0% { transform: translateX(-200px) scaleX(1); }
+            45% { transform: translateX(200px) scaleX(1); }
+            50% { transform: translateX(200px) scaleX(-1); }
+            95% { transform: translateX(-200px) scaleX(-1); }
+            100% { transform: translateX(-200px) scaleX(1); }
         }
 
-        .kpi-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .kpi-card.warning {
-            background: linear-gradient(135deg, #ff6b6b20, #ee525320);
-            border-left: 4px solid #ff6b6b;
-        }
-
-        .kpi-icon {
-            font-size: 30px;
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-
-        .kpi-label {
-            font-size: 14px;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-        }
-
-        .kpi-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .kpi-trend {
-            font-size: 14px;
-            color: #43e97b;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        /* Filters Section */
-        .filters-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .filters-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .filter-badge {
-            background: #667eea;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .filter-group {
+        /* main dashboard - mobile first */
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 1rem;
         }
-
-        .filter-group label {
-            font-weight: 600;
-            color: #555;
-            font-size: 14px;
-        }
-
-        .filter-group input, .filter-group select {
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 14px;
-        }
-
-        .filter-group input:focus, .filter-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        /* Fixed date range styling - prevents overlap */
-        .date-range-container {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .date-range-container input {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .filter-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 20px;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #666;
-        }
-
-        .btn-warning {
-            background: #ff6b6b;
-            color: white;
-        }
-
-        .btn-success {
-            background: #43e97b;
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        /* Limit Alert Section */
-        .limit-alert {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border-left: 4px solid #ff6b6b;
-            display: none;
-        }
-
-        .limit-alert.show {
-            display: block;
-            animation: slideIn 0.5s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+        
+        @media (min-width: 1024px) {
+            .dashboard {
+                display: grid;
+                grid-template-columns: 1.2fr 0.8fr;
+                gap: 1.5rem;
             }
         }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(12px);
+            border-radius: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.6);
+            width: 100%;
+        }
+        
+        @media (min-width: 768px) {
+            .card {
+                padding: 2rem;
+                border-radius: 40px;
+            }
+        }
+        
+        .card.full-width {
+            grid-column: span 2;
+        }
 
-        .alert-title {
-            color: #ff6b6b;
-            font-size: 18px;
-            margin-bottom: 15px;
+        /* header - responsive */
+        .logo-row {
             display: flex;
             align-items: center;
-            gap: 10px;
-        }
-
-        .alert-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .alert-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-        }
-
-        .alert-label {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .alert-value {
-            font-size: 18px;
-            font-weight: 700;
-            color: #333;
-        }
-
-        .alert-progress {
-            margin-top: 15px;
-            height: 10px;
-            background: #e0e0e0;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .alert-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #ff6b6b, #ee5253);
-            transition: width 0.3s ease;
-        }
-
-        /* Charts Row */
-        .charts-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .chart-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .chart-header h3 {
-            color: #333;
-            font-size: 18px;
-        }
-
-        .chart-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .chart-actions button {
-            background: none;
-            border: none;
-            color: #667eea;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        canvas {
-            width: 100% !important;
-            height: 300px !important;
-        }
-
-        /* Table Section */
-        .table-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
             flex-wrap: wrap;
-            gap: 15px;
         }
-
-        .table-header h2 {
-            color: #333;
-            font-size: 22px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+        
+        .badge {
+            background: #0e2f44;
             color: white;
-            padding: 15px;
-            text-align: left;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            font-weight: 700;
+            font-size: 1.2rem;
+            padding: 0.3rem 1.2rem;
+            border-radius: 40px;
+            letter-spacing: -0.3px;
+            box-shadow: -4px 4px 0 #7aa7c9;
             white-space: nowrap;
         }
-
-        td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #f0f0f0;
-            white-space: nowrap;
+        
+        @media (min-width: 768px) {
+            .badge {
+                font-size: 1.6rem;
+                padding: 0.3rem 1.8rem 0.3rem 2rem;
+                box-shadow: -6px 6px 0 #7aa7c9;
+            }
+        }
+        
+        .badge i {
+            margin-right: 8px;
+            color: #fedb9f;
+        }
+        
+        .sheet-id {
+            background: #edf5fb;
+            padding: 0.4rem 1rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            color: #0e3a55;
+            font-weight: 500;
+            border: 1px solid white;
+            margin-left: 0;
+            word-break: break-word;
+        }
+        
+        @media (min-width: 768px) {
+            .sheet-id {
+                margin-left: auto;
+                padding: 0.6rem 1.5rem;
+                font-size: 0.85rem;
+            }
         }
 
-        tr:hover {
-            background: #f8f9fa;
+        /* form grids - mobile first (stack vertically) */
+        .form-grid-4 {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
         }
-
-        tr.exceed-limit {
-            background: #ff6b6b20;
-            border-left: 4px solid #ff6b6b;
+        
+        @media (min-width: 768px) {
+            .form-grid-4 {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1.2rem;
+            }
         }
-
-        .fuel-efficient {
-            color: #43e97b;
+        
+        .form-grid-3, .form-grid-2 {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+        
+        @media (min-width: 640px) {
+            .form-grid-2 {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.2rem;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .form-grid-3 {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1.2rem;
+            }
+        }
+        
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            width: 100%;
+        }
+        
+        .field label {
             font-weight: 600;
-        }
-
-        .fuel-inefficient {
-            color: #ff6b6b;
-            font-weight: 600;
-        }
-
-        .view-image {
-            color: #667eea;
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        .view-image:hover {
-            text-decoration: underline;
-        }
-
-        /* Loading Overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.9);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f0f0f0;
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Notifications */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 10px;
-            background: white;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #1b4b6e;
             display: flex;
             align-items: center;
-            gap: 10px;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            z-index: 1001;
+            gap: 6px;
         }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success { border-left: 4px solid #43e97b; }
-        .notification.error { border-left: 4px solid #fa709a; }
-        .notification.info { border-left: 4px solid #667eea; }
-        .notification.warning { border-left: 4px solid #ff6b6b; }
-
-        @media (max-width: 768px) {
-            .charts-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .filter-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .date-range-container {
-                flex-direction: column;
-                align-items: stretch;
+        
+        @media (min-width: 768px) {
+            .field label {
+                font-size: 0.8rem;
             }
         }
-    
-        .submission-image-icon {
+        
+        .field input, .field select, .field textarea {
+            background: white;
+            border: 2px solid #d0e2f2;
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #102b3f;
+            transition: 0.2s;
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        
+        @media (min-width: 768px) {
+            .field input, .field select, .field textarea {
+                border-radius: 18px;
+                padding: 0.8rem 1.2rem;
+                font-size: 0.95rem;
+            }
+        }
+        
+        .field input:focus, .field select:focus {
+            border-color: #2c7da0;
+            box-shadow: 0 8px 18px -12px #1e4f6e;
+            outline: none;
+        }
+
+        /* cost sections */
+        .cost-section {
+            background: #e8f1f9;
+            border-radius: 24px;
+            padding: 1.2rem;
+            margin: 1rem 0;
+        }
+        
+        @media (min-width: 768px) {
+            .cost-section {
+                border-radius: 28px;
+                padding: 1.5rem;
+            }
+        }
+        
+        .section-title {
+            font-weight: 700;
+            color: #0c3e5e;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        @media (min-width: 768px) {
+            .section-title {
+                font-size: 1.1rem;
+                margin-bottom: 1.2rem;
+            }
+        }
+        
+        .inline-cost {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        
+        @media (min-width: 640px) {
+            .inline-cost {
+                display: grid;
+                grid-template-columns: 1fr 1fr auto;
+                gap: 1rem;
+                align-items: end;
+            }
+        }
+        
+        .add-btn {
+            background: #1d6f94;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 0.8rem 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+            width: 100%;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        @media (min-width: 640px) {
+            .add-btn {
+                width: auto;
+                padding: 0.8rem 1.5rem;
+            }
+        }
+        
+        .add-btn:hover {
+            background: #0e5c80;
+        }
+
+        /* totals panel - responsive grid */
+        .totals-panel {
+            background: linear-gradient(135deg, #0f3348 0%, #1b5577 100%);
+            border-radius: 24px;
+            padding: 1.2rem;
+            margin: 1.2rem 0;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            color: white;
+            box-shadow: 0 15px 25px -10px #061b28;
+        }
+        
+        @media (min-width: 640px) {
+            .totals-panel {
+                grid-template-columns: repeat(4, 1fr);
+                padding: 1.5rem;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .totals-panel {
+                padding: 1.8rem;
+            }
+        }
+        
+        .total-item {
+            text-align: center;
+        }
+        
+        .total-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            opacity: 0.7;
+            letter-spacing: 0.3px;
+        }
+        
+        @media (min-width: 768px) {
+            .total-label {
+                font-size: 0.75rem;
+            }
+        }
+        
+        .total-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        
+        @media (min-width: 768px) {
+            .total-value {
+                font-size: 1.6rem;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .total-value {
+                font-size: 1.9rem;
+            }
+        }
+        
+        .total-value small {
+            font-size: 0.7rem;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+        
+        @media (min-width: 768px) {
+            .total-value small {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* action buttons - stacked on mobile */
+        .action-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+        
+        @media (min-width: 640px) {
+            .action-bar {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+        }
+        
+        .btn {
+            border: none;
+            border-radius: 40px;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: #eef2ff;
-            color: #4f46e5;
-            text-decoration: none;
-            border: 1px solid #c7d2fe;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .submission-image-icon:hover {
-            background: #4f46e5;
-            color: white;
-            transform: scale(1.05);
-        }
-
-        .image-modal {
-            display: none;
-            position: fixed;
-            z-index: 99999;
-            left: 0;
-            top: 0;
+            gap: 10px;
+            transition: 0.15s;
+            background: white;
+            color: #0f3348;
+            border: 2px solid #c5dff2;
             width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
         }
-
-        .image-modal img {
-            max-width: 95%;
-            max-height: 95%;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        
+        @media (min-width: 640px) {
+            .btn {
+                width: auto;
+                padding: 1rem 2rem;
+                font-size: 1rem;
+            }
         }
-
-        .image-modal-close {
-            position: absolute;
-            top: 20px;
-            right: 30px;
+        
+        .btn-primary {
+            background: #fedb9f;
+            border-color: #feca7a;
+            color: #0f2a3b;
+            font-weight: 700;
+        }
+        
+        .btn-primary:hover {
+            background: #ffd28c;
+            transform: scale(1.02);
+        }
+        
+        .btn-success {
+            background: #1e7920;
+            border-color: #1a9e3a;
             color: white;
-            font-size: 42px;
-            cursor: pointer;
-            font-weight: bold;
+        }
+        
+        .btn-success:hover {
+            background: #166318;
         }
 
-</style>
+        /* toll entries - mobile optimized */
+        .toll-entry {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            border: 1px solid #bcd6ec;
+        }
+        
+        @media (min-width: 640px) {
+            .toll-entry {
+                display: grid;
+                grid-template-columns: 1fr 1fr 0.8fr 0.5fr auto;
+                gap: 0.8rem;
+                align-items: center;
+                padding: 1rem;
+            }
+        }
+        
+        .toll-entry input {
+            padding: 0.7rem;
+            border: 2px solid #d0e2f2;
+            border-radius: 12px;
+            width: 100%;
+        }
+        
+        .remove-toll {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        @media (min-width: 640px) {
+            .remove-toll {
+                padding: 0.4rem 1rem;
+            }
+        }
+        
+
+        .receipt-preview {
+            margin-top: 0.8rem;
+            padding: 0.8rem 1rem;
+            border-radius: 18px;
+            background: #ffffff;
+            border: 2px dashed #bcd6ec;
+            color: #0f3348;
+            font-size: 0.9rem;
+            word-break: break-word;
+        }
+
+        .receipt-preview a {
+            color: #1d6f94;
+            font-weight: 700;
+        }
+
+        .response-message {
+            margin-top: 1rem;
+            padding: 0.8rem;
+            border-radius: 30px;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        /* right panel summary - mobile friendly */
+        .summary-stats {
+            background: #edf5fb;
+            border-radius: 24px;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        
+        @media (min-width: 768px) {
+            .summary-stats {
+                padding: 1.5rem;
+                border-radius: 30px;
+                gap: 1rem;
+            }
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #cbdbe9;
+        }
+        
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-label {
+            font-weight: 600;
+            color: #0f3348;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .summary-value {
+            font-weight: 700;
+            color: #1d6f94;
+            font-size: 1.1rem;
+        }
+        
+        .total-highlight {
+            font-size: 1.5rem;
+            color: #0f3348;
+            text-align: right;
+            font-weight: 800;
+        }
+        
+        @media (min-width: 768px) {
+            .total-highlight {
+                font-size: 1.8rem;
+            }
+        }
+        
+        /* footer image */
+        .footer-img {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+        
+        .footer-img svg {
+            max-width: 100%;
+            height: auto;
+        }
+        .bow{
+            color: blue;
+            font-size: 20px;
+            margin-left: 30px;
+            border-radius: 10px;
+            border: 2mm;
+            
+        }
+        .bow:hover{
+            transition: 0.7s;
+            opacity: 0.6;
+            cursor: pointer;
+            color: green;
+            background-color: yellow;
+        }
+        .nav-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin: 0.5rem 0 1.5rem;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            background: linear-gradient(135deg, #0f3348 0%, #1b5577 100%);
+            color: #ffffff;
+            border: 2px solid #7aa7c9;
+            border-radius: 999px;
+            padding: 0.75rem 1.15rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-shadow: 0 10px 20px -14px #061b28;
+            transition: 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #1b5577 0%, #0f3348 100%);
+            box-shadow: 0 14px 24px -16px #061b28;
+        }
+
+        .odo-helper {
+            margin-top: 0.45rem;
+            color: #4a6f8a;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Loading Overlay -->
-        <div class="loading-overlay" id="loadingOverlay">
-            <div class="loading-spinner"></div>
+    <div class="character-scene">
+        <div class="fuel-mascot">
+            <svg viewBox="0 0 120 120" width="100%" height="100%">
+                <circle cx="60" cy="60" r="50" fill="#FEDB9F"/>
+                <circle cx="40" cy="45" r="8" fill="white"/>
+                <circle cx="80" cy="45" r="8" fill="white"/>
+                <circle cx="42" cy="47" r="4" fill="#274873"/>
+                <circle cx="78" cy="47" r="4" fill="#274873"/>
+                <path d="M50 70 Q60 85, 70 70" stroke="#274873" stroke-width="5" fill="none"/>
+                <rect x="30" y="90" width="60" height="18" fill="#457b9d" rx="9"/>
+                <text x="48" y="106" font-size="14" fill="white" font-weight="bold">⛽</text>
+            </svg>
         </div>
-
-        <!-- Notification -->
-        <div class="notification" id="notification">
-            <i class="fas fa-check-circle" id="notificationIcon"></i>
-            <span id="notificationMessage">Notification message</span>
+        <div class="lube-character">
+            <svg viewBox="0 0 100 100" width="100%" height="100%">
+                <path d="M30 40 L70 40 L80 70 L20 70 Z" fill="#a5d8ff"/>
+                <circle cx="35" cy="35" r="12" fill="#74c0fc"/>
+                <circle cx="65" cy="35" r="12" fill="#74c0fc"/>
+                <text x="42" y="42" fill="white" font-size="16">🛢️</text>
+            </svg>
         </div>
-
-        <!-- Header -->
-        <div class="header">
-            <div class="logo-container">
-                <img src="logo.png" alt="Onpoint Group Logo" onerror="this.style.display='none'">
-                <h1><i class="fas fa-gas-pump"></i> Fuel Management Dashboard</h1>
-            </div>
-            <div class="user-section">
-                <div class="sync-status online" id="syncStatus">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <span>Connected</span>
-                </div>
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">U</div>
-                    <span id="userNameDisplay">Loading...</span>
-                </div>
-                <button class="logout-btn" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
+        <div class="toll-character">
+            <svg viewBox="0 0 80 40" width="100%" height="100%">
+                <rect x="10" y="10" width="60" height="20" fill="#ffd966" rx="5"/>
+                <circle cx="25" cy="35" r="8" fill="#333"/>
+                <circle cx="55" cy="35" r="8" fill="#333"/>
+                <text x="30" y="25" fill="#333" font-size="12">🚦</text>
+            </svg>
         </div>
+    </div>
 
-        <!-- KPI Cards -->
-        <div class="kpi-grid" id="kpiCards">
-            <div class="kpi-card">
-                <div class="kpi-icon"><i class="fas fa-spinner fa-pulse"></i></div>
-                <div class="kpi-label">Loading</div>
-                <div class="kpi-value">Please wait...</div>
+    <div class="dashboard">
+        <!-- MAIN FORM CARD -->
+        <div class="card">
+            <div class="logo-row">
+                <div class="badge"><i class="fas fa-gas-pump"></i> ONPOINT</div>
+                <div class="sheet-id"><i class="fas fa-file-excel"></i> Fuel Entries</div>
+            </div><br><br>
+            <div class="nav-actions">
+                <a class="nav-btn" href="accident.html"><i class="fas fa-home"></i> Home</a>
+                <a class="nav-btn" href="contacts.html"><i class="fas fa-clipboard-check"></i> Hand Over</a>
             </div>
-        </div>
 
-        <!-- Limit Alert Section -->
-        <div class="limit-alert" id="limitAlert">
-            <div class="alert-title">
-                <i class="fas fa-exclamation-triangle"></i>
-                Fuel Limit Alert
-            </div>
-            <div class="alert-grid" id="alertContent">
-                <!-- Dynamic -->
-            </div>
-        </div>
+            <form id="fuelForm">
+                <!-- Basic Info with Driver dropdown -->
+                <div class="form-grid-4">
+                    <div class="field">
+                        <label><i class="fas fa-user"></i>Driver *</label>
+                        <select id="driverName" required>
+                            <option value="">Select Driver...</option>
+                            <option value="Retselisitsoe Mohapi">Retselisitsoe Mohapi</option>
+                            <option value="George Rusere">George Rusere</option>
+                            <option value="Nyasha Marira">Nyasha Marira</option>
+                            <option value="Trymore Mtizwa">Trymore Mtizwa</option>
+                            <option value="Brian Mugiya">Brian Mugiya</option>
+                            <option value="Peter Nong">Peter Nong</option>
+                            <option value="Nicholas Dambiranwa">Nicholas Dambiranwa</option>
+                            <option value="Curious Sixpense">Curious Sixpense</option>
+                            <option value="Clifonce Matewe">Clifonce Matewe</option>
+                            <option value="Moeketsi Tshabalala">Moeketsi Tshabalala</option>
+                            <option value="Elias Mashiane">Elias Mashiane</option>
+                            <option value="Leah Phiri">Leah Phiri</option>
+                            <option value="Lungile Soni">Lungile Soni</option>
+                            <option value="Washington Musiiwa">Washington Musiiwa</option>
+                            <option value="Donald Tawengwa">Donald Tawengwa</option>
+                            <option value="Washington Madauka">Washington Madauka</option>
+                            <option value="Before Simonne">Before Simonne</option>
+                            <option value="Happison Mupanedengu">Happison Mupanedengu</option>
+                            <option value="William Mahlo">William Mahlo</option>
+                            <option value="Pride Nyoni">Pride Nyoni</option>
+                            <option value="Petros Mosekidi">Petros Mosekidi</option>
+                            <option value="Tonderai Matsikire">Tonderai Matsikire</option>
+                            <option value="Adelaide Dimingo">Adelaide Dimingo</option>
+                            <option value="Tumelo Mhlongo">Tumelo Mhlongo</option>
+                            <option value="Sabelo Zulu">Sabelo Zulu</option>
+                            <option value="Tsitsi Dube">Tsitsi Dube</option>
+                            <option value="Starnley Vaningwa">Starnley Vaningwa</option>
+                            <option value="Philip Shambare">Philip Shambare</option>
+                            <option value="Graham Tsuro">Graham Tsuro</option>
+                            <option value="Meshellum Mugabe">Meshellum Mugabe</option>
+                            <option value="Tafadzwa Magejo">Tafadzwa Magejo</option>
+                            <option value="Trust Bhila">Trust Bhila</option>
+                            <option value="Moses Magutse">Moses Magutse</option>
+                            <option value="Kudakwashe Madzikangava">Kudakwashe Madzikangava</option>
+                            <option value="Andrew Moloisane">Andrew Moloisane</option>
+                            <option value="Zivai Magwaza">Zivai Magwaza</option>
+                            <option value="Brian Nkomo">Brian Nkomo</option>
+                            <option value="Joshuwa Paradzai">Joshuwa Paradzai</option>
+                            <option value="Goodwill Rakgoko">Goodwill Rakgoko</option>
+                            <option value="Johanne Hendriks">Johanne Hendriks</option>
+                            <option value="Claudius Gomo">Claudius Gomo</option>
+                            <option value="Patience Chipundo">Patience Chipundo</option>
+                            <option value="Siyanda Dlamini">Siyanda Dlamini</option>
+                            <option value="Vusi Mabena">Vusi Mabena</option>
+                            <option value="Ronald Musengwa">Ronald Musengwa</option>
+                            <option value="Neo Mogatusi">Neo Mogatusi</option>
+                            <option value="Mqondisi Ndlovu">Mqondisi Ndlovu</option>
+                            <option value="Govern Paradzai">Govern Paradzai</option>
+                            <option value="Dickens Magwaza">Dickens Magwaza</option>
+                            <option value="Kgomotso Letsoalo">Kgomotso Letsoalo</option>
+                            <option value="Nametso Bokoane">Nametso Bokoane</option>
+                            <option value="Phumzile Cindi">Phumzile Cindi</option>
+                            <option value="Sydney Ngwenya">Sydney Ngwenya</option>
+                            <option value="Bheki Makhwanazi">Bheki Makhwanazi</option>
+                            <option value="Ntsako Mathe">Ntsako Mathe</option>
+                            <option value="Bongile Cuba">Bongile Cuba</option>
+                            <option value="Moses Mashatola">Moses Mashatola</option>
+                            <option value="Tony Takabvakure">Tony Takabvakure</option>
+                            <option value="Timothy Wadzema">Timothy Wadzema</option>
+                            <option value="Rayman Mugaramanja">Rayman Mugaramanja</option>
+                        </select>
+                        <button type="button" class="add-btn" style="margin-top:8px;" onclick="addNewOption('driverName')">
+                            <i class="fas fa-plus"></i> Add Driver
+                        </button>
 
-        <!-- Filters Section -->
-        <div class="filters-section">
-            <div class="filters-header">
-                <h3><i class="fas fa-filter"></i> Search & Filter Entries</h3>
-                <span class="filter-badge" id="filterCount">Loading entries...</span>
-            </div>
-            <div class="filter-grid">
-                <div class="filter-group">
-                    <label><i class="fas fa-calendar"></i> Date Range</label>
-                    <div class="date-range-container">
-                        <input type="date" id="startDate">
-                        <span>to</span>
-                        <input type="date" id="endDate">
+                    </div>
+                    <div class="field">
+                        <label><i class="fas fa-calendar"></i>Date *</label>
+                        <input type="date" id="logDate" required>
+                    </div>
+                    <div class="field">
+                        <label><i class="fas fa-tag"></i>Vehicle</label>
+                        <select id="vehicleReg">
+                            <option value="">Select Vehicle...</option>
+                            <option value="LH83NTGP">LH83NTGP</option>
+                            <option value="HZ00XWGP">HZ00XWGP</option>
+                            <option value="HK60TXGP">HK60TXGP</option>
+                            <option value="HK60TRGP">HK60TRGP</option>
+                            <option value="HN03JZGP">HN03JZGP</option>
+                            <option value="LD72VRGP">LD72VRGP</option>
+                            <option value="LD72VKGP">LD72VKGP</option>
+                            <option value="KZ14DYGP">KZ14DYGP</option>
+                            <option value="MJ53VVGP">MJ53VVGP</option>
+                            <option value="MF72JPGP">MF72JPGP</option>
+                            <option value="MH18HLGP">MH18HLGP</option>
+                            <option value="MH18HPGP">MH18HPGP</option>
+                            <option value="MJ22MJGP">MJ22MJGP</option>
+                            <option value="JD12LMGP">JD12LMGP</option>
+                            <option value="JV09TWGP">JV09TWGP</option>
+                            <option value="LD45TFGP">LD45TFGP</option>
+                            <option value="MG47YRGP">MG47YRGP</option>
+                            <option value="CW15XZGP">CW15XZGP</option>
+                            <option value="YBR245GP">YBR245GP</option>
+                            <option value="LN30PNGP">LN30PNGP</option>
+                            <option value="LX67YSGP">LX67YSGP</option>
+                            <option value="LD27RXGP">LD27RXGP</option>
+                            <option value="JN01DGGP">JN01DGGP</option>
+                            <option value="LW46XCGP">LW46XCGP</option>
+                            <option value="LP17TVGP">LP17TVGP</option>
+                            <option value="BZ89VHGP">BZ89VHGP</option>
+                            <option value="DZ53XBGP">DZ53XBGP</option>
+                            <option value="KP98PDGP">KP98PDGP</option>
+                            <option value="KL60NJGP">KL60NJGP</option>
+                            <option value="JP41CHGP">JP41CHGP</option>
+                            <option value="JB41MPGP">JB41MPGP</option>
+                            <option value="LS77SJGP">LS77SJGP</option>
+                            <option value="MH47SRGP">MH47SRGP</option>
+                            <option value="HX96RVGP">HX96RVGP</option>
+                            <option value="KK19DDGP">KK19DDGP</option>
+                            <option value="KR76PYGP">KR76PYGP</option>
+                            <option value="KT74WDGP">KT74WDGP</option>
+                            <option value="KP56BVGP">KP56BVGP</option>
+                            <option value="RTH651GP">RTH651GP</option>
+                            <option value="JX95DNGP">JX95DNGP</option>
+                            <option value="HN23FWGP">HN23FWGP</option>
+                            <option value="LP28LYGP">LP28LYGP</option>
+                            <option value="KJ96FZGP">KJ96FZGP</option>
+                            <option value="HV09VKGP">HV09VKGP</option>
+                            <option value="JD95XGGP">JD95XGGP</option>
+                            <option value="JT31YRGP">JT31YRGP</option>
+                            <option value="KP33HDGP">KP33HDGP</option>
+                            <option value="JF10CSGP">JF10CSGP</option>
+                            <option value="HP34WKGP">HP34WKGP</option>
+                            <option value="KN47CFGP">KN47CFGP</option>
+                            <option value="LS85RVGP">LS85RVGP</option>
+                            <option value="LP00HKGP">LP00HKGP</option>
+                            <option value="FY37DDGP">FY37DDGP</option>
+                            <option value="FW95WXGP">FW95WXGP</option>
+                            <option value="LM52NWGP">LM52NWGP</option>
+                            <option value="HM80WZGP">HM80WZGP</option>
+                            <option value="KK57HSGP">KK57HSGP</option>
+                            <option value="HG00HPGP">HG00HPGP</option>
+                            <option value="JJ42MZGP">JJ42MZGP</option>
+                            <option value="LN12MTGP">LN12MTGP</option>
+                            <option value="HG00JMGP">HG00JMGP</option>
+                            <option value="HM68TLGP">HM68TLGP</option>
+                            <option value="KP18GMGP">KP18GMGP</option>
+                            <option value="LF33HXGP">LF33HXGP</option>
+                            <option value="FN34BVGP">FN34BVGP</option>
+                            <option value="HK67KZGP">HK67KZGP</option>
+                            <option value="HK67LDGP">HK67LDGP</option>
+                            <option value="KK68RFGP">KK68RFGP</option>
+                            <option value="HH32LSGP">HH32LSGP</option>
+                            <option value="KD94SSGP">KD94SSGP</option>
+                            <option value="KF60VWGP">KF60VWGP</option>
+                            <option value="KT41KTGP">KT41KTGP</option>
+                            <option value="KT53WZGP">KT53WZGP</option>
+                            <option value="HG75GMGP">HG75GMGP</option>
+                            <option value="LK76BGGP">LK76BGGP</option>
+                            <option value="MK85PWGP">MK85PWGP</option>
+                        </select>
+                        <button type="button" class="add-btn" style="margin-top:8px;" onclick="addNewOption('vehicleReg')">
+                            <i class="fas fa-plus"></i> Add Vehicle
+                        </button>
+                        <div id="odoAutoFillNote" class="odo-helper"></div>
+                    </div>
+                    <div class="field">
+                        <label><i class="fas fa-hashtag"></i>ER No.</label>
+                        <input type="text" id="erNumber" value="ER-" placeholder="ER-12345" inputmode="numeric">
                     </div>
                 </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-user"></i> Driver</label>
-                    <input type="text" id="driverFilter" placeholder="Search driver...">
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-truck"></i> Vehicle</label>
-                    <input type="text" id="vehicleFilter" placeholder="Search vehicle...">
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-hashtag"></i> ER Number</label>
-                    <input type="text" id="erNumberFilter" placeholder="Search ER Number...">
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-store"></i> Merchant</label>
-                    <select id="merchantFilter">
-                        <option value="all">All Merchants</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-tag"></i> Cost Center</label>
-                    <select id="costCenterFilter">
-                        <option value="all">All Cost Centers</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-building"></i> Department</label>
-                    <select id="departmentFilter">
-                        <option value="all">All Departments</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-flask"></i> Fuel Type</label>
-                    <select id="fuelTypeFilter">
-                        <option value="all">All Types</option>
-                    </select>
-                </div>
-            </div>
-            <div class="filter-actions">
-                <button class="btn btn-secondary" onclick="resetFilters()">
-                    <i class="fas fa-undo"></i> Reset
-                </button>
-                <button class="btn btn-primary" onclick="applyFilters()">
-                    <i class="fas fa-search"></i> Apply Filters
-                </button>
-                <button class="btn btn-warning" onclick="checkLimits()">
-                    <i class="fas fa-exclamation-triangle"></i> Check Limits
-                </button>
-                <button class="btn btn-success" onclick="refreshData()">
-                    <i class="fas fa-sync-alt"></i> Refresh Data
-                </button>
-            </div>
-        </div>
 
-        <!-- Charts Row -->
-        <div class="charts-row">
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h3><i class="fas fa-chart-line"></i> Fuel Consumption Trend</h3>
-                    <div class="chart-actions">
-                        <button onclick="exportChart('fuelTrendChart', 'Fuel Trend')"><i class="fas fa-download"></i></button>
+                <!-- Merchant Field (NEW) -->
+                <div class="form-grid-2" style="margin-top: 0;">
+                    <div class="field">
+                        <label><i class="fas fa-store"></i>Merchant *</label>
+                        <select id="merchant" required>
+                            <option value="">Select Merchant...</option>
+                            <option value="Shell">Shell</option>
+                            <option value="Engen">Engen</option>
+                            <option value="Redan">Redan</option>
+                            <option value="Caltex">Caltex</option>
+                            <option value="Alstron">Alstron</option>
+                            <option value="Sasol">Sasol</option>
+                            <option value="BP">BP</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <button type="button" class="add-btn" style="margin-top:8px;" onclick="addNewOption('merchant')">
+                            <i class="fas fa-plus"></i> Add Merchant
+                        </button>
+
                     </div>
                 </div>
-                <canvas id="fuelTrendChart"></canvas>
-            </div>
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h3><i class="fas fa-chart-pie"></i> Fuel Cost by Vehicle</h3>
-                    <div class="chart-actions">
-                        <button onclick="exportChart('fuelCostChart', 'Fuel Cost')"><i class="fas fa-download"></i></button>
+
+                <!-- Odometer -->
+                <div class="form-grid-2">
+                    <div class="field">
+                        <label><i class="fas fa-tachometer-alt"></i>Odo start (km) *</label>
+                        <input type="number" id="odoStart" step="0.1" min="0" placeholder="e.g. 12450" required>
+                    </div>
+                    <div class="field">
+                        <label><i class="fas fa-flag-checkered"></i>Odo finish (km) *</label>
+                        <input type="number" id="odoFinish" step="0.1" min="0" placeholder="e.g. 12780" required>
                     </div>
                 </div>
-                <canvas id="fuelCostChart"></canvas>
-            </div>
-        </div>
 
-        <!-- Table Section -->
-        <div class="table-section">
-            <div class="table-header">
-                <h2><i class="fas fa-list"></i> Fuel Entries</h2>
-                <div class="header-actions">
-                    <button class="btn btn-secondary" onclick="exportToExcel()">
-                        <i class="fas fa-file-excel"></i> Export Excel
+                <!-- Fuel Section with Price per Liter -->
+                <div class="cost-section">
+                    <div class="section-title"><i class="fas fa-oil-can"></i> FUEL TRANSACTION</div>
+                    <div class="form-grid-3">
+                        <div class="field">
+                            <label>Fuel type *</label>
+                            <select id="fuelType" required>
+                                <option value="">Select</option>
+                                <option value="Petrol">Petrol</option>
+                                <option value="Diesel">Diesel</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Price/L (R) *</label>
+                            <input type="number" id="pricePerLiter" step="0.01" min="0" placeholder="22.50" required>
+                        </div>
+                        <div class="field">
+                            <label>Liters *</label>
+                            <input type="number" id="fuelLiters" step="0.01" min="0" placeholder="55.5" required>
+                        </div>
+                    </div>
+                    <div style="text-align:right; font-weight:600; margin-top:0.8rem; font-size:1.1rem;">
+                        ⛽ Fuel total: R<span id="fuelTotalDisplay">0.00</span>
+                    </div>
+                </div>
+
+                <!-- Lubrication Cost -->
+                <div class="cost-section">
+                    <div class="section-title"><i class="fas fa-oil-can"></i> LUBRICATION / FLUIDS</div>
+                    <div class="form-grid-3">
+                        <div class="field">
+                            <label>Lube type</label>
+                            <select id="lubeType">
+                                <option value="Engine Oil">Engine oil</option>
+                                <option value="Brake fluid">Brake fluid</option>
+                                <option value="Coolant">Coolant</option>
+                                <option value="Transmission oil">Transmission oil</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Quantity (L)</label>
+                            <input type="number" id="lubeQty" step="0.1" min="0" value="0" placeholder="2.0">
+                        </div>
+                        <div class="field">
+                            <label>Total cost (R)</label>
+                            <input type="number" id="lubeCost" step="0.01" min="0" value="0" placeholder="450.00">
+                        </div>
+                    </div>
+                    <div style="margin-top:0.8rem;">
+                        <textarea id="lubeNotes" rows="2" placeholder="Additional notes about lubrication..." style="width:100%;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Cost Center & Department -->
+                <div class="form-grid-2">
+                    <div class="field">
+                        <label><i class="fas fa-building"></i>Cost center *</label>
+                        <select id="costCenter" required>
+                            <option value="">Select</option>
+                            <option value="Onpoint Group HQ">Onpoint Group HQ</option>
+                            <option value="DI Solutions">DI Solutions</option>
+                            <option value="Aqua Telecoms">Aqua Telecoms</option>
+                            <option value="Nkanyezi Projects">Nkanyezi Projects</option>
+                            <option value="Onpoint Ontime Solutions">Onpoint Ontime Solutions</option>
+                        </select>
+                        <button type="button" class="add-btn" style="margin-top:8px;" onclick="addNewOption('costCenter')">
+                            <i class="fas fa-plus"></i> Add Cost Center
+                        </button>
+
+                    </div>
+                    <div class="field">
+                        <label><i class="fas fa-users"></i>Department *</label>
+                        <select id="department" required>
+                            <option value="">Select</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Business Development">Business Development</option>
+                            <option value="Finance & IT">Finance & IT</option>
+                            <option value="Fleet Management">Fleet Management</option>
+                            <option value="HR">HR</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Procurements">Procurements</option>
+                            <option value="Sales">Sales</option>
+                            <option value="SHEQ">SHEQ</option>
+                            <option value="Tendering">Tendering</option>
+                            <option value="Warehouse">Warehouse</option>
+                        </select>
+                        <button type="button" class="add-btn" style="margin-top:8px;" onclick="addNewOption('department')">
+                            <i class="fas fa-plus"></i> Add Department
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- Toll Gates Dynamic Section -->
+                <div class="cost-section">
+                    <div class="section-title"><i class="fas fa-road"></i> TOLL GATE COSTS</div>
+                    <div id="tollContainer"></div>
+                    <button type="button" class="add-btn" id="addTollBtn">
+                        <i class="fas fa-plus"></i> Add toll gate
                     </button>
-                    <button class="btn btn-primary" onclick="generatePDF()">
-                        <i class="fas fa-file-pdf"></i> PDF Report
+                </div>
+
+                <!-- Receipt Upload Section -->
+                <div class="cost-section">
+                    <div class="section-title"><i class="fas fa-receipt"></i> RECEIPT PHOTO / UPLOAD</div>
+                    <div class="field">
+                        <label><i class="fas fa-camera"></i>Upload or take receipt picture</label>
+                        <input type="file" id="receiptPhoto" accept="image/*,application/pdf" capture="environment">
+                        <small style="color:#4a6f8a; font-weight:500; margin-top:0.3rem; display:block;">
+                            The receipt will be stored in Google Drive folder ID: 19GoN9yzz0ODP_F-4ffba_olb3cD0b0f4
+                        </small>
+                    </div>
+                    <div id="receiptPreview" class="receipt-preview" style="display:none;"></div>
+                </div>
+
+                <!-- GRAND TOTAL PANEL -->
+                <div class="totals-panel" id="totalsPanel">
+                    <div class="total-item">
+                        <span class="total-label">km travelled</span>
+                        <div class="total-value" id="kmTraveled">0.0</div>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">km/liter</span>
+                        <div class="total-value" id="kmPerLiter">0.00</div>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">fuel cost</span>
+                        <div class="total-value" id="fuelCostTotal">R0</div>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">TOTAL PAID</span>
+                        <div class="total-value" id="grandTotalPaid">R0</div>
+                    </div>
+                </div>
+
+                <!-- hidden field for sheet ID -->
+                <input type="hidden" id="sheetId" value="1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ">
+                
+                <!-- Action Buttons -->
+                <div class="action-bar">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-cloud-upload-alt"></i> SUBMIT
+                    </button>
+                    <button type="button" class="btn" id="pdfDownloadBtn">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button type="button" class="btn" id="emailPdfBtn">
+                        <i class="fas fa-envelope"></i> EMAIL
                     </button>
                 </div>
+                <div id="submitResponse" class="response-message"></div>
+            </form>
+        </div>
+
+        <!-- RIGHT PANEL: SUMMARY & PREVIEW -->
+        <div class="card">
+            <h3 style="color:#0f3348; margin-bottom:1.2rem; font-size:1.2rem;">
+                <i class="fas fa-chart-pie"></i> TRIP SUMMARY
+            </h3>
+            <div class="summary-stats">
+                <div class="summary-item">
+                    <span class="summary-label"><i class="fas fa-gas-pump"></i> Efficiency:</span>
+                    <span class="summary-value" id="summaryEfficiency">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label"><i class="fas fa-wrench"></i> Lube cost:</span>
+                    <span class="summary-value" id="summaryLube">R0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label"><i class="fas fa-road"></i> Toll total:</span>
+                    <span class="summary-value" id="summaryToll">R0.00</span>
+                </div>
+                <div style="border-top: 2px solid #cbdbe9; margin: 0.5rem 0;"></div>
+                <div class="summary-item">
+                    <span class="summary-label" style="font-size:1.1rem;">TOTAL:</span>
+                    <span class="total-highlight" id="summaryTotal">R0.00</span>
+                </div>
             </div>
-            <div class="table-container">
-                <table id="fuelTable">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Driver</th>
-                            <th>Vehicle</th>
-                            <th>ER Number</th>
-                            <th>Merchant</th>
-                            <th>Odo Start</th>
-                            <th>Odo Finish</th>
-                            <th>Distance (km)</th>
-                            <th>Fuel Type</th>
-                            <th>Price/L</th>
-                            <th>Liters</th>
-                            <th>Fuel Total</th>
-                            <th>Lubrication</th>
-                            <th>Lube Cost</th>
-                            <th>Tolls</th>
-                            <th>Toll Total</th>
-                            <th>Grand Total</th>
-                            <th>km/L</th>
-                            <th>Cost Center</th>
-                            <th>Department</th>
-                            <th>Notes</th>
-                            <th>Submission ID</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr>
-                            <td colspan="23" style="text-align: center; padding: 50px;">
-                                <i class="fas fa-spinner fa-pulse"></i> Loading data...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="footer-img">
+                <svg viewBox="0 0 200 60" width="100%" height="auto">
+                    <rect width="200" height="60" fill="#f0f7fe" rx="10"/>
+                    <text x="20" y="25" font-size="12" fill="#0f3348">Onpoint Group</text>
+                    <text x="20" y="45" font-size="10" fill="#4a6f8a">Fleet Management System</text>
+                    <text x="150" y="40" font-size="20" fill="#7aa7c9">⛽</text>
+                </svg>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuration - CORRECTED WITH YOUR ACTUAL APPS SCRIPT URL
-        const CONFIG = {
-            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyAwqU6c-R_fWYiccaeHuPNxgfFpvEJKEEgqm0fgF8j1qPwtbf8pywOq1_ul0t5iaXvRg/exec',
-            SHEET_ID: '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ',
-            SHEET_NAME: 'Fuel Log',
-            DRIVE_FOLDER_ID: '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM'
-        };
+        (function() {
+            // DOM elements
+            const odoStart = document.getElementById('odoStart');
+            const odoFinish = document.getElementById('odoFinish');
+            const fuelLiters = document.getElementById('fuelLiters');
+            const pricePerLiter = document.getElementById('pricePerLiter');
+            const lubeCost = document.getElementById('lubeCost');
+            const fuelTotalDisplay = document.getElementById('fuelTotalDisplay');
+            const kmTraveledSpan = document.getElementById('kmTraveled');
+            const kmPerLiterSpan = document.getElementById('kmPerLiter');
+            const fuelCostTotalSpan = document.getElementById('fuelCostTotal');
+            const grandTotalSpan = document.getElementById('grandTotalPaid');
+            const summaryLube = document.getElementById('summaryLube');
+            const summaryToll = document.getElementById('summaryToll');
+            const summaryTotal = document.getElementById('summaryTotal');
+            const summaryEfficiency = document.getElementById('summaryEfficiency');
+            const tollContainer = document.getElementById('tollContainer');
+            const addTollBtn = document.getElementById('addTollBtn');
+            const receiptPhoto = document.getElementById('receiptPhoto');
+            const receiptPreview = document.getElementById('receiptPreview');
+            const receiptDriveFolderId = '19GoN9yzz0ODP_F-4ffba_olb3cD0b0f4';
+            let receiptFileData = null;
+            let uploadedReceiptLink = '';
+            
+            let tollEntries = [];
 
-        // Global variables
-        let allEntries = [];
-        let filteredEntries = [];
-        let fuelTrendChart, fuelCostChart;
-        let fuelLimits = {
-            monthlyBudget: 50000,
-            kmPerLiter: 8,
-            maxFuelPrice: 25,
-            monthlyVolume: 2000
-        };
+            const vehicleRegSelect = document.getElementById('vehicleReg');
+            const odoAutoFillNote = document.getElementById('odoAutoFillNote');
+            const ODO_MEMORY_KEY = 'onpointFuelLastOdoFinishByVehicle';
 
-        // Initialize
-        window.onload = function() {
-            checkAuth();
-            setDefaultDates();
-            loadFuelEntries();
-        };
-
-        function checkAuth() {
-            const user = localStorage.getItem('currentUser');
-            if (user) {
+            function getOdoMemory() {
                 try {
-                    const userData = JSON.parse(user);
-                    document.getElementById('userAvatar').textContent = (userData.FullName || 'U').charAt(0).toUpperCase();
-                    document.getElementById('userNameDisplay').textContent = userData.FullName || 'User';
-                } catch (e) {
-                    console.log('Using default user');
+                    return JSON.parse(localStorage.getItem(ODO_MEMORY_KEY) || '{}');
+                } catch (error) {
+                    return {};
                 }
             }
-        }
 
-        function logout() {
-            localStorage.removeItem('currentUser');
-            showNotification('Logging out...', 'info');
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1500);
-        }
+            function saveLastOdoFinish(vehicle, finishValue) {
+                const reg = String(vehicle || '').trim();
+                const finish = parseFloat(finishValue);
 
-        function setDefaultDates() {
-            const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-            
-            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
-            document.getElementById('endDate').value = lastDay.toISOString().split('T')[0];
-        }
+                if (!reg || isNaN(finish) || finish <= 0) return;
 
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            const icon = document.getElementById('notificationIcon');
-            const messageEl = document.getElementById('notificationMessage');
-            
-            icon.className = type === 'success' ? 'fas fa-check-circle' : 
-                            type === 'error' ? 'fas fa-exclamation-circle' : 
-                            type === 'warning' ? 'fas fa-exclamation-triangle' :
-                            'fas fa-info-circle';
-            
-            notification.className = `notification ${type}`;
-            messageEl.textContent = message;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-
-        function setLoading(show) {
-            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
-        }
-
-        function updateSyncStatus(status) {
-            const syncEl = document.getElementById('syncStatus');
-            if (status === 'online') {
-                syncEl.className = 'sync-status online';
-                syncEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> <span>Connected</span>';
-            } else {
-                syncEl.className = 'sync-status offline';
-                syncEl.innerHTML = '<i class="fas fa-cloud-offline"></i> <span>Offline - Using Demo Data</span>';
+                const memory = getOdoMemory();
+                memory[reg] = finish;
+                localStorage.setItem(ODO_MEMORY_KEY, JSON.stringify(memory));
             }
-        }
 
-        function formatCurrency(amount) {
-            return 'R ' + Number(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
+            function autoFillOdoStartForVehicle() {
+                if (!vehicleRegSelect || !odoStart) return;
 
-        function formatNumber(number) {
-            return Number(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
+                const reg = String(vehicleRegSelect.value || '').trim();
+                const memory = getOdoMemory();
+                const savedFinish = memory[reg];
 
-        // Generate demo data matching the 24-column structure
-        function generateDemoData() {
-            const vehicles = ['Toyota Hilux - ABC123', 'Nissan NP300 - XYZ789', 'Ford Ranger - DEF456', 'Isuzu KB - GHI789'];
-            const drivers = ['John Smith', 'Mike Johnson', 'Sarah Williams', 'David Brown'];
-            const fuelTypes = ['Petrol', 'Diesel'];
-            const merchants = ['Shell', 'Engen', 'Sasol', 'BP', 'Caltex'];
-            const costCenters = ['Onpoint Group HQ', 'DI Solutions', 'Aqua Telecoms', 'Nkanyezi Projects'];
-            const departments = ['Fleet Management', 'Operations', 'Logistics', 'Procurement'];
-            
-            const entries = [];
-            const today = new Date();
-            
-            for (let i = 0; i < 50; i++) {
-                const date = new Date(today);
-                date.setDate(date.getDate() - i);
-                const start = 50000 + Math.floor(Math.random() * 1000);
-                const distance = Math.floor(Math.random() * 300) + 50;
-                const finish = start + distance;
-                const liters = (distance / (Math.random() * 3 + 7)).toFixed(2);
-                const price = (Math.random() * 5 + 20).toFixed(2);
-                const fuelTotal = parseFloat(price) * parseFloat(liters);
-                const lubeCost = Math.random() * 200;
-                const tollTotal = Math.random() * 100;
-                const grandTotal = fuelTotal + lubeCost + tollTotal;
-                const kmPerLiter = (distance / liters).toFixed(2);
-                
-                entries.push({
-                    Date: date.toISOString().split('T')[0],
-                    Driver: drivers[Math.floor(Math.random() * drivers.length)],
-                    Vehicle: vehicles[Math.floor(Math.random() * vehicles.length)],
-                    ERNumber: 'ER' + Math.floor(Math.random() * 10000),
-                    Merchant: merchants[Math.floor(Math.random() * merchants.length)],
-                    OdoStart: start,
-                    OdoFinish: finish,
-                    Distance: distance,
-                    FuelType: fuelTypes[Math.floor(Math.random() * fuelTypes.length)],
-                    PricePerLiter: parseFloat(price),
-                    Liters: parseFloat(liters),
-                    FuelTotal: fuelTotal,
-                    Lubrication: 'Engine Oil - ' + (Math.random() * 5).toFixed(1) + 'L',
-                    LubeCost: lubeCost,
-                    Tolls: 'N3:R' + tollTotal.toFixed(2),
-                    TollTotal: tollTotal,
-                    GrandTotal: grandTotal,
-                    KmPerLiter: parseFloat(kmPerLiter),
-                    CostCenter: costCenters[Math.floor(Math.random() * costCenters.length)],
-                    Department: departments[Math.floor(Math.random() * departments.length)],
-                    Notes: 'Regular refuel',
-                    SubmissionID: 'FUEL-' + Date.now().toString(36).toUpperCase() + i,
-                    Status: 'Completed'
+                if (reg && savedFinish !== undefined && savedFinish !== null && savedFinish !== '') {
+                    odoStart.value = savedFinish;
+                    if (odoAutoFillNote) {
+                        odoAutoFillNote.innerHTML = `<i class="fas fa-sync-alt"></i> Odo start auto-filled from previous Odo finish: ${savedFinish}`;
+                    }
+                    updateTotals();
+                } else if (odoAutoFillNote) {
+                    odoAutoFillNote.innerHTML = '';
+                }
+            }
+
+            if (vehicleRegSelect) {
+                vehicleRegSelect.addEventListener('change', autoFillOdoStartForVehicle);
+            }
+
+            if (odoFinish) {
+                odoFinish.addEventListener('blur', function() {
+                    if (vehicleRegSelect && vehicleRegSelect.value) {
+                        saveLastOdoFinish(vehicleRegSelect.value, this.value);
+                    }
                 });
             }
-            return entries;
-        }
 
-        // Load fuel entries from Google Sheets
-        async function loadFuelEntries() {
-            setLoading(true);
-            try {
-                // Use the correct Apps Script URL with action parameter
-                const url = `${CONFIG.GOOGLE_SCRIPT_URL}?action=getEntries&sheetId=${CONFIG.SHEET_ID}&sheetName=${CONFIG.SHEET_NAME}`;
-                
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.success && data.data) {
-                    // Map the data from Google Sheets to match our internal structure
-                    // The data should come in the same 24-column format as your Apps Script
-                    allEntries = data.data.map(entry => {
-                        // Create a standardized entry object
-                        return {
-                            Date: entry.Date || entry[1] || '',
-                            Driver: entry.Driver || entry[2] || '',
-                            Vehicle: entry.Vehicle || entry[3] || '',
-                            ERNumber: entry.ERNumber || entry['ER Number'] || entry[4] || '',
-                            Merchant: entry.Merchant || entry[5] || '',
-                            OdoStart: parseFloat(entry.OdoStart || entry['Odo Start'] || entry[6] || 0),
-                            OdoFinish: parseFloat(entry.OdoFinish || entry['Odo Finish'] || entry[7] || 0),
-                            Distance: parseFloat(entry.KMTraveled || entry['KM Traveled'] || entry[20] || 0),
-                            FuelType: entry.FuelType || entry['Fuel Type'] || entry[8] || '',
-                            PricePerLiter: parseFloat(entry.PricePerLiter || entry['Price/L'] || entry[9] || 0),
-                            Liters: parseFloat(entry.Liters || entry[10] || 0),
-                            FuelTotal: parseFloat(entry.FuelTotal || entry['Fuel Total'] || entry[11] || 0),
-                            Lubrication: entry.Lubrication || entry[12] || '',
-                            LubeCost: parseFloat(entry.LubeCost || entry['Lube Cost'] || entry[13] || 0),
-                            Tolls: entry.Tolls || entry[14] || '',
-                            TollTotal: parseFloat(entry.TollTotal || entry['Toll Total'] || entry[15] || 0),
-                            GrandTotal: parseFloat(entry.GrandTotal || entry['Grand Total'] || entry[16] || 0),
-                            KmPerLiter: parseFloat(entry.KmPerLiter || entry['KM/Liter'] || entry[21] || 0),
-                            CostCenter: entry.CostCenter || entry['Cost Center'] || entry[17] || '',
-                            Department: entry.Department || entry[18] || '',
-                            Notes: entry.Notes || entry[19] || '',
-                            SubmissionID: entry.SubmissionID || entry['Submission ID'] || entry[22] || '',
-                            Status: entry.Status || entry[23] || 'Completed'
+
+            const erNumberInput = document.getElementById('erNumber');
+
+            function getFormattedErNumber(showWarning = false) {
+                let rawValue = (erNumberInput.value || '').toUpperCase().replace(/^ER-?/, '');
+                let digitsOnly = rawValue.replace(/\D/g, '');
+
+                if (showWarning && digitsOnly.length !== 5) {
+                    alert('Please double check ER No. It should normally be ER- followed by 5 digits.');
+                }
+
+                digitsOnly = digitsOnly.slice(0, 5);
+                return 'ER-' + digitsOnly.padStart(5, '0');
+            }
+
+            function keepErPrefix() {
+                let digitsOnly = (erNumberInput.value || '').replace(/^ER-?/i, '').replace(/\D/g, '');
+                erNumberInput.value = 'ER-' + digitsOnly;
+            }
+
+            if (erNumberInput) {
+                erNumberInput.addEventListener('focus', keepErPrefix);
+                erNumberInput.addEventListener('input', keepErPrefix);
+                erNumberInput.addEventListener('blur', function() {
+                    if ((this.value || '').replace(/^ER-?/i, '').replace(/\D/g, '').length > 0) {
+                        this.value = getFormattedErNumber(false);
+                    } else {
+                        this.value = 'ER-';
+                    }
+                });
+            }
+
+
+
+            function fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            if (receiptPhoto) {
+                receiptPhoto.addEventListener('change', async function() {
+                    const file = this.files && this.files[0];
+                    uploadedReceiptLink = '';
+                    receiptFileData = null;
+
+                    if (!file) {
+                        receiptPreview.style.display = 'none';
+                        receiptPreview.innerHTML = '';
+                        return;
+                    }
+
+                    receiptPreview.style.display = 'block';
+                    receiptPreview.innerHTML = `<i class="fas fa-paperclip"></i> Selected: ${file.name}`;
+
+                    try {
+                        receiptFileData = {
+                            fileName: file.name,
+                            mimeType: file.type || 'application/octet-stream',
+                            folderId: receiptDriveFolderId,
+                            data: await fileToBase64(file)
                         };
-                    });
-                    
-                    filteredEntries = [...allEntries];
-                    document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
-                    
-                    populateFilters();
-                    updateDashboard();
-                    updateSyncStatus('online');
-                    showNotification(`Loaded ${allEntries.length} fuel entries from Google Sheets`, 'success');
-                } else {
-                    throw new Error(data.error || 'No data received');
-                }
-            } catch (error) {
-                console.error('Error loading fuel entries:', error);
-                showNotification('Using demo data - ' + error.message, 'info');
-                updateSyncStatus('offline');
-                
-                // Use demo data for testing
-                allEntries = generateDemoData();
-                filteredEntries = [...allEntries];
-                document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries (Demo)`;
-                populateFilters();
-                updateDashboard();
-            } finally {
-                setLoading(false);
+                    } catch (error) {
+                        console.error('Receipt read error:', error);
+                        receiptFileData = null;
+                        receiptPreview.innerHTML = 'Could not read receipt file. Please try again.';
+                    }
+                });
             }
-        }
 
-        // Populate filter dropdowns from actual data
-        function populateFilters() {
-            const merchants = [...new Set(allEntries.map(e => e.Merchant).filter(m => m))];
-            const costCenters = [...new Set(allEntries.map(e => e.CostCenter).filter(cc => cc))];
-            const departments = [...new Set(allEntries.map(e => e.Department).filter(d => d))];
-            const fuelTypes = [...new Set(allEntries.map(e => e.FuelType).filter(f => f))];
-            
-            const merchantFilter = document.getElementById('merchantFilter');
-            const costFilter = document.getElementById('costCenterFilter');
-            const deptFilter = document.getElementById('departmentFilter');
-            const fuelFilter = document.getElementById('fuelTypeFilter');
-            
-            // Clear existing options except 'all'
-            merchantFilter.innerHTML = '<option value="all">All Merchants</option>';
-            costFilter.innerHTML = '<option value="all">All Cost Centers</option>';
-            deptFilter.innerHTML = '<option value="all">All Departments</option>';
-            fuelFilter.innerHTML = '<option value="all">All Types</option>';
-            
-            merchants.forEach(m => {
-                merchantFilter.innerHTML += `<option value="${m}">${m}</option>`;
-            });
-            
-            costCenters.forEach(cc => {
-                costFilter.innerHTML += `<option value="${cc}">${cc}</option>`;
-            });
-            
-            departments.forEach(d => {
-                deptFilter.innerHTML += `<option value="${d}">${d}</option>`;
-            });
-            
-            fuelTypes.forEach(f => {
-                fuelFilter.innerHTML += `<option value="${f}">${f}</option>`;
-            });
-        }
+            // Set today's date
+            document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
 
-        // Apply filters to data
-        function applyFilters() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const driver = document.getElementById('driverFilter').value.toLowerCase().trim();
-            const vehicle = document.getElementById('vehicleFilter').value.toLowerCase().trim();
-            const erNumber = document.getElementById('erNumberFilter').value.toLowerCase().trim();
-            const merchant = document.getElementById('merchantFilter').value;
-            const costCenter = document.getElementById('costCenterFilter').value;
-            const department = document.getElementById('departmentFilter').value;
-            const fuelType = document.getElementById('fuelTypeFilter').value;
-            
-            filteredEntries = allEntries.filter(entry => {
-                // Date filtering
-                let matchesDate = true;
-                if (startDate && endDate) {
-                    const entryDate = entry.Date;
-                    matchesDate = entryDate >= startDate && entryDate <= endDate;
-                }
+            // Update all calculations
+            function updateTotals() {
+                const start = parseFloat(odoStart.value) || 0;
+                const finish = parseFloat(odoFinish.value) || 0;
+                const liters = parseFloat(fuelLiters.value) || 0;
+                const price = parseFloat(pricePerLiter.value) || 0;
+                const lube = parseFloat(lubeCost.value) || 0;
                 
-                // Driver filtering
-                let matchesDriver = true;
-                if (driver) {
-                    const entryDriver = (entry.Driver || '').toLowerCase();
-                    matchesDriver = entryDriver.includes(driver);
-                }
+                // Fuel total
+                const fuelTotal = liters * price;
+                fuelTotalDisplay.innerText = fuelTotal.toFixed(2);
                 
-                // Vehicle filtering
-                let matchesVehicle = true;
-                if (vehicle) {
-                    const entryVehicle = (entry.Vehicle || '').toLowerCase();
-                    matchesVehicle = entryVehicle.includes(vehicle);
-                }
+                // KM travelled
+                const km = (finish > start) ? finish - start : 0;
+                kmTraveledSpan.innerText = km.toFixed(1);
                 
-                // ER Number filtering
-                let matchesER = true;
-                if (erNumber) {
-                    const entryER = (entry.ERNumber || '').toLowerCase();
-                    matchesER = entryER.includes(erNumber);
-                }
+                // KM per liter
+                const kmPerL = (liters > 0 && km > 0) ? km / liters : 0;
+                kmPerLiterSpan.innerText = kmPerL.toFixed(2);
+                summaryEfficiency.innerText = kmPerL.toFixed(2) + ' km/L';
                 
-                const matchesMerchant = merchant === 'all' || !merchant || entry.Merchant === merchant;
-                const matchesCost = costCenter === 'all' || !costCenter || entry.CostCenter === costCenter;
-                const matchesDept = department === 'all' || !department || entry.Department === department;
-                const matchesFuel = fuelType === 'all' || !fuelType || entry.FuelType === fuelType;
+                // Fuel cost total display
+                fuelCostTotalSpan.innerText = 'R' + fuelTotal.toFixed(2);
                 
-                return matchesDate && matchesDriver && matchesVehicle && matchesER && matchesMerchant && matchesCost && matchesDept && matchesFuel;
-            });
-            
-            document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
-            updateDashboard();
-            showNotification(`Found ${filteredEntries.length} entries`, 'success');
-        }
+                // Toll total
+                const tollTotal = tollEntries.reduce((sum, entry) => sum + (parseFloat(entry.cost) || 0), 0);
+                summaryToll.innerText = 'R' + tollTotal.toFixed(2);
+                
+                // Grand total (fuel + lube + toll)
+                const grandTotal = fuelTotal + lube + tollTotal;
+                grandTotalSpan.innerText = 'R' + grandTotal.toFixed(2);
+                summaryLube.innerText = 'R' + lube.toFixed(2);
+                summaryTotal.innerText = 'R' + grandTotal.toFixed(2);
+            }
 
-        function resetFilters() {
-            setDefaultDates();
-            document.getElementById('driverFilter').value = '';
-            document.getElementById('vehicleFilter').value = '';
-            document.getElementById('erNumberFilter').value = '';
-            document.getElementById('merchantFilter').value = 'all';
-            document.getElementById('costCenterFilter').value = 'all';
-            document.getElementById('departmentFilter').value = 'all';
-            document.getElementById('fuelTypeFilter').value = 'all';
-            
-            filteredEntries = [...allEntries];
-            document.getElementById('filterCount').textContent = `Showing ${filteredEntries.length} entries`;
-            updateDashboard();
-            showNotification('Filters reset', 'info');
-        }
-
-        function refreshData() {
-            loadFuelEntries();
-        }
-
-        // Check limits against actual data
-        async function checkLimits() {
-            setLoading(true);
-            try {
-                const now = new Date();
-                const currentMonth = now.getMonth();
-                const currentYear = now.getFullYear();
+            // Add toll gate entry
+            function addTollRow(tollData = { name: '', cost: 0 }) {
+                const index = tollEntries.length;
+                const div = document.createElement('div');
+                div.className = 'toll-entry';
+                div.setAttribute('data-index', index);
+                div.innerHTML = `
+                    <input type="text" placeholder="Toll name (e.g. N3)" class="toll-name" value="${tollData.name}">
+                    <input type="number" step="0.01" placeholder="Cost (R)" class="toll-cost" value="${tollData.cost}">
+                    <button type="button" class="remove-toll"><i class="fas fa-trash"></i> Remove</button>
+                `;
                 
-                const monthEntries = allEntries.filter(e => {
-                    const entryDate = new Date(e.Date);
-                    return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
+                tollContainer.appendChild(div);
+                tollEntries.push({ name: tollData.name, cost: parseFloat(tollData.cost) || 0 });
+                
+                // Add event listeners to new inputs
+                attachTollListeners(div, index);
+                updateTotals();
+            }
+
+            function attachTollListeners(div, index) {
+                const nameInput = div.querySelector('.toll-name');
+                const costInput = div.querySelector('.toll-cost');
+                const removeBtn = div.querySelector('.remove-toll');
+                
+                nameInput.addEventListener('input', function() {
+                    tollEntries[index].name = this.value;
+                    updateTotals();
                 });
                 
-                const monthlyTotal = monthEntries.reduce((sum, e) => sum + (e.GrandTotal || 0), 0);
-                const monthlyVolume = monthEntries.reduce((sum, e) => sum + (e.Liters || 0), 0);
-                const totalDistance = monthEntries.reduce((sum, e) => sum + (e.Distance || 0), 0);
-                const avgKmPerLiter = monthlyVolume > 0 ? totalDistance / monthlyVolume : 0;
+                costInput.addEventListener('input', function() {
+                    tollEntries[index].cost = parseFloat(this.value) || 0;
+                    updateTotals();
+                });
                 
-                const issues = [];
-                
-                if (monthlyTotal > fuelLimits.monthlyBudget) {
-                    issues.push({
-                        message: `Monthly budget exceeded: ${formatCurrency(monthlyTotal)} > ${formatCurrency(fuelLimits.monthlyBudget)}`
+                removeBtn.addEventListener('click', function() {
+                    div.remove();
+                    tollEntries.splice(index, 1);
+                    // Re-index remaining entries
+                    const remainingDivs = document.querySelectorAll('.toll-entry');
+                    remainingDivs.forEach((el, i) => {
+                        el.setAttribute('data-index', i);
+                        // Re-attach listeners with new indices
+                        const nameIn = el.querySelector('.toll-name');
+                        const costIn = el.querySelector('.toll-cost');
+                        const remove = el.querySelector('.remove-toll');
+                        
+                        // Remove old listeners by cloning and replacing
+                        const newNameIn = nameIn.cloneNode(true);
+                        const newCostIn = costIn.cloneNode(true);
+                        const newRemove = remove.cloneNode(true);
+                        
+                        nameIn.parentNode.replaceChild(newNameIn, nameIn);
+                        costIn.parentNode.replaceChild(newCostIn, costIn);
+                        remove.parentNode.replaceChild(newRemove, remove);
+                        
+                        // Add new listeners
+                        newNameIn.addEventListener('input', function() {
+                            tollEntries[i].name = this.value;
+                            updateTotals();
+                        });
+                        
+                        newCostIn.addEventListener('input', function() {
+                            tollEntries[i].cost = parseFloat(this.value) || 0;
+                            updateTotals();
+                        });
+                        
+                        newRemove.addEventListener('click', function() {
+                            el.remove();
+                            tollEntries.splice(i, 1);
+                            // After removal, re-index all remaining entries
+                            const updatedDivs = document.querySelectorAll('.toll-entry');
+                            updatedDivs.forEach((updatedEl, updatedIdx) => {
+                                updatedEl.setAttribute('data-index', updatedIdx);
+                                // Re-attach listeners recursively
+                                attachTollListeners(updatedEl, updatedIdx);
+                            });
+                            updateTotals();
+                        });
                     });
+                    updateTotals();
+                });
+            }
+
+            addTollBtn.addEventListener('click', () => addTollRow());
+
+            // Add listeners for calculation
+            [odoStart, odoFinish, fuelLiters, pricePerLiter, lubeCost].forEach(el => 
+                el.addEventListener('input', updateTotals)
+            );
+
+            // Initial update
+            updateTotals();
+            setTimeout(autoFillOdoStartForVehicle, 0);
+
+            // Submit to Google Sheets
+            document.getElementById('fuelForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Gather all data
+                const driver = document.getElementById('driverName').value;
+                const date = document.getElementById('logDate').value;
+                const vehicle = document.getElementById('vehicleReg').value;
+                const erNumber = getFormattedErNumber(true);
+                const merchant = document.getElementById('merchant').value;
+                const start = parseFloat(odoStart.value);
+                const finish = parseFloat(odoFinish.value);
+                const fuelType = document.getElementById('fuelType').value;
+                const price = parseFloat(pricePerLiter.value);
+                const liters = parseFloat(fuelLiters.value);
+                
+                // Validation
+                if (!driver || !date || !vehicle || !fuelType || !merchant || !document.getElementById('costCenter').value || !document.getElementById('department').value) {
+                    showMessage('Please fill all required fields (*)', 'error');
+                    return;
                 }
                 
-                if (monthlyVolume > fuelLimits.monthlyVolume) {
-                    issues.push({
-                        message: `Monthly volume exceeded: ${formatNumber(monthlyVolume)}L > ${fuelLimits.monthlyVolume}L`
-                    });
+                if (finish <= start) {
+                    showMessage('Odometer finish must be greater than start', 'error');
+                    return;
                 }
                 
-                if (avgKmPerLiter < fuelLimits.kmPerLiter && avgKmPerLiter > 0) {
-                    issues.push({
-                        message: `Low fuel efficiency: ${avgKmPerLiter.toFixed(2)} km/L < ${fuelLimits.kmPerLiter} km/L`
-                    });
+                if (isNaN(price) || price <= 0) {
+                    showMessage('Please enter a valid price per liter', 'error');
+                    return;
                 }
                 
-                const result = {
-                    current: {
-                        monthlyTotal: monthlyTotal,
-                        monthlyVolume: monthlyVolume,
-                        avgKmPerLiter: avgKmPerLiter
-                    },
-                    limits: fuelLimits,
-                    issues: issues,
-                    hasIssues: issues.length > 0,
-                    summary: issues.length > 0 ? `${issues.length} limit issue(s) detected` : 'All limits OK'
+                if (isNaN(liters) || liters <= 0) {
+                    showMessage('Please enter a valid fuel amount', 'error');
+                    return;
+                }
+                
+                const fuelTotal = liters * price;
+                const lubeType = document.getElementById('lubeType').value;
+                const lubeQty = parseFloat(document.getElementById('lubeQty').value) || 0;
+                const lubeTotal = parseFloat(lubeCost.value) || 0;
+                const lubeNotes = document.getElementById('lubeNotes').value;
+                
+                // Toll data
+                const tolls = tollEntries.map(t => `${t.name}:R${t.cost.toFixed(2)}`).join('; ');
+                const tollTotal = tollEntries.reduce((sum, t) => sum + t.cost, 0);
+                
+                const km = finish - start;
+                const kmPerL = liters > 0 ? km / liters : 0;
+                const grandTotal = fuelTotal + lubeTotal + tollTotal;
+                
+                // Build lubrication string
+                let lubricationStr = '';
+                if (lubeType && lubeQty > 0) {
+                    lubricationStr = `${lubeType} - ${lubeQty}L`;
+                }
+                if (lubeNotes) {
+                    lubricationStr += (lubricationStr ? ' | ' : '') + lubeNotes;
+                }
+                
+                const payload = {
+                    timestamp: new Date().toISOString(),
+                    date: date,
+                    driver: driver,
+                    vehicle: vehicle,
+                    erNumber: erNumber,
+                    merchant: merchant,
+                    odoStart: start,
+                    odoFinish: finish,
+                    fuelType: fuelType,
+                    pricePerLiter: price,
+                    fuelLiters: liters,
+                    fuelTotal: fuelTotal,
+                    lubrication: lubricationStr || 'None',
+                    lubeCost: lubeTotal,
+                    tolls: tolls || 'None',
+                    tollTotal: tollTotal,
+                    grandTotal: grandTotal,
+                    costCenter: document.getElementById('costCenter').value,
+                    department: document.getElementById('department').value,
+                    notes: lubeNotes,
+                    kmTraveled: km,
+                    kmPerLiter: kmPerL,
+                    receiptFolderId: receiptDriveFolderId,
+                    receiptFile: receiptFileData,
+                    photoLink: uploadedReceiptLink
                 };
                 
-                if (result.hasIssues) {
-                    showNotification('⚠️ ' + result.summary, 'warning');
-                    showLimitAlert(result);
-                } else {
-                    showNotification('✅ All limits are within acceptable range', 'success');
-                    document.getElementById('limitAlert').classList.remove('show');
-                }
-            } catch (error) {
-                console.error('Error checking limits:', error);
-                showNotification('Error checking limits: ' + error.message, 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        function showLimitAlert(data) {
-            const alert = document.getElementById('limitAlert');
-            const content = document.getElementById('alertContent');
-            
-            const percentOfBudget = (data.current.monthlyTotal / data.limits.monthlyBudget) * 100;
-            
-            let issuesHtml = '';
-            data.issues.forEach(issue => {
-                issuesHtml += `<div class="alert-item"><small>⚠️ ${issue.message}</small></div>`;
-            });
-            
-            content.innerHTML = `
-                <div class="alert-item">
-                    <div class="alert-label">Monthly Spend</div>
-                    <div class="alert-value">${formatCurrency(data.current.monthlyTotal)} / ${formatCurrency(data.limits.monthlyBudget)}</div>
-                    <div class="alert-progress">
-                        <div class="alert-progress-bar" style="width: ${Math.min(percentOfBudget, 100)}%"></div>
-                    </div>
-                </div>
-                <div class="alert-item">
-                    <div class="alert-label">Volume Used</div>
-                    <div class="alert-value">${formatNumber(data.current.monthlyVolume)}L / ${data.limits.monthlyVolume}L</div>
-                </div>
-                <div class="alert-item">
-                    <div class="alert-label">Efficiency</div>
-                    <div class="alert-value">${data.current.avgKmPerLiter.toFixed(2)} km/L</div>
-                </div>
-                ${issuesHtml}
-            `;
-            
-            alert.classList.add('show');
-        }
-
-        function updateDashboard() {
-            updateKPIs();
-            updateCharts();
-            renderTable();
-        }
-
-        function updateKPIs() {
-            const totalFuel = filteredEntries.reduce((sum, e) => sum + (e.FuelTotal || 0), 0);
-            const totalLube = filteredEntries.reduce((sum, e) => sum + (e.LubeCost || 0), 0);
-            const totalToll = filteredEntries.reduce((sum, e) => sum + (e.TollTotal || 0), 0);
-            const totalGrand = filteredEntries.reduce((sum, e) => sum + (e.GrandTotal || 0), 0);
-            const totalVolume = filteredEntries.reduce((sum, e) => sum + (e.Liters || 0), 0);
-            const totalDistance = filteredEntries.reduce((sum, e) => sum + (e.Distance || 0), 0);
-            const avgEfficiency = totalVolume > 0 ? (totalDistance / totalVolume).toFixed(2) : 0;
-            
-            document.getElementById('kpiCards').innerHTML = `
-                <div class="kpi-card">
-                    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
-                    <div class="kpi-label">Total Fuel Cost</div>
-                    <div class="kpi-value">${formatCurrency(totalFuel)}</div>
-                    <div class="kpi-trend">${filteredEntries.length} entries</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-icon"><i class="fas fa-oil-can"></i></div>
-                    <div class="kpi-label">Total Lube Cost</div>
-                    <div class="kpi-value">${formatCurrency(totalLube)}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-icon"><i class="fas fa-road"></i></div>
-                    <div class="kpi-label">Total Distance</div>
-                    <div class="kpi-value">${formatNumber(totalDistance)} km</div>
-                </div>
-                <div class="kpi-card ${parseFloat(avgEfficiency) < fuelLimits.kmPerLiter && parseFloat(avgEfficiency) > 0 ? 'warning' : ''}">
-                    <div class="kpi-icon"><i class="fas fa-tachometer-alt"></i></div>
-                    <div class="kpi-label">Avg Efficiency</div>
-                    <div class="kpi-value">${avgEfficiency} km/L</div>
-                    <div class="kpi-trend">Target: ${fuelLimits.kmPerLiter} km/L</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
-                    <div class="kpi-label">Grand Total</div>
-                    <div class="kpi-value">${formatCurrency(totalGrand)}</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-icon"><i class="fas fa-gas-pump"></i></div>
-                    <div class="kpi-label">Total Volume</div>
-                    <div class="kpi-value">${formatNumber(totalVolume)} L</div>
-                </div>
-            `;
-        }
-
-        function updateCharts() {
-            // Fuel Trend Chart
-            const ctx1 = document.getElementById('fuelTrendChart').getContext('2d');
-            if (fuelTrendChart) fuelTrendChart.destroy();
-            
-            // Get last 30 days of data or all if less
-            const sorted = [...filteredEntries].sort((a, b) => new Date(a.Date) - new Date(b.Date));
-            const recent = sorted.slice(-30);
-            
-            const dates = recent.map(e => e.Date);
-            const fuelTotals = recent.map(e => e.FuelTotal || 0);
-            const volumes = recent.map(e => e.Liters || 0);
-
-            fuelTrendChart = new Chart(ctx1, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [
-                        {
-                            label: 'Fuel Cost (R)',
-                            data: fuelTotals,
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            tension: 0.4,
-                            fill: true,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: 'Volume (L)',
-                            data: volumes,
-                            borderColor: '#43e97b',
-                            backgroundColor: 'rgba(67, 233, 123, 0.1)',
-                            tension: 0.4,
-                            fill: true,
-                            yAxisID: 'y1'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            title: {
-                                display: true,
-                                text: 'Cost (R)'
-                            }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            title: {
-                                display: true,
-                                text: 'Volume (L)'
-                            },
-                            grid: {
-                                drawOnChartArea: false
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Fuel Cost by Vehicle
-            const ctx2 = document.getElementById('fuelCostChart').getContext('2d');
-            if (fuelCostChart) fuelCostChart.destroy();
-            
-            const vehicles = {};
-            filteredEntries.forEach(e => {
-                const vehicle = e.Vehicle || 'Unknown';
-                vehicles[vehicle] = (vehicles[vehicle] || 0) + (e.FuelTotal || 0);
-            });
-            
-            const vehicleLabels = Object.keys(vehicles).slice(0, 8);
-            const vehicleData = Object.values(vehicles).slice(0, 8);
-
-            fuelCostChart = new Chart(ctx2, {
-                type: 'bar',
-                data: {
-                    labels: vehicleLabels,
-                    datasets: [{
-                        label: 'Fuel Cost by Vehicle',
-                        data: vehicleData,
-                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return 'R ' + value.toLocaleString();
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-            
-            if (filteredEntries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="23" style="text-align: center; padding: 50px;">No fuel entries found</td></tr>';
-                return;
-            }
-            
-            filteredEntries.slice(0, 100).forEach(entry => {
-                const row = tbody.insertRow();
-                const efficiency = entry.KmPerLiter || 0;
+                // Use your actual Apps Script URL here
+                const scriptURL = 'https://script.google.com/macros/s/AKfycbyw_t8UqEa7dGWD3yQLuNzhXqRaDJcZWiD73pFpS3lAwugajoaj3IBeMW0UkQHjaMfN/exec';
                 
-                if (efficiency < fuelLimits.kmPerLiter && efficiency > 0) {
-                    row.classList.add('exceed-limit');
-                }
+                showMessage('<i class="fas fa-spinner fa-pulse"></i> Submitting' + (receiptFileData ? ' and uploading receipt...' : '...'), 'info');
                 
-                row.innerHTML = `
-                    <td>${entry.Date || ''}</td>
-                    <td>${entry.Driver || ''}</td>
-                    <td>${entry.Vehicle || ''}</td>
-                    <td>${entry.ERNumber || ''}</td>
-                    <td>${entry.Merchant || ''}</td>
-                    <td>${entry.OdoStart || ''}</td>
-                    <td>${entry.OdoFinish || ''}</td>
-                    <td>${entry.Distance ? entry.Distance.toFixed(1) : ''}</td>
-                    <td>${entry.FuelType || ''}</td>
-                    <td>R ${(entry.PricePerLiter || 0).toFixed(2)}</td>
-                    <td>${(entry.Liters || 0).toFixed(2)} L</td>
-                    <td>R ${(entry.FuelTotal || 0).toFixed(2)}</td>
-                    <td>${entry.Lubrication || ''}</td>
-                    <td>R ${(entry.LubeCost || 0).toFixed(2)}</td>
-                    <td>${entry.Tolls || ''}</td>
-                    <td>R ${(entry.TollTotal || 0).toFixed(2)}</td>
-                    <td><strong>R ${(entry.GrandTotal || 0).toFixed(2)}</strong></td>
-                    <td class="${efficiency >= fuelLimits.kmPerLiter ? 'fuel-efficient' : 'fuel-inefficient'}">
-                        ${efficiency > 0 ? efficiency.toFixed(2) : '0.00'} km/L
-                    </td>
-                    <td>${entry.CostCenter || ''}</td>
-                    <td>${entry.Department || ''}</td>
-                    <td>${entry.Notes || ''}</td>
-                    <td>${createSubmissionImageIcon(entry.SubmissionID || '')}</td>
-                    <td>${entry.Status || ''}</td>
-                `;
+                try {
+                    const response = await fetch(scriptURL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    showMessage('✅ Successfully logged to Google Sheets' + (receiptFileData ? ' with receipt upload!' : '!'), 'success');
+                    saveLastOdoFinish(vehicle, finish);
+                    
+                    // Reset form but keep date
+                    document.getElementById('fuelForm').reset();
+                    document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
+                    
+                    // Clear toll entries
+                    tollContainer.innerHTML = '';
+                    tollEntries = [];
+                    
+                    // Reset lube fields
+                    document.getElementById('lubeQty').value = '0';
+                    document.getElementById('lubeCost').value = '0';
+                    receiptFileData = null;
+                    uploadedReceiptLink = '';
+                    if (receiptPhoto) receiptPhoto.value = '';
+                    if (receiptPreview) {
+                        receiptPreview.style.display = 'none';
+                        receiptPreview.innerHTML = '';
+                    }
+                    
+                    updateTotals();
+                    
+                } catch (error) {
+                    console.error('Submission error:', error);
+                    showMessage('❌ Submission failed. Please check connection.', 'error');
+                }
             });
-        }
 
-        function exportChart(chartId, filename) {
-            const canvas = document.getElementById(chartId);
-            const link = document.createElement('a');
-            link.download = `${filename}_${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        function exportToExcel() {
-            if (filteredEntries.length === 0) {
-                showNotification('No data to export', 'error');
-                return;
+            // Helper function to show messages
+            function showMessage(message, type) {
+                const responseDiv = document.getElementById('submitResponse');
+                responseDiv.innerHTML = message;
+                responseDiv.style.backgroundColor = type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#fff3cd';
+                responseDiv.style.color = type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#856404';
+                
+                if (type !== 'info') {
+                    setTimeout(() => {
+                        responseDiv.innerHTML = '';
+                        responseDiv.style.backgroundColor = 'transparent';
+                    }, 5000);
+                }
             }
-            
-            const headers = [
-                'Date', 'Driver', 'Vehicle', 'ER Number', 'Merchant', 'Odo Start', 'Odo Finish', 'Distance',
-                'Fuel Type', 'Price/L', 'Liters', 'Fuel Total', 'Lubrication', 'Lube Cost', 'Tolls',
-                'Toll Total', 'Grand Total', 'km/L', 'Cost Center', 'Department', 'Notes', 'Submission ID', 'Status'
-            ];
-            
-            const rows = filteredEntries.map(e => [
-                e.Date,
-                e.Driver,
-                e.Vehicle,
-                e.ERNumber,
-                e.Merchant,
-                e.OdoStart,
-                e.OdoFinish,
-                e.Distance,
-                e.FuelType,
-                e.PricePerLiter,
-                e.Liters,
-                e.FuelTotal,
-                e.Lubrication,
-                e.LubeCost,
-                e.Tolls,
-                e.TollTotal,
-                e.GrandTotal,
-                e.KmPerLiter,
-                e.CostCenter,
-                e.Department,
-                e.Notes,
-                e.SubmissionID,
-                e.Status
-            ]);
-            
-            const csvContent = [headers, ...rows]
-                .map(row => row.map(cell => `"${cell || ''}"`).join(','))
-                .join('\n');
-            
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `fuel_entries_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            showNotification('Excel file downloaded', 'success');
-        }
 
-        function generatePDF() {
-            showNotification('Generating PDF report...', 'info');
-            setTimeout(() => {
-                showNotification('PDF report generated', 'success');
-            }, 2000);
-        }
+            // PDF Generation
+            window.jsPDF = window.jspdf.jsPDF;
+            document.getElementById('pdfDownloadBtn').addEventListener('click', function() {
+                const doc = new jsPDF();
+                
+                // Build PDF content
+                const driver = document.getElementById('driverName').value || 'N/A';
+                const date = document.getElementById('logDate').value || 'N/A';
+                const vehicle = document.getElementById('vehicleReg').value || 'N/A';
+                const erNumber = document.getElementById('erNumber').value || 'N/A';
+                const merchant = document.getElementById('merchant').value || 'N/A';
+                const start = odoStart.value || '0';
+                const finish = odoFinish.value || '0';
+                const fuelType = document.getElementById('fuelType').value || 'N/A';
+                const price = pricePerLiter.value || '0';
+                const liters = fuelLiters.value || '0';
+                const lube = lubeCost.value || '0';
+                const costCenter = document.getElementById('costCenter').value || 'N/A';
+                const dept = document.getElementById('department').value || 'N/A';
+                
+                doc.setFontSize(20);
+                doc.text('ONPOINT FUEL LOG REPORT', 20, 20);
+                doc.setFontSize(10);
+                
+                let y = 40;
+                const lineHeight = 8;
+                
+                doc.text(`Driver: ${driver}`, 20, y); y += lineHeight;
+                doc.text(`Date: ${date}`, 20, y); y += lineHeight;
+                doc.text(`Vehicle: ${vehicle}`, 20, y); y += lineHeight;
+                doc.text(`ER No.: ${erNumber}`, 20, y); y += lineHeight;
+                doc.text(`Merchant: ${merchant}`, 20, y); y += lineHeight;
+                doc.text(`Odometer: ${start} km → ${finish} km`, 20, y); y += lineHeight;
+                doc.text(`Distance: ${kmTraveledSpan.innerText} km`, 20, y); y += lineHeight;
+                doc.text(`Fuel: ${liters} L × R${price} = R${fuelTotalDisplay.innerText}`, 20, y); y += lineHeight;
+                doc.text(`Efficiency: ${kmPerLiterSpan.innerText} km/L`, 20, y); y += lineHeight;
+                doc.text(`Lubrication cost: R${lube}`, 20, y); y += lineHeight;
+                doc.text(`Toll total: ${summaryToll.innerText}`, 20, y); y += lineHeight;
+                doc.text(`GRAND TOTAL: ${grandTotalSpan.innerText}`, 20, y); y += lineHeight * 2;
+                doc.text(`Cost center: ${costCenter}`, 20, y); y += lineHeight;
+                doc.text(`Department: ${dept}`, 20, y); y += lineHeight;
+                doc.text(`Submission: ${new Date().toLocaleString()}`, 20, y);
+                
+                doc.save(`fuel_log_${date}.pdf`);
+            });
+
+            // Email PDF (opens mail client)
+            document.getElementById('emailPdfBtn').addEventListener('click', function() {
+                const subject = `Fuel Log Report ${document.getElementById('logDate').value}`;
+                const body = `ONPOINT FUEL LOG REPORT\n\n` +
+                    `Driver: ${document.getElementById('driverName').value || 'N/A'}\n` +
+                    `Date: ${document.getElementById('logDate').value}\n` +
+                    `Vehicle: ${document.getElementById('vehicleReg').value || 'N/A'}\n` +
+                    `ER No.: ${document.getElementById('erNumber').value || 'N/A'}\n` +
+                    `Merchant: ${document.getElementById('merchant').value || 'N/A'}\n` +
+                    `Distance: ${kmTraveledSpan.innerText} km\n` +
+                    `Fuel cost: ${fuelCostTotalSpan.innerText}\n` +
+                    `Lube cost: ${summaryLube.innerText}\n` +
+                    `Toll total: ${summaryToll.innerText}\n` +
+                    `GRAND TOTAL: ${grandTotalSpan.innerText}\n\n` +
+                    `Cost center: ${document.getElementById('costCenter').value || 'N/A'}\n` +
+                    `Department: ${document.getElementById('department').value || 'N/A'}`;
+                
+                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            });
+
+        })();
     </script>
 
-    <div class="image-modal" id="imageModal">
-        <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
-        <img id="modalImage" src="" alt="Submission Image">
-    </div>
-
 <script>
+function addNewOption(selectId) {
+    const select = document.getElementById(selectId);
+    const newValue = prompt(selectId === 'vehicleReg' ? "Enter new vehicle registration:" : "Enter new name if not listed:");
 
-    function createSubmissionImageIcon(imageUrl) {
-        if (!imageUrl || imageUrl.trim() === '') return '-';
+    if (newValue && newValue.trim() !== "") {
+        const cleanValue = selectId === 'vehicleReg' ? newValue.trim().toUpperCase() : newValue.trim();
+        const exists = Array.from(select.options).some(option => option.value.toUpperCase() === cleanValue.toUpperCase());
 
-        const safeUrl = imageUrl.trim();
-
-        const isImage =
-            safeUrl.includes('.jpg') ||
-            safeUrl.includes('.jpeg') ||
-            safeUrl.includes('.png') ||
-            safeUrl.includes('.gif') ||
-            safeUrl.includes('drive.google.com') ||
-            safeUrl.includes('googleusercontent');
-
-        if (!isImage) {
-            return safeUrl;
+        if (!exists) {
+            const option = document.createElement("option");
+            option.value = cleanValue;
+            option.text = cleanValue;
+            select.appendChild(option);
         }
 
-        return `
-            <a class="submission-image-icon"
-               href="${safeUrl}"
-               target="_blank"
-               rel="noopener noreferrer"
-               title="Open Image Link">
-                🖼️
-            </a>
-        `;
+        select.value = cleanValue;
+        select.dispatchEvent(new Event('change'));
     }
-
-
-    function openImageModal(url) {
-        document.getElementById('modalImage').src = url;
-        document.getElementById('imageModal').style.display = 'flex';
-    }
-
-    function closeImageModal() {
-        document.getElementById('imageModal').style.display = 'none';
-        document.getElementById('modalImage').src = '';
-    }
-
-    window.addEventListener('click', function(e) {
-        const modal = document.getElementById('imageModal');
-        if (e.target === modal) {
-            closeImageModal();
-        }
-    });
+}
 </script>
 
 </body>
