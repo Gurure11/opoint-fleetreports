@@ -359,7 +359,7 @@
       Example:
       const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
     */
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0E416VfmFQxfiA89diREMjoPXDnw_TqSUyxIqeus5VM_uYYjg0oOVuJHcAruAfL161g/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjr7OtVFsLDzt0YQALC8YXXNvyQs9FzW2PogzsMdxPnzWSBgblFIwOd5B4NDP-rIjCzA/exec";
 
     let handoverData = [];
     let filteredData = [];
@@ -393,8 +393,8 @@
     ];
 
     function loadData() {
-      if (!SCRIPT_URL || SCRIPT_URL.includes("PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE")) {
-        showError("Please replace SCRIPT_URL in the HTML with your deployed Google Apps Script Web App URL.");
+      if (!SCRIPT_URL || SCRIPT_URL.includes("REPLACE_WITH_YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL")) {
+        showError("Please replace SCRIPT_URL in this HTML file with your deployed Google Apps Script Web App URL ending in /exec.");
         document.getElementById("loadingMessage").style.display = "none";
         return;
       }
@@ -422,8 +422,14 @@
     }
 
     function handleVehicleHandovers(data) {
+      if (data && data.error) {
+        showError("Apps Script error: " + data.message);
+        document.getElementById("loadingMessage").style.display = "none";
+        return;
+      }
+
       if (!Array.isArray(data)) {
-        showError("Apps Script did not return a valid data array.");
+        showError("Apps Script did not return a valid data array. Redeploy the Apps Script as a new Web App version and set access to Anyone.");
         document.getElementById("loadingMessage").style.display = "none";
         return;
       }
