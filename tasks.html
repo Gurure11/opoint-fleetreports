@@ -419,6 +419,19 @@
     .message-error { background: #fee2e2; color: #991b1b; border-left: 3px solid #ef4444; }
     .message-info { background: #dbeafe; color: #1e3a8a; border-left: 3px solid #3b82f6; }
 
+    .api-response-box {
+      width: 100%;
+      min-height: 180px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 12px;
+      overflow: auto;
+      white-space: pre-wrap;
+      border: 1px solid #1e293b;
+    }
+
     button:disabled {
       opacity: 0.65;
       cursor: not-allowed;
@@ -503,6 +516,7 @@
       <div class="nav-link active" data-section="dashboard">📊 App home</div>
       <div class="nav-link" data-section="users">👥 Users</div>
       <div class="nav-link" data-section="settings">⚙️ App settings</div>
+      <div class="nav-link" data-section="apiConnection">🔌 API Connection</div>
       
       <div class="nav-section" style="margin-top: 16px;">Data</div>
       <div class="nav-link" data-section="departments">🏢 Departments</div>
@@ -544,6 +558,10 @@
   let SCRIPT_URL = localStorage.getItem('quickbase_api_url') || DEFAULT_SCRIPT_URL;
   let SEND_EMAIL_NOTIFICATIONS = localStorage.getItem('quickbase_send_email_notifications') !== 'false';
   let API_POST_MODE = localStorage.getItem('quickbase_api_post_mode') || 'text';
+  let API_ONLY_URL = localStorage.getItem('quickbase_api_only_url') || SCRIPT_URL;
+  let API_ONLY_METHOD = localStorage.getItem('quickbase_api_only_method') || 'GET';
+  let API_ONLY_HEADERS = localStorage.getItem('quickbase_api_only_headers') || '{\n  "Content-Type": "application/json"\n}';
+  let API_ONLY_BODY = localStorage.getItem('quickbase_api_only_body') || '{\n  "action": "employees",\n  "sheetId": "1KWYWSUmwGYcBVIuDzh7yo86eTrfnMZX35DuGnRAVNv8"\n}';
   let currentUser = null;
   let currentSection = 'dashboard';
   let charts = {};
@@ -1061,6 +1079,121 @@ Please log in to QuickBase to review and update this item.`
 
   async function renderUsers() { const data = await safeGet('users'); renderSimpleTable('Users', data, ['Employee ID', 'Employee Name', 'Department', 'Role', 'Status', 'Created Date']); }
 
+
+  async function renderApiConnection() {
+    document.getElementById('mainContent').innerHTML = `
+      <div class="top-bar"><div class="page-title"><h1>API Connection</h1><p>API-only posting and fetching test area</p></div></div>
+      <div class="panel">
+        <div class="panel-header"><h2>🔌 API Only - Fetch / Post</h2></div>
+        <div style="padding:20px">
+          <div class="form-field" style="margin-bottom:16px">
+            <label>API Endpoint URL</label>
+            <input id="apiOnlyUrlInput" value="${escapeHtml(API_ONLY_URL)}" placeholder="Paste API endpoint URL here">
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>Method</label>
+              <select id="apiOnlyMethodInput">
+                <option value="GET" ${API_ONLY_METHOD === 'GET' ? 'selected' : ''}>GET / Fetch</option>
+                <option value="POST" ${API_ONLY_METHOD === 'POST' ? 'selected' : ''}>POST</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Content Type / Headers JSON</label>
+              <textarea id="apiOnlyHeadersInput" rows="4" placeholder='{"Content-Type":"application/json"}'>${escapeHtml(API_ONLY_HEADERS)}</textarea>
+            </div>
+          </div>
+          <div class="form-field" style="margin-bottom:16px">
+            <label>POST Body JSON</label>
+            <textarea id="apiOnlyBodyInput" rows="7" placeholder='{"action":"employees"}'>${escapeHtml(API_ONLY_BODY)}</textarea>
+          </div>
+          <button class="btn-primary" id="saveApiOnlyBtn">💾 Save API Only Settings</button>
+          <button class="btn-secondary" id="testApiOnlyFetchBtn">🔄 Test Fetch</button>
+          <button class="btn-secondary" id="testApiOnlyPostBtn">⬆ Test Post</button>
+          <div id="apiOnlyMessage" class="message-bar"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h2>📡 API Response</h2></div>
+        <div style="padding:20px">
+          <pre id="apiOnlyResponse" class="api-response-box">No API test run yet.</pre>
+        </div>
+      </div>`;
+
+    const saveApiOnlySettings = () => {
+      API_ONLY_URL = document.getElementById('apiOnlyUrlInput').value.trim();
+      API_ONLY_METHOD = document.getElementById('apiOnlyMethodInput').value;
+      API_ONLY_HEADERS = document.getElementById('apiOnlyHeadersInput').value;
+      API_ONLY_BODY = document.getElementById('apiOnlyBodyInput').value;
+      if (!API_ONLY_URL) {
+        showMessage('API endpoint URL is required', 'error', 'apiOnlyMessage');
+        return false;
+      }
+      localStorage.setItem('quickbase_api_only_url', API_ONLY_URL);
+      localStorage.setItem('quickbase_api_only_method', API_ONLY_METHOD);
+      localStorage.setItem('quickbase_api_only_headers', API_ONLY_HEADERS);
+      localStorage.setItem('quickbase_api_only_body', API_ONLY_BODY);
+      showMessage('API-only settings saved.', 'success', 'apiOnlyMessage');
+      return true;
+    };
+
+    const parseHeaders = () => {
+      const raw = document.getElementById('apiOnlyHeadersInput').value.trim();
+      if (!raw) return {};
+      try {
+        return JSON.parse(raw);
+      } catch(e) {
+        throw new Error('Headers must be valid JSON.');
+      }
+    };
+
+    const parseBody = () => {
+      const raw = document.getElementById('apiOnlyBodyInput').value.trim();
+      if (!raw) return {};
+      try {
+        return JSON.parse(raw);
+      } catch(e) {
+        throw new Error('POST body must be valid JSON.');
+      }
+    };
+
+    const runApiOnlyTest = async (method) => {
+      if (!saveApiOnlySettings()) return;
+      const responseBox = document.getElementById('apiOnlyResponse');
+      responseBox.textContent = 'Connecting...';
+      showMessage(`Testing API ${method}...`, 'info', 'apiOnlyMessage');
+
+      try {
+        const headers = parseHeaders();
+        const options = { method, headers, redirect: 'follow', cache: 'no-store' };
+        let url = API_ONLY_URL;
+
+        if (method === 'POST') {
+          options.body = JSON.stringify(parseBody());
+        } else {
+          const connector = API_ONLY_URL.includes('?') ? '&' : '?';
+          const bodyObj = parseBody();
+          const query = new URLSearchParams(bodyObj).toString();
+          if (query) url = `${API_ONLY_URL}${connector}${query}`;
+        }
+
+        const res = await fetch(url, options);
+        const responseText = await res.text();
+        let display = responseText;
+        try { display = JSON.stringify(JSON.parse(responseText), null, 2); } catch(e) {}
+        responseBox.textContent = `Status: ${res.status} ${res.statusText}\n\n${display}`;
+        showMessage(`API ${method} completed. Status: ${res.status}`, res.ok ? 'success' : 'error', 'apiOnlyMessage');
+      } catch(e) {
+        responseBox.textContent = e.stack || e.message || String(e);
+        showMessage(e.message || 'API test failed.', 'error', 'apiOnlyMessage');
+      }
+    };
+
+    document.getElementById('saveApiOnlyBtn').addEventListener('click', saveApiOnlySettings);
+    document.getElementById('testApiOnlyFetchBtn').addEventListener('click', () => runApiOnlyTest('GET'));
+    document.getElementById('testApiOnlyPostBtn').addEventListener('click', () => runApiOnlyTest('POST'));
+  }
+
   async function renderSettings() {
     document.getElementById('mainContent').innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>App Settings</h1><p>API connection and Google Sheet configuration</p></div></div>
@@ -1291,6 +1424,7 @@ Please log in to QuickBase to review and update this item.`
     if (currentSection === 'dashboard') await renderDashboard();
     else if (currentSection === 'users') await renderUsers();
     else if (currentSection === 'settings') await renderSettings();
+    else if (currentSection === 'apiConnection') await renderApiConnection();
     else if (currentSection === 'departments') await renderDepartments();
     else if (currentSection === 'employees') await renderEmployees();
     else if (currentSection === 'tickets') await renderTickets();
