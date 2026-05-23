@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Distinct Infrastructure Inventory</title>
+  <style>
+    :root {
+      --navy: #0f172a;
+      --blue: #2563eb;
+      --light: #f3f4f6;
+      --text: #111827;
+      --muted: #6b7280;
+      --green: #16a34a;
+      --red: #dc2626;
+      --orange: #f97316;
+      --border: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--light);
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      color: white;
+      padding: 28px;
+      border-radius: 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px rgba(15,23,42,0.2);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .hero p {
+      margin-bottom: 0;
+      color: #dbeafe;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 30px;
+      margin-top: 8px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 950px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 11px;
+      font-size: 14px;
+      margin-bottom: 12px;
+      background: white;
+    }
+
+    textarea {
+      min-height: 75px;
+      resize: vertical;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      background: var(--blue);
+      color: white;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .toolbar input, .toolbar select {
+      margin-bottom: 0;
+      max-width: 260px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f9fafb;
+      color: #374151;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .in {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .out {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .low {
+      background: #ffedd5;
+      color: #9a3412;
+    }
+
+    .ok {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .message {
+      display: none;
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    .secondary {
+      background: var(--green);
+    }
+
+    .secondary:hover {
+      background: #15803d;
+    }
+
+    .report-only {
+      display: none;
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      body.print-report .app > *:not(#inventoryPdfReport) {
+        display: none !important;
+      }
+
+      body.print-report #inventoryPdfReport {
+        display: block !important;
+      }
+
+      #inventoryPdfReport {
+        padding: 20px;
+      }
+
+      #inventoryPdfReport table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      #inventoryPdfReport th,
+      #inventoryPdfReport td {
+        border: 1px solid #d1d5db;
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="hero">
+      <h1>Distinct Infrastructure Inventory</h1>
+      <p>Tools and motor spare parts stock control, movement tracking, search, and reports.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <span>Unique Items</span>
+        <strong id="uniqueItems">0</strong>
+      </div>
+      <div class="stat">
+        <span>Total Stock In</span>
+        <strong id="totalStockIn">0</strong>
+      </div>
+      <div class="stat">
+        <span>Total Stock Out</span>
+        <strong id="totalStockOut">0</strong>
+      </div>
+      <div class="stat">
+        <span>Low Stock Alerts</span>
+        <strong id="lowStockCount">0</strong>
+      </div>
+      <div class="stat">
+        <span>Total Stock Value</span>
+        <strong id="totalStockValue">R0.00</strong>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2>Record Stock Movement</h2>
+          <form id="inventoryForm">
+            <label>Transaction Type</label>
+            <select name="transactionType" required>
+              <option value="">Select</option>
+              <option>Stock In</option>
+              <option>Stock Out</option>
+            </select>
+
+            <label>Item ID</label>
+            <input name="itemId" placeholder="Leave blank for new item">
+
+            <label>Item Name</label>
+            <input name="itemName" placeholder="Example: Brake Pads, Drill Machine" required>
+
+            <div class="row">
+              <div>
+                <label>Category</label>
+                <select name="category" required>
+                  <option value="">Select</option>
+                  <option>Tools</option>
+                  <option>Motor Spare Parts</option>
+                  <option>Consumables</option>
+                  <option>Safety Equipment</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
+                <label>Item Type</label>
+                <input name="itemType" placeholder="Example: Electrical, Engine, Body">
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>Brand</label>
+                <input name="brand">
+              </div>
+              <div>
+                <label>Model / Part Number</label>
+                <input name="modelPartNumber">
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>Quantity</label>
+                <input name="quantity" type="number" min="1" required>
+              </div>
+              <div>
+                <label>Unit</label>
+                <input name="unit" value="Each">
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>Minimum Stock</label>
+                <input name="minimumStock" type="number" min="0" value="0">
+              </div>
+              <div>
+                <label>Location</label>
+                <input name="location" placeholder="Store / Site / Vehicle">
+              </div>
+            </div>
+
+            <label>Issued To / Received From</label>
+            <input name="party" placeholder="Person or supplier">
+
+            <label>Vehicle / Asset</label>
+            <input name="vehicleAsset" placeholder="Registration, fleet number, asset name">
+
+            <div class="row">
+              <div>
+                <label>Department</label>
+                <input name="department" value="Infrastructure">
+              </div>
+              <div>
+                <label>Recorded By</label>
+                <input name="recordedBy">
+              </div>
+            </div>
+
+            <label>Reference Number</label>
+            <input name="referenceNumber" placeholder="Invoice, job card, requisition">
+
+            <label>Amount / Value of Stock Entered</label>
+            <input name="stockValue" type="number" min="0" step="0.01" placeholder="0.00">
+
+            <label>Description</label>
+            <textarea name="description"></textarea>
+
+            <label>Notes</label>
+            <textarea name="notes"></textarea>
+
+            <button id="saveBtn" type="submit">Save Transaction</button>
+            <div id="message" class="message"></div>
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="section-title">
+            <h2>Inventory Search</h2>
+            <div class="toolbar">
+              <button type="button" class="secondary" onclick="downloadInventoryReport()">Download Inventory Report</button>
+              <button type="button" onclick="refreshAll()">Refresh</button>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <input id="searchInput" placeholder="Search item, category, part number, location...">
+            <select id="categoryFilter">
+              <option value="">All Categories</option>
+              <option>Tools</option>
+              <option>Motor Spare Parts</option>
+              <option>Consumables</option>
+              <option>Safety Equipment</option>
+              <option>Other</option>
+            </select>
+            <select id="stockFilter">
+              <option value="">All Stock</option>
+              <option value="low">Low Stock Only</option>
+              <option value="available">Available Stock</option>
+            </select>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Part / Model</th>
+                  <th>Location</th>
+                  <th>Current Stock</th>
+                  <th>Stock Value</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTable">
+                <tr><td colspan="7">Loading inventory...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Movement Report</h2>
+          <p class="small">Shows the latest stock in and stock out transactions.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Item</th>
+                  <th>Movement</th>
+                  <th>Qty In</th>
+                  <th>Qty Out</th>
+                  <th>Issued To / From</th>
+                  <th>Vehicle / Asset</th>
+                </tr>
+              </thead>
+              <tbody id="reportTable">
+                <tr><td colspan="7">Loading report...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Low Stock Alerts</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Current Stock</th>
+                  <th>Minimum Stock</th>
+                </tr>
+              </thead>
+              <tbody id="lowStockTable">
+                <tr><td colspan="4">Loading low stock alerts...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="inventoryPdfReport" class="report-only"></div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxl8AmbRO2CziCRTtppLoQWS6ExhA6tdpU7O0gEdPy2LZnWn5LFJ3wq9k1aSBVFNSNk/exec';
+
+    let inventoryItems = [];
+
+    document.addEventListener('DOMContentLoaded', refreshAll);
+
+    document.getElementById('searchInput').addEventListener('input', renderInventoryTable);
+    document.getElementById('categoryFilter').addEventListener('change', renderInventoryTable);
+    document.getElementById('stockFilter').addEventListener('change', renderInventoryTable);
+
+    document.getElementById('inventoryForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const saveBtn = document.getElementById('saveBtn');
+      const payload = Object.fromEntries(new FormData(e.target).entries());
+      payload.action = 'save';
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          }
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.message || 'Could not save transaction.');
+        }
+
+        showMessage(result.message + ' Current stock: ' + result.currentStock, 'success');
+        e.target.reset();
+        e.target.unit.value = 'Each';
+        e.target.department.value = 'Infrastructure';
+        e.target.minimumStock.value = 0;
+        refreshAll();
+
+      } catch (error) {
+        showMessage(error.message || 'Could not save transaction.', 'error');
+      }
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Transaction';
+    });
+
+    async function refreshAll() {
+      await Promise.all([
+        loadInventory(),
+        loadReports()
+      ]);
+    }
+
+    async function loadInventory() {
+      try {
+        const response = await fetch(SCRIPT_URL + '?action=items');
+        const data = await response.json();
+
+        inventoryItems = data.items || [];
+        renderInventoryTable();
+        document.getElementById('totalStockValue').textContent = formatCurrency(getTotalInventoryValue());
+
+      } catch (error) {
+        document.getElementById('inventoryTable').innerHTML =
+          '<tr><td colspan="7">Could not load inventory.</td></tr>';
+      }
+    }
+
+    async function loadReports() {
+      try {
+        const response = await fetch(SCRIPT_URL + '?action=reports');
+        const data = await response.json();
+
+        const summary = data.summary || {};
+
+        document.getElementById('uniqueItems').textContent = summary.uniqueItems || 0;
+        document.getElementById('totalStockIn').textContent = summary.totalStockIn || 0;
+        document.getElementById('totalStockOut').textContent = summary.totalStockOut || 0;
+        document.getElementById('lowStockCount').textContent = summary.lowStockCount || 0;
+        document.getElementById('totalStockValue').textContent = formatCurrency(summary.totalStockValue || getTotalInventoryValue());
+
+        renderReportTable(data.transactions || []);
+        renderLowStockTable(data.lowStockItems || []);
+
+      } catch (error) {
+        document.getElementById('reportTable').innerHTML =
+          '<tr><td colspan="7">Could not load report.</td></tr>';
+        document.getElementById('lowStockTable').innerHTML =
+          '<tr><td colspan="4">Could not load low stock alerts.</td></tr>';
+      }
+    }
+
+    function renderInventoryTable() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const category = document.getElementById('categoryFilter').value;
+      const stock = document.getElementById('stockFilter').value;
+
+      let rows = inventoryItems.filter(function(item) {
+        const text = [
+          item.itemId,
+          item.itemName,
+          item.category,
+          item.itemType,
+          item.brand,
+          item.modelPartNumber,
+          item.description,
+          item.location,
+          item.stockValue
+        ].join(' ').toLowerCase();
+
+        const searchMatch = !search || text.includes(search);
+        const categoryMatch = !category || item.category === category;
+        const stockMatch =
+          !stock ||
+          (stock === 'low' && item.lowStock) ||
+          (stock === 'available' && Number(item.currentStock || 0) > 0);
+
+        return searchMatch && categoryMatch && stockMatch;
+      });
+
+      if (rows.length === 0) {
+        document.getElementById('inventoryTable').innerHTML =
+          '<tr><td colspan="7">No inventory items found.</td></tr>';
+        return;
+      }
+
+      document.getElementById('inventoryTable').innerHTML = rows.map(function(item) {
+        const statusClass = item.lowStock ? 'low' : 'ok';
+        const statusText = item.lowStock ? 'Low Stock' : 'Available';
+
+        return `
+          <tr>
+            <td>
+              <strong>${escapeHtml(item.itemName)}</strong><br>
+              <span class="small">${escapeHtml(item.itemId)}</span>
+            </td>
+            <td>${escapeHtml(item.category)}<br><span class="small">${escapeHtml(item.itemType)}</span></td>
+            <td>${escapeHtml(item.modelPartNumber)}<br><span class="small">${escapeHtml(item.brand)}</span></td>
+            <td>${escapeHtml(item.location)}</td>
+            <td><strong>${escapeHtml(String(item.currentStock))}</strong> ${escapeHtml(item.unit || '')}</td>
+            <td>${escapeHtml(formatCurrency(getItemStockValue(item)))}</td>
+            <td><span class="badge ${statusClass}">${statusText}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderReportTable(transactions) {
+      if (!transactions.length) {
+        document.getElementById('reportTable').innerHTML =
+          '<tr><td colspan="7">No transactions yet.</td></tr>';
+        return;
+      }
+
+      document.getElementById('reportTable').innerHTML = transactions.map(function(t) {
+        const badgeClass = t.transactionType === 'Stock In' ? 'in' : 'out';
+
+        return `
+          <tr>
+            <td>${escapeHtml(t.timestamp)}</td>
+            <td><strong>${escapeHtml(t.itemName)}</strong><br><span class="small">${escapeHtml(t.itemId)}</span></td>
+            <td><span class="badge ${badgeClass}">${escapeHtml(t.transactionType)}</span></td>
+            <td>${escapeHtml(String(t.quantityIn))}</td>
+            <td>${escapeHtml(String(t.quantityOut))}</td>
+            <td>${escapeHtml(t.party)}</td>
+            <td>${escapeHtml(t.vehicleAsset)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderLowStockTable(items) {
+      if (!items.length) {
+        document.getElementById('lowStockTable').innerHTML =
+          '<tr><td colspan="4">No low stock items.</td></tr>';
+        return;
+      }
+
+      document.getElementById('lowStockTable').innerHTML = items.map(function(item) {
+        return `
+          <tr>
+            <td><strong>${escapeHtml(item.itemName)}</strong><br><span class="small">${escapeHtml(item.itemId)}</span></td>
+            <td>${escapeHtml(item.category)}</td>
+            <td>${escapeHtml(String(item.currentStock))}</td>
+            <td>${escapeHtml(String(item.minimumStock))}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+
+    function getItemStockValue(item) {
+      return parseMoney(item.stockValue || item.amountValue || 0);
+    }
+
+    function getTotalInventoryValue() {
+      return inventoryItems.reduce(function(total, item) {
+        return total + getItemStockValue(item);
+      }, 0);
+    }
+
+    function parseMoney(value) {
+      const cleaned = String(value || '0').replace(/[^0-9.-]/g, '');
+      const amount = Number(cleaned);
+      return Number.isFinite(amount) ? amount : 0;
+    }
+
+    function formatCurrency(value) {
+      return 'R' + Number(value || 0).toLocaleString('en-ZA', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function downloadInventoryReport() {
+      const reportDate = new Date().toLocaleString('en-ZA');
+      const totalValue = getTotalInventoryValue();
+      const rows = inventoryItems.map(function(item) {
+        return `
+          <tr>
+            <td>${escapeHtml(item.itemId)}</td>
+            <td>${escapeHtml(item.itemName)}</td>
+            <td>${escapeHtml(item.category)}</td>
+            <td>${escapeHtml(item.modelPartNumber)}</td>
+            <td>${escapeHtml(item.location)}</td>
+            <td>${escapeHtml(String(item.currentStock || 0))} ${escapeHtml(item.unit || '')}</td>
+            <td>${escapeHtml(formatCurrency(getItemStockValue(item)))}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('inventoryPdfReport').innerHTML = `
+        <h1>Inventory Report</h1>
+        <p><strong>Generated:</strong> ${escapeHtml(reportDate)}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Item ID</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Part / Model</th>
+              <th>Location</th>
+              <th>Current Stock</th>
+              <th>Stock Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="7">No inventory items found.</td></tr>'}
+            <tr>
+              <td colspan="6"><strong>Total Stock Inventory Value</strong></td>
+              <td><strong>${escapeHtml(formatCurrency(totalValue))}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+
+      document.body.classList.add('print-report');
+      window.print();
+      setTimeout(function() {
+        document.body.classList.remove('print-report');
+      }, 500);
+    }
+
+    function showMessage(text, type) {
+      const message = document.getElementById('message');
+      message.textContent = text;
+      message.className = 'message ' + type;
+      message.style.display = 'block';
+
+      setTimeout(function() {
+        message.style.display = 'none';
+      }, 4500);
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
