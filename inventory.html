@@ -4,6 +4,7 @@
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Distinct Infrastructure Inventory</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --navy: #0f172a;
@@ -258,6 +259,15 @@
       background: #15803d;
     }
 
+    .chart-box {
+      height: 360px;
+    }
+
+    .chart-box canvas {
+      width: 100% !important;
+      height: 300px !important;
+    }
+
     .report-only {
       display: none;
     }
@@ -319,6 +329,25 @@
       <div class="stat">
         <span>Total Stock Value</span>
         <strong id="totalStockValue">R0.00</strong>
+      </div>
+      <div class="stat">
+        <span>Total Goods Received</span>
+        <strong id="totalGoodsReceivedValue">R0.00</strong>
+      </div>
+      <div class="stat">
+        <span>Total Issued Out</span>
+        <strong id="totalGoodsIssuedValue">R0.00</strong>
+      </div>
+      <div class="stat">
+        <span>Stock Remaining Value</span>
+        <strong id="totalStockRemainingValue">R0.00</strong>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cost of Goods Issued by Cost Center</h2>
+      <div class="chart-box">
+        <canvas id="costCenterChart"></canvas>
       </div>
     </div>
 
@@ -394,6 +423,16 @@
             <label>Issued To / Received From</label>
             <input name="party" placeholder="Person or supplier">
 
+            <label>Cost Center</label>
+            <select name="costCenter">
+              <option value="">Select Cost Center</option>
+              <option>Onpoint Ontime</option>
+              <option>Nkanyezi</option>
+              <option>Aqua Telecoms</option>
+              <option>Distinct</option>
+              <option>Work Shop</option>
+            </select>
+
             <label>Vehicle / Asset</label>
             <input name="vehicleAsset" placeholder="Registration, fleet number, asset name">
 
@@ -432,6 +471,8 @@
             <h2>Inventory Search</h2>
             <div class="toolbar">
               <button type="button" class="secondary" onclick="downloadInventoryReport()">Download Inventory Report</button>
+              <button type="button" class="secondary" onclick="downloadGoodsReceivedReport()">Goods Received Report</button>
+              <button type="button" class="secondary" onclick="downloadGoodsIssuedReport()">Goods Issued Report</button>
               <button type="button" onclick="refreshAll()">Refresh</button>
             </div>
           </div>
@@ -486,11 +527,12 @@
                   <th>Qty In</th>
                   <th>Qty Out</th>
                   <th>Issued To / From</th>
+                  <th>Cost Center</th>
                   <th>Vehicle / Asset</th>
                 </tr>
               </thead>
               <tbody id="reportTable">
-                <tr><td colspan="7">Loading report...</td></tr>
+                <tr><td colspan="8">Loading report...</td></tr>
               </tbody>
             </table>
           </div>
@@ -524,6 +566,8 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxl8AmbRO2CziCRTtppLoQWS6ExhA6tdpU7O0gEdPy2LZnWn5LFJ3wq9k1aSBVFNSNk/exec';
 
     let inventoryItems = [];
+    let latestTransactions = [];
+    let costCenterChart;
 
     document.addEventListener('DOMContentLoaded', refreshAll);
 
@@ -605,8 +649,13 @@
         document.getElementById('totalStockOut').textContent = summary.totalStockOut || 0;
         document.getElementById('lowStockCount').textContent = summary.lowStockCount || 0;
         document.getElementById('totalStockValue').textContent = formatCurrency(summary.totalStockValue || getTotalInventoryValue());
+        document.getElementById('totalGoodsReceivedValue').textContent = formatCurrency(summary.totalGoodsReceivedValue || 0);
+        document.getElementById('totalGoodsIssuedValue').textContent = formatCurrency(summary.totalGoodsIssuedValue || 0);
+        document.getElementById('totalStockRemainingValue').textContent = formatCurrency(summary.totalStockRemainingValue || summary.totalStockValue || getTotalInventoryValue());
 
-        renderReportTable(data.transactions || []);
+        latestTransactions = data.transactions || [];
+        renderCostCenterChart(summary.issuedByCostCenter || {});
+        renderReportTable(latestTransactions);
         renderLowStockTable(data.lowStockItems || []);
 
       } catch (error) {
@@ -615,6 +664,43 @@
         document.getElementById('lowStockTable').innerHTML =
           '<tr><td colspan="4">Could not load low stock alerts.</td></tr>';
       }
+    }
+
+    function renderCostCenterChart(costCenters) {
+      const labels = Object.keys(costCenters || {});
+      const values = labels.map(function(label) {
+        return Number(costCenters[label] || 0);
+      });
+
+      if (costCenterChart) {
+        costCenterChart.destroy();
+      }
+
+      costCenterChart = new Chart(document.getElementById('costCenterChart'), {
+        type: 'bar',
+        data: {
+          labels: labels.length ? labels : ['No Issued Stock'],
+          datasets: [{
+            label: 'Cost of Goods Issued',
+            data: values.length ? values : [0],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
     }
 
     function renderInventoryTable() {
@@ -675,7 +761,7 @@
     function renderReportTable(transactions) {
       if (!transactions.length) {
         document.getElementById('reportTable').innerHTML =
-          '<tr><td colspan="7">No transactions yet.</td></tr>';
+          '<tr><td colspan="8">No transactions yet.</td></tr>';
         return;
       }
 
@@ -690,6 +776,7 @@
             <td>${escapeHtml(String(t.quantityIn))}</td>
             <td>${escapeHtml(String(t.quantityOut))}</td>
             <td>${escapeHtml(t.party)}</td>
+            <td>${escapeHtml(t.costCenter)}</td>
             <td>${escapeHtml(t.vehicleAsset)}</td>
           </tr>
         `;
@@ -786,6 +873,81 @@
       setTimeout(function() {
         document.body.classList.remove('print-report');
       }, 500);
+    }
+
+
+    function buildTransactionReport(title, transactions, totalLabel, totalValue) {
+      const reportDate = new Date().toLocaleString('en-ZA');
+      const rows = transactions.map(function(t) {
+        return `
+          <tr>
+            <td>${escapeHtml(t.timestamp)}</td>
+            <td>${escapeHtml(t.itemId)}</td>
+            <td>${escapeHtml(t.itemName)}</td>
+            <td>${escapeHtml(t.category)}</td>
+            <td>${escapeHtml(t.transactionType)}</td>
+            <td>${escapeHtml(String(t.quantityIn || 0))}</td>
+            <td>${escapeHtml(String(t.quantityOut || 0))}</td>
+            <td>${escapeHtml(t.costCenter || '')}</td>
+            <td>${escapeHtml(formatCurrency(t.stockValue || 0))}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('inventoryPdfReport').innerHTML = `
+        <h1>${escapeHtml(title)}</h1>
+        <p><strong>Generated:</strong> ${escapeHtml(reportDate)}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Item ID</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Movement</th>
+              <th>Qty In</th>
+              <th>Qty Out</th>
+              <th>Cost Center</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="9">No transactions found.</td></tr>'}
+            <tr>
+              <td colspan="8"><strong>${escapeHtml(totalLabel)}</strong></td>
+              <td><strong>${escapeHtml(formatCurrency(totalValue))}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+
+      document.body.classList.add('print-report');
+      window.print();
+      setTimeout(function() {
+        document.body.classList.remove('print-report');
+      }, 500);
+    }
+
+    function downloadGoodsReceivedReport() {
+      const received = latestTransactions.filter(function(t) {
+        return t.transactionType === 'Stock In';
+      });
+      const total = received.reduce(function(sum, t) {
+        return sum + parseMoney(t.stockValue || 0);
+      }, 0);
+
+      buildTransactionReport('Total Goods Received Report', received, 'Total Goods Received', total);
+    }
+
+    function downloadGoodsIssuedReport() {
+      const issued = latestTransactions.filter(function(t) {
+        return t.transactionType === 'Stock Out';
+      });
+      const total = issued.reduce(function(sum, t) {
+        return sum + parseMoney(t.stockValue || 0);
+      }, 0);
+
+      buildTransactionReport('Total Goods Issued Out Report', issued, 'Total Goods Issued Out', total);
     }
 
     function showMessage(text, type) {
