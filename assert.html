@@ -3,594 +3,740 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Distinct Infrastructure - Asset Register</title>
+  <title>Distinct Infrastructure | Asset Register Dashboard</title>
 
   <style>
-    *{
-      margin:0;
-      padding:0;
-      box-sizing:border-box;
-      font-family: Arial, sans-serif;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Inter, Arial, sans-serif;
     }
 
-    body{
-      background:#f4f6f9;
-      padding:20px;
+    body {
+      background: #eef2f7;
+      padding: 24px;
+      color: #1d2939;
     }
 
-    .container{
-      max-width:1500px;
-      margin:auto;
-      background:#fff;
-      padding:25px;
-      border-radius:10px;
-      box-shadow:0 2px 10px rgba(0,0,0,0.1);
+    .container {
+      max-width: 1600px;
+      margin: auto;
+      background: #ffffff;
+      border-radius: 22px;
+      box-shadow: 0 15px 40px rgba(16, 24, 40, 0.08);
+      overflow: hidden;
     }
 
-    .header{
-      text-align:center;
-      margin-bottom:25px;
+    .topbar {
+      background: linear-gradient(135deg, #12395b, #1f4e78);
+      color: #ffffff;
+      padding: 30px;
     }
 
-    .header h1{
-      color:#1f4e78;
-      margin-bottom:5px;
+    .topbar h1 {
+      font-size: 30px;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
     }
 
-    .header p{
-      color:#666;
-      font-size:14px;
+    .topbar p {
+      color: #d9e7f3;
+      font-size: 14px;
+      margin-bottom: 6px;
     }
 
-    .dashboard{
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
-      gap:15px;
-      margin-bottom:25px;
+    .sheet-pill {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      font-size: 12px;
+      font-family: Consolas, monospace;
     }
 
-    .dash-card{
-      background:#1f4e78;
-      color:#fff;
-      padding:18px;
-      border-radius:8px;
-      text-align:center;
+    .main {
+      padding: 28px;
     }
 
-    .dash-card h2{
-      font-size:30px;
-      margin-bottom:5px;
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
     }
 
-    .dash-card p{
-      font-size:14px;
+    .dash-card {
+      background: #ffffff;
+      border: 1px solid #e5edf5;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
+      position: relative;
+      overflow: hidden;
     }
 
-    .toolbar{
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-      gap:15px;
-      margin-bottom:25px;
-      padding:15px;
-      background:#eef3f8;
-      border-radius:8px;
+    .dash-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 5px;
+      width: 100%;
+      background: linear-gradient(90deg, #1f4e78, #4f9bc8);
     }
 
-    .form-grid{
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap:15px;
-      margin-bottom:20px;
+    .dash-card h2 {
+      font-size: 34px;
+      color: #1f4e78;
+      margin-bottom: 6px;
     }
 
-    .form-group{
-      display:flex;
-      flex-direction:column;
+    .dash-card p {
+      color: #667085;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
     }
 
-    label{
-      margin-bottom:5px;
-      font-weight:bold;
-      color:#333;
-      font-size:14px;
+    .toolbar {
+      display: grid;
+      grid-template-columns: 2fr 1fr auto auto;
+      gap: 14px;
+      align-items: end;
+      background: #f8fbfd;
+      padding: 18px;
+      border: 1px solid #e5edf5;
+      border-radius: 18px;
+      margin-bottom: 26px;
     }
 
-    input, select{
-      padding:10px;
-      border:1px solid #ccc;
-      border-radius:5px;
-      font-size:14px;
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
     }
 
-    button{
-      background:#1f4e78;
-      color:#fff;
-      border:none;
-      padding:12px 25px;
-      border-radius:5px;
-      cursor:pointer;
-      font-size:15px;
-      margin-top:20px;
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
-    button:hover{
-      background:#163954;
+    label {
+      font-size: 13px;
+      color: #344054;
+      font-weight: 700;
     }
 
-    .secondary-btn{
-      background:#666;
-      margin-left:10px;
+    input, select {
+      width: 100%;
+      padding: 12px 13px;
+      border: 1px solid #cfdbea;
+      border-radius: 12px;
+      background: #ffffff;
+      font-size: 14px;
+      outline: none;
     }
 
-    table{
-      width:100%;
-      border-collapse:collapse;
-      margin-top:30px;
-      overflow-x:auto;
+    input:focus, select:focus {
+      border-color: #1f4e78;
+      box-shadow: 0 0 0 4px rgba(31, 78, 120, 0.1);
     }
 
-    th{
-      background:#1f4e78;
-      color:white;
-      padding:12px;
-      text-align:left;
-      font-size:13px;
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 18px;
     }
 
-    td{
-      padding:10px;
-      border-bottom:1px solid #ddd;
-      font-size:13px;
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 22px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      transition: 0.2s ease;
     }
 
-    tr:hover{
-      background:#f1f1f1;
+    .btn-primary {
+      background: #1f4e78;
+      color: #ffffff;
     }
 
-    .status{
-      margin-top:15px;
-      font-weight:bold;
-      color:green;
+    .btn-primary:hover {
+      background: #163954;
     }
 
-    .edit-btn{
-      margin-top:0;
-      padding:8px 12px;
-      font-size:12px;
-      background:#2f7d32;
+    .btn-secondary {
+      background: #edf2f7;
+      color: #344054;
+      border: 1px solid #d6e0ec;
     }
 
-    .file-link{
-      color:#1f4e78;
-      font-weight:bold;
-      text-decoration:none;
+    .btn-secondary:hover {
+      background: #e2e8f0;
     }
 
-    .attachment-preview{
-      max-width:80px;
-      max-height:60px;
-      border-radius:5px;
-      border:1px solid #ddd;
-      display:block;
-      margin-bottom:4px;
+    .status {
+      display: inline-block;
+      margin: 18px 0 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #eaf4ff;
+      color: #1f4e78;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .table-wrap {
+      margin-top: 20px;
+      overflow-x: auto;
+      border: 1px solid #e5edf5;
+      border-radius: 18px;
+      background: #ffffff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1100px;
+    }
+
+    th {
+      background: #f3f7fb;
+      color: #1f4e78;
+      padding: 14px 12px;
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid #e5edf5;
+    }
+
+    td {
+      padding: 13px 12px;
+      border-bottom: 1px solid #eef2f6;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr:hover {
+      background: #f8fbfd;
+    }
+
+    .edit-btn {
+      background: #248a3d;
+      color: #ffffff;
+      padding: 8px 14px;
+      margin: 0;
+      font-size: 12px;
+    }
+
+    .file-link {
+      color: #1f4e78;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .file-link:hover {
+      text-decoration: underline;
+    }
+
+    .attachment-preview {
+      width: 70px;
+      height: 52px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #d6e0ec;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #667085;
+      padding: 34px;
+      font-weight: 700;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 22px;
+      max-width: 780px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: auto;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-head {
+      padding: 22px;
+      background: #1f4e78;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .modal-head h3 {
+      font-size: 20px;
+    }
+
+    .close {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      padding: 8px 12px;
+      margin: 0;
+    }
+
+    .modal-body {
+      padding: 22px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .detail {
+      background: #f8fbfd;
+      border: 1px solid #e5edf5;
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .detail strong {
+      display: block;
+      color: #667085;
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .main {
+        padding: 18px;
+      }
     }
   </style>
 </head>
 
 <body>
-
 <div class="container">
-
-  <div class="header">
+  <div class="topbar">
     <h1>Distinct Infrastructure</h1>
-    <p>Vehicle & Asset Register Management System</p>
-    <p><strong>Google Sheet ID:</strong> 1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw</p>
+    <p>Professional Asset Register Dashboard · Live Google Sheet Transactions</p>
+    <p><strong>Sheet:</strong> Assert Reg / Asset Reg</p>
+    <span class="sheet-pill">Sheet ID: 1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw</span>
   </div>
 
-  <div class="dashboard">
+  <div class="main">
+    <div class="dashboard" id="dashboardCards"></div>
+
+    <div class="toolbar">
+      <div class="form-group">
+        <label>Search Transactions</label>
+        <input type="text" id="searchInput" placeholder="Search asset ID, registration, VIN, model, driver, department, category...">
+      </div>
+
+      <div class="form-group">
+        <label>Filter Category</label>
+        <select id="filterCategory"></select>
+      </div>
+
+      <button type="button" class="btn-primary" onclick="applyFilters()">Search</button>
+      <button type="button" class="btn-secondary" onclick="resetFiltersAndRefresh()">Reset</button>
+    </div>
+
+    <form id="assetForm">
+      <input type="hidden" id="editIndex" value="">
+
+      <div class="form-grid">
+        <div class="form-group"><label>Asset ID</label><input type="text" id="assetId"></div>
+        <div class="form-group"><label>Vehicle Registration</label><input type="text" id="registration"></div>
+        <div class="form-group"><label>Engine Number</label><input type="text" id="engineNumber"></div>
+        <div class="form-group"><label>VIN Number</label><input type="text" id="vinNumber"></div>
+        <div class="form-group"><label>Purchase Date</label><input type="date" id="purchaseDate"></div>
+        <div class="form-group"><label>Purchased By</label><input type="text" id="purchasedBy"></div>
+        <div class="form-group"><label>Description</label><input type="text" id="description"></div>
+        <div class="form-group"><label>Body Type</label><input type="text" id="bodyType"></div>
+        <div class="form-group"><label>Engine Capacity</label><input type="text" id="engine"></div>
+        <div class="form-group"><label>Model</label><input type="text" id="model"></div>
+        <div class="form-group"><label>Cost</label><input type="number" id="cost" step="any"></div>
+        <div class="form-group"><label>Market Value</label><input type="number" id="marketValue" step="any"></div>
+        <div class="form-group"><label>In ZOHO</label><select id="zoho"><option value="Yes">Yes</option><option value="No">No</option></select></div>
+        <div class="form-group"><label>Driver / Operator</label><input type="text" id="driver"></div>
+        <div class="form-group"><label>Allocation Department</label><input type="text" id="department"></div>
+        <div class="form-group"><label>Tracking Company</label><input type="text" id="trackingCompany"></div>
+        <div class="form-group"><label>Installment Amount</label><input type="number" id="installment" step="any"></div>
+        <div class="form-group"><label>Asset Category</label><select id="category"></select></div>
+        <div class="form-group"><label>Upload Photo / Document</label><input type="file" id="assetFile" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"></div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn-primary" id="saveButton">Save Asset</button>
+        <button type="button" class="btn-secondary" onclick="clearForm()">Clear</button>
+      </div>
+    </form>
+
+    <div class="status" id="status">Ready</div>
+
+    <div class="table-wrap">
+      <table id="assetTable">
+        <thead>
+          <tr>
+            <th>Asset ID</th>
+            <th>Registration</th>
+            <th>Engine No</th>
+            <th>VIN</th>
+            <th>Model</th>
+            <th>Driver</th>
+            <th>Department</th>
+            <th>Category</th>
+            <th>Cost</th>
+            <th>Market Value</th>
+            <th>Attachment</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="detailsModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="modalTitle">Asset Details</h3>
+      <button class="close" onclick="closeDetails()">Close</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZxnDm5o7KBYyFh8M3qLccWymO9lb8GwhZeYLqxB_JgA4GcjHmfUAEJdWU0CsBu-1UOw/exec";
+
+const CATEGORIES = [
+  "Trailers",
+  "Tanker Trailers",
+  "Executive Vehicles",
+  "Admin",
+  "Projects & Tenders",
+  "Small Equipment",
+  "Yellow plant"
+];
+
+let assets = [];
+let displayedAssets = [];
+
+document.addEventListener("DOMContentLoaded", function() {
+  buildCategoryOptions();
+  buildDashboardCards();
+  loadAssetsFromSheet();
+
+  document.getElementById("searchInput").addEventListener("input", applyFilters);
+  document.getElementById("filterCategory").addEventListener("change", applyFilters);
+  document.getElementById("assetForm").addEventListener("submit", handleSubmit);
+});
+
+function buildCategoryOptions() {
+  const filterCategory = document.getElementById("filterCategory");
+  const formCategory = document.getElementById("category");
+
+  filterCategory.innerHTML = `<option value="">All Categories</option>`;
+  formCategory.innerHTML = "";
+
+  CATEGORIES.forEach(category => {
+    filterCategory.innerHTML += `<option value="${escapeAttr(category)}">${safe(category)}</option>`;
+    formCategory.innerHTML += `<option value="${escapeAttr(category)}">${safe(category)}</option>`;
+  });
+}
+
+function buildDashboardCards() {
+  const dashboard = document.getElementById("dashboardCards");
+
+  dashboard.innerHTML = `
     <div class="dash-card">
       <h2 id="totalAssets">0</h2>
       <p>Total Assets</p>
     </div>
-    <div class="dash-card">
-      <h2 id="earthmovingAssets">0</h2>
-      <p>Earthmoving</p>
-    </div>
-    <div class="dash-card">
-      <h2 id="truckAssets">0</h2>
-      <p>Trucks</p>
-    </div>
-    <div class="dash-card">
-      <h2 id="vehicleAssets">0</h2>
-      <p>Vehicles</p>
-    </div>
-    <div class="dash-card">
-      <h2 id="otherAssets">0</h2>
-      <p>Other</p>
-    </div>
-  </div>
+  `;
 
-  <div class="toolbar">
-    <div class="form-group">
-      <label>Search Asset</label>
-      <input type="text" id="searchInput" placeholder="Search by asset ID, registration, model, driver">
-    </div>
-
-    <div class="form-group">
-      <label>Filter Category</label>
-      <select id="filterCategory">
-        <option value="">All Categories</option>
-        <option value="Earthmoving">Earthmoving</option>
-        <option value="Trucks">Trucks</option>
-        <option value="Vehicles">Vehicles</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>&nbsp;</label>
-      <button type="button" onclick="applyFilters()">Search / Filter</button>
-    </div>
-  </div>
-
-  <form id="assetForm">
-
-    <input type="hidden" id="editIndex" value="">
-
-    <div class="form-grid">
-
-      <div class="form-group">
-        <label>Asset ID</label>
-        <input type="text" id="assetId">
+  CATEGORIES.forEach(category => {
+    dashboard.innerHTML += `
+      <div class="dash-card">
+        <h2 id="card-${slug(category)}">0</h2>
+        <p>${safe(category)}</p>
       </div>
+    `;
+  });
+}
 
-      <div class="form-group">
-        <label>Vehicle Registration</label>
-        <input type="text" id="registration">
-      </div>
+async function loadAssetsFromSheet() {
+  try {
+    setStatus("Loading live transactions from Google Sheet...");
 
-      <div class="form-group">
-        <label>Engine Number</label>
-        <input type="text" id="engineNumber">
-      </div>
+    const res = await fetch(`${SCRIPT_URL}?action=list&_=${Date.now()}`, {
+      method: "GET",
+      cache: "no-store"
+    });
 
-      <div class="form-group">
-        <label>VIN Number</label>
-        <input type="text" id="vinNumber">
-      </div>
+    const data = await res.json();
 
-      <div class="form-group">
-        <label>Purchase Date</label>
-        <input type="date" id="purchaseDate">
-      </div>
+    assets = Array.isArray(data) ? data.filter(hasMeaningfulData) : [];
+    displayedAssets = [...assets];
 
-      <div class="form-group">
-        <label>Purchased By</label>
-        <input type="text" id="purchasedBy">
-      </div>
+    renderTable(displayedAssets);
+    updateDashboard();
+    setStatus(`Loaded ${assets.length} live transactions from Google Sheet.`);
+  } catch (err) {
+    console.error(err);
+    assets = [];
+    displayedAssets = [];
+    renderTable([]);
+    updateDashboard();
+    setStatus("Could not load Google Sheet data. Check Apps Script deployment permissions.");
+  }
+}
 
-      <div class="form-group">
-        <label>Description</label>
-        <input type="text" id="description">
-      </div>
+function hasMeaningfulData(asset) {
+  return asset.assetId || asset.registration || asset.vinNumber || asset.model || asset.description;
+}
 
-      <div class="form-group">
-        <label>Body Type</label>
-        <input type="text" id="bodyType">
-      </div>
-
-      <div class="form-group">
-        <label>Engine Capacity</label>
-        <input type="text" id="engine">
-      </div>
-
-      <div class="form-group">
-        <label>Model</label>
-        <input type="text" id="model">
-      </div>
-
-      <div class="form-group">
-        <label>Cost</label>
-        <input type="number" id="cost">
-      </div>
-
-      <div class="form-group">
-        <label>Market Value</label>
-        <input type="number" id="marketValue">
-      </div>
-
-      <div class="form-group">
-        <label>In ZOHO</label>
-        <select id="zoho">
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Driver / Operator</label>
-        <input type="text" id="driver">
-      </div>
-
-      <div class="form-group">
-        <label>Allocation Department</label>
-        <input type="text" id="department">
-      </div>
-
-      <div class="form-group">
-        <label>Tracking Company</label>
-        <input type="text" id="trackingCompany">
-      </div>
-
-      <div class="form-group">
-        <label>Installment Amount</label>
-        <input type="number" id="installment">
-      </div>
-
-      <!-- New fields added after the original fields -->
-      <div class="form-group">
-        <label>Asset Category</label>
-        <select id="category">
-          <option value="Earthmoving">Earthmoving</option>
-          <option value="Trucks">Trucks</option>
-          <option value="Vehicles">Vehicles</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Upload Image/File</label>
-        <input type="file" id="assetFile">
-      </div>
-
-    </div>
-
-    <button type="submit" id="saveButton">Save Asset</button>
-    <button type="button" class="secondary-btn" onclick="clearForm()">Clear</button>
-
-  </form>
-
-  <div class="status" id="status"></div>
-
-  <table id="assetTable">
-    <thead>
-      <tr>
-        <th>Asset ID</th>
-        <th>Registration</th>
-        <th>Engine No</th>
-        <th>VIN</th>
-        <th>Model</th>
-        <th>Driver</th>
-        <th>Department</th>
-        <th>Category</th>
-        <th>Cost</th>
-        <th>Market Value</th>
-        <th>Attachment</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-
-    <tbody></tbody>
-
-  </table>
-
-</div>
-
-<script>
-
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkEhRzq1GFVK6M14BScoiXUJX7myEFvw5VmtTT8ecJySzOWFDvVoxcHwFieRZzobKPXQ/exec";
-
-let assets = [];
-
-document.getElementById("assetForm").addEventListener("submit", function(e){
-
+async function handleSubmit(e) {
   e.preventDefault();
 
   const saveButton = document.getElementById("saveButton");
   saveButton.disabled = true;
-  saveButton.innerHTML = "Synchronising...";
+  saveButton.innerText = "Synchronising...";
 
-  const fileInput = document.getElementById("assetFile");
-  const file = fileInput.files[0];
+  try {
+    const fileInput = document.getElementById("assetFile");
+    const file = fileInput.files[0];
+    const rowNumber = document.getElementById("editIndex").value;
 
-  const data = {
-    assetId: document.getElementById("assetId").value,
-    registration: document.getElementById("registration").value,
-    engineNumber: document.getElementById("engineNumber").value,
-    vinNumber: document.getElementById("vinNumber").value,
-    purchaseDate: document.getElementById("purchaseDate").value,
-    purchasedBy: document.getElementById("purchasedBy").value,
-    description: document.getElementById("description").value,
-    bodyType: document.getElementById("bodyType").value,
-    engine: document.getElementById("engine").value,
-    model: document.getElementById("model").value,
-    cost: document.getElementById("cost").value,
-    marketValue: document.getElementById("marketValue").value,
-    zoho: document.getElementById("zoho").value,
-    driver: document.getElementById("driver").value,
-    department: document.getElementById("department").value,
-    trackingCompany: document.getElementById("trackingCompany").value,
-    installment: document.getElementById("installment").value,
-    category: document.getElementById("category").value,
-    attachmentName: file ? file.name : "",
-    attachmentData: "",
-    attachmentType: file ? file.type : "",
-    attachmentUrl: ""
-  };
-
-  const editIndex = document.getElementById("editIndex").value;
-
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      data.attachmentData = event.target.result;
-      saveAsset(data, editIndex);
+    const payload = {
+      rowNumber: rowNumber || "",
+      assetId: value("assetId"),
+      registration: value("registration"),
+      engineNumber: value("engineNumber"),
+      vinNumber: value("vinNumber"),
+      purchaseDate: value("purchaseDate"),
+      purchasedBy: value("purchasedBy"),
+      description: value("description"),
+      bodyType: value("bodyType"),
+      engine: value("engine"),
+      model: value("model"),
+      cost: value("cost"),
+      marketValue: value("marketValue"),
+      zoho: value("zoho"),
+      driver: value("driver"),
+      department: value("department"),
+      trackingCompany: value("trackingCompany"),
+      installment: value("installment"),
+      category: value("category")
     };
-    reader.readAsDataURL(file);
-  } else {
-    saveAsset(data, editIndex);
-  }
 
-});
-
-function saveAsset(data, editIndex){
-
-  const saveButton = document.getElementById("saveButton");
-
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify(data)
-  })
-  .then(res => res.json())
-  .then(response => {
-
-    if (response.status === "success") {
-      data.attachmentUrl = response.attachmentUrl || data.attachmentUrl;
-
-      if (editIndex !== "") {
-        assets[Number(editIndex)] = data;
-        document.getElementById("status").innerHTML = "Asset Updated Successfully";
-      } else {
-        assets.push(data);
-        document.getElementById("status").innerHTML = "Asset Saved Successfully";
-      }
-
-      renderTable(assets);
-      updateDashboard();
-      clearForm();
-
-      alert("Asset synchronised successfully");
-    } else {
-      document.getElementById("status").innerHTML = "Error: " + response.message;
-      alert("Error synchronising asset");
+    if (file) {
+      payload.attachmentName = file.name;
+      payload.attachmentType = file.type;
+      payload.attachmentData = await fileToBase64(file);
+    } else if (rowNumber) {
+      const oldAsset = assets.find(a => Number(a.rowNumber) === Number(rowNumber));
+      payload.attachmentName = oldAsset?.attachmentName || "";
+      payload.attachmentType = oldAsset?.attachmentType || "";
+      payload.attachmentUrl = oldAsset?.attachmentUrl || "";
+      payload.fileId = oldAsset?.fileId || "";
     }
 
-  })
-  .catch(err => {
-    console.error(err);
-    document.getElementById("status").innerHTML = "Error Saving Asset";
-    alert("Error synchronising asset");
-  })
-  .finally(() => {
-    saveButton.disabled = false;
-    saveButton.innerHTML = "Save Asset";
-  });
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
 
+    const result = await res.json();
+
+    if (result.status !== "success") {
+      throw new Error(result.message || "Unknown save error");
+    }
+
+    clearForm();
+    await loadAssetsFromSheet();
+    setStatus("Asset saved successfully.");
+    alert("Asset synchronised successfully.");
+  } catch (err) {
+    console.error(err);
+    setStatus("Error saving asset: " + err.message);
+    alert("Error synchronising asset.");
+  } finally {
+    saveButton.disabled = false;
+    saveButton.innerText = "Save Asset";
+  }
 }
 
-function renderTable(data){
-
-  const tbody = document.querySelector("#assetTable tbody");
+function renderTable(data) {
+  const tbody = document.getElementById("tableBody");
   tbody.innerHTML = "";
 
-  data.forEach((asset, index) => {
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="12" class="empty">No transactions found.</td></tr>`;
+    return;
+  }
 
-    const realIndex = assets.indexOf(asset);
+  data.forEach(asset => {
+    const tr = document.createElement("tr");
 
-    let attachment = "";
-
-    if (asset.attachmentType && asset.attachmentType.startsWith("image/")) {
-      const imageSource = asset.attachmentData || asset.attachmentUrl || "";
-      const imageLink = asset.attachmentUrl || imageSource;
-
-      attachment = imageSource
-        ? `<a class="file-link" href="${imageLink}" target="_blank"><img class="attachment-preview" src="${imageSource}" alt="Uploaded image">View Image</a>`
-        : (asset.attachmentName || "");
-    } else {
-      attachment = asset.attachmentUrl
-        ? `<a class="file-link" href="${asset.attachmentUrl}" target="_blank">Open File</a>`
-        : (asset.attachmentName || "");
-    }
-
-    const row = `
-      <tr>
-        <td>${asset.assetId || ""}</td>
-        <td>${asset.registration || ""}</td>
-        <td>${asset.engineNumber || ""}</td>
-        <td>${asset.vinNumber || ""}</td>
-        <td>${asset.model || ""}</td>
-        <td>${asset.driver || ""}</td>
-        <td>${asset.department || ""}</td>
-        <td>${asset.category || ""}</td>
-        <td>${asset.cost || ""}</td>
-        <td>${asset.marketValue || ""}</td>
-        <td>${attachment}</td>
-        <td><button class="edit-btn" type="button" onclick="editAsset(${realIndex})">Edit</button></td>
-      </tr>
+    tr.innerHTML = `
+      <td>${safe(asset.assetId)}</td>
+      <td>${safe(asset.registration)}</td>
+      <td>${safe(asset.engineNumber)}</td>
+      <td>${safe(asset.vinNumber)}</td>
+      <td>${safe(asset.model)}</td>
+      <td>${safe(asset.driver)}</td>
+      <td>${safe(asset.department)}</td>
+      <td>${safe(asset.category)}</td>
+      <td>${money(asset.cost)}</td>
+      <td>${money(asset.marketValue)}</td>
+      <td>${attachmentHtml(asset)}</td>
+      <td><button class="edit-btn" type="button">Edit</button></td>
     `;
 
-    tbody.innerHTML += row;
+    tr.addEventListener("click", () => openDetails(asset));
+    tr.querySelector(".edit-btn").addEventListener("click", event => {
+      event.stopPropagation();
+      editAsset(asset.rowNumber);
+    });
 
+    tbody.appendChild(tr);
   });
-
 }
 
-function updateDashboard(){
+function attachmentHtml(asset) {
+  if (!asset.attachmentUrl) return "—";
 
-  document.getElementById("totalAssets").innerHTML = assets.length;
-  document.getElementById("earthmovingAssets").innerHTML = assets.filter(a => a.category === "Earthmoving").length;
-  document.getElementById("truckAssets").innerHTML = assets.filter(a => a.category === "Trucks").length;
-  document.getElementById("vehicleAssets").innerHTML = assets.filter(a => a.category === "Vehicles").length;
-  document.getElementById("otherAssets").innerHTML = assets.filter(a => a.category === "Other").length;
+  if (asset.attachmentType && asset.attachmentType.startsWith("image/")) {
+    return `
+      <a class="file-link" href="${asset.attachmentUrl}" target="_blank" onclick="event.stopPropagation()">
+        <img class="attachment-preview" src="${asset.attachmentUrl}" alt="Asset photo">
+        View Image
+      </a>
+    `;
+  }
 
+  return `
+    <a class="file-link" href="${asset.attachmentUrl}" target="_blank" onclick="event.stopPropagation()">
+      Open Document
+    </a>
+  `;
 }
 
+function openDetails(asset) {
+  document.getElementById("modalTitle").innerText = asset.assetId || asset.registration || "Asset Details";
 
-function loadAssetsFromSheet(){
+  const fields = [
+    ["Asset ID", asset.assetId],
+    ["Registration", asset.registration],
+    ["Engine Number", asset.engineNumber],
+    ["VIN Number", asset.vinNumber],
+    ["Purchase Date", asset.purchaseDate],
+    ["Purchased By", asset.purchasedBy],
+    ["Description", asset.description],
+    ["Body Type", asset.bodyType],
+    ["Engine Capacity", asset.engine],
+    ["Model", asset.model],
+    ["Cost", money(asset.cost)],
+    ["Market Value", money(asset.marketValue)],
+    ["In ZOHO", asset.zoho],
+    ["Driver / Operator", asset.driver],
+    ["Allocation Department", asset.department],
+    ["Tracking Company", asset.trackingCompany],
+    ["Installment Amount", money(asset.installment)],
+    ["Category", asset.category],
+    ["Attachment", asset.attachmentUrl ? `<a class="file-link" href="${asset.attachmentUrl}" target="_blank">Open Photo / Document</a>` : "—"]
+  ];
 
-  fetch(SCRIPT_URL)
-  .then(res => res.json())
-  .then(data => {
+  document.getElementById("modalBody").innerHTML = `
+    <div class="detail-grid">
+      ${fields.map(([label, val]) => `
+        <div class="detail">
+          <strong>${safe(label)}</strong>
+          <span>${val || "—"}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
 
-    if (Array.isArray(data)) {
-      assets = data;
-      renderTable(assets);
-      updateDashboard();
-    }
+  document.getElementById("detailsModal").style.display = "flex";
+}
 
-  })
-  .catch(err => {
-    console.error(err);
-    document.getElementById("status").innerHTML = "Could not load existing Google Sheet data";
+function closeDetails() {
+  document.getElementById("detailsModal").style.display = "none";
+}
+
+function updateDashboard() {
+  document.getElementById("totalAssets").innerText = assets.length;
+
+  CATEGORIES.forEach(category => {
+    const count = assets.filter(asset => String(asset.category || "").trim() === category).length;
+    document.getElementById(`card-${slug(category)}`).innerText = count;
   });
-
 }
 
-document.addEventListener("DOMContentLoaded", loadAssetsFromSheet);
-
-function applyFilters(){
-
-  const search = document.getElementById("searchInput").value.toLowerCase();
+function applyFilters() {
+  const search = document.getElementById("searchInput").value.toLowerCase().trim();
   const category = document.getElementById("filterCategory").value;
 
-  const filtered = assets.filter(asset => {
-
-    const searchText = [
-      asset.assetId,
-      asset.registration,
-      asset.engineNumber,
-      asset.vinNumber,
-      asset.model,
-      asset.driver,
-      asset.department,
-      asset.category
-    ].join(" ").toLowerCase();
-
-    const matchesSearch = searchText.includes(search);
-    const matchesCategory = category ? asset.category === category : true;
-
+  displayedAssets = assets.filter(asset => {
+    const searchText = Object.values(asset).join(" ").toLowerCase();
+    const matchesSearch = !search || searchText.includes(search);
+    const matchesCategory = !category || asset.category === category;
     return matchesSearch && matchesCategory;
-
   });
 
-  renderTable(filtered);
-
+  renderTable(displayedAssets);
+  setStatus(`Showing ${displayedAssets.length} of ${assets.length} transactions.`);
 }
 
-function editAsset(index){
+function resetFiltersAndRefresh() {
+  document.getElementById("searchInput").value = "";
+  document.getElementById("filterCategory").value = "";
+  loadAssetsFromSheet();
+}
 
-  const asset = assets[index];
+function editAsset(rowNumber) {
+  const asset = assets.find(a => Number(a.rowNumber) === Number(rowNumber));
+  if (!asset) return;
 
+  document.getElementById("editIndex").value = asset.rowNumber || "";
   document.getElementById("assetId").value = asset.assetId || "";
   document.getElementById("registration").value = asset.registration || "";
   document.getElementById("engineNumber").value = asset.engineNumber || "";
@@ -608,23 +754,65 @@ function editAsset(index){
   document.getElementById("department").value = asset.department || "";
   document.getElementById("trackingCompany").value = asset.trackingCompany || "";
   document.getElementById("installment").value = asset.installment || "";
-  document.getElementById("category").value = asset.category || "Other";
-  document.getElementById("editIndex").value = index;
+  document.getElementById("category").value = CATEGORIES.includes(asset.category) ? asset.category : CATEGORIES[0];
 
-  document.getElementById("saveButton").innerHTML = "Update Asset";
-  document.getElementById("status").innerHTML = "Editing selected asset. Click Update Asset to save changes.";
-
+  document.getElementById("saveButton").innerText = "Update Asset";
+  setStatus("Editing selected asset. Click Update Asset to save changes.");
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function clearForm(){
-
+function clearForm() {
   document.getElementById("assetForm").reset();
   document.getElementById("editIndex").value = "";
-  document.getElementById("saveButton").innerHTML = "Save Asset";
-
+  document.getElementById("assetFile").value = "";
+  document.getElementById("saveButton").innerText = "Save Asset";
 }
 
-</script>
+function fileToBase64(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = event => resolve(event.target.result);
+    reader.readAsDataURL(file);
+  });
+}
 
+function value(id) {
+  return document.getElementById(id).value;
+}
+
+function money(value) {
+  if (value === null || value === undefined || value === "") return "";
+  const number = Number(value);
+  if (Number.isNaN(number)) return safe(value);
+  return "R " + number.toLocaleString();
+}
+
+function slug(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function safe(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#039;"
+  }[char]));
+}
+
+function escapeAttr(value) {
+  return safe(value).replace(/"/g, "&quot;");
+}
+
+function setStatus(message) {
+  document.getElementById("status").innerText = message;
+}
+
+window.onclick = function(event) {
+  const modal = document.getElementById("detailsModal");
+  if (event.target === modal) closeDetails();
+};
+</script>
 </body>
 </html>
