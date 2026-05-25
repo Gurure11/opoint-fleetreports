@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Distinct Infrastructure - Asset Register</title>
+
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body{
+      background:#f4f6f9;
+      padding:20px;
+    }
+
+    .container{
+      max-width:1500px;
+      margin:auto;
+      background:#fff;
+      padding:25px;
+      border-radius:10px;
+      box-shadow:0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header{
+      text-align:center;
+      margin-bottom:25px;
+    }
+
+    .header h1{
+      color:#1f4e78;
+      margin-bottom:5px;
+    }
+
+    .header p{
+      color:#666;
+      font-size:14px;
+    }
+
+    .dashboard{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+      gap:15px;
+      margin-bottom:25px;
+    }
+
+    .dash-card{
+      background:#1f4e78;
+      color:#fff;
+      padding:18px;
+      border-radius:8px;
+      text-align:center;
+    }
+
+    .dash-card h2{
+      font-size:30px;
+      margin-bottom:5px;
+    }
+
+    .dash-card p{
+      font-size:14px;
+    }
+
+    .toolbar{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:15px;
+      margin-bottom:25px;
+      padding:15px;
+      background:#eef3f8;
+      border-radius:8px;
+    }
+
+    .form-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap:15px;
+      margin-bottom:20px;
+    }
+
+    .form-group{
+      display:flex;
+      flex-direction:column;
+    }
+
+    label{
+      margin-bottom:5px;
+      font-weight:bold;
+      color:#333;
+      font-size:14px;
+    }
+
+    input, select{
+      padding:10px;
+      border:1px solid #ccc;
+      border-radius:5px;
+      font-size:14px;
+    }
+
+    button{
+      background:#1f4e78;
+      color:#fff;
+      border:none;
+      padding:12px 25px;
+      border-radius:5px;
+      cursor:pointer;
+      font-size:15px;
+      margin-top:20px;
+    }
+
+    button:hover{
+      background:#163954;
+    }
+
+    .secondary-btn{
+      background:#666;
+      margin-left:10px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:30px;
+      overflow-x:auto;
+    }
+
+    th{
+      background:#1f4e78;
+      color:white;
+      padding:12px;
+      text-align:left;
+      font-size:13px;
+    }
+
+    td{
+      padding:10px;
+      border-bottom:1px solid #ddd;
+      font-size:13px;
+    }
+
+    tr:hover{
+      background:#f1f1f1;
+    }
+
+    .status{
+      margin-top:15px;
+      font-weight:bold;
+      color:green;
+    }
+
+    .edit-btn{
+      margin-top:0;
+      padding:8px 12px;
+      font-size:12px;
+      background:#2f7d32;
+    }
+
+    .file-link{
+      color:#1f4e78;
+      font-weight:bold;
+      text-decoration:none;
+    }
+
+    .attachment-preview{
+      max-width:80px;
+      max-height:60px;
+      border-radius:5px;
+      border:1px solid #ddd;
+      display:block;
+      margin-bottom:4px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h1>Distinct Infrastructure</h1>
+    <p>Vehicle & Asset Register Management System</p>
+    <p><strong>Google Sheet ID:</strong> 1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw</p>
+  </div>
+
+  <div class="dashboard">
+    <div class="dash-card">
+      <h2 id="totalAssets">0</h2>
+      <p>Total Assets</p>
+    </div>
+    <div class="dash-card">
+      <h2 id="earthmovingAssets">0</h2>
+      <p>Earthmoving</p>
+    </div>
+    <div class="dash-card">
+      <h2 id="truckAssets">0</h2>
+      <p>Trucks</p>
+    </div>
+    <div class="dash-card">
+      <h2 id="vehicleAssets">0</h2>
+      <p>Vehicles</p>
+    </div>
+    <div class="dash-card">
+      <h2 id="otherAssets">0</h2>
+      <p>Other</p>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="form-group">
+      <label>Search Asset</label>
+      <input type="text" id="searchInput" placeholder="Search by asset ID, registration, model, driver">
+    </div>
+
+    <div class="form-group">
+      <label>Filter Category</label>
+      <select id="filterCategory">
+        <option value="">All Categories</option>
+        <option value="Earthmoving">Earthmoving</option>
+        <option value="Trucks">Trucks</option>
+        <option value="Vehicles">Vehicles</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>&nbsp;</label>
+      <button type="button" onclick="applyFilters()">Search / Filter</button>
+    </div>
+  </div>
+
+  <form id="assetForm">
+
+    <input type="hidden" id="editIndex" value="">
+
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Asset ID</label>
+        <input type="text" id="assetId">
+      </div>
+
+      <div class="form-group">
+        <label>Vehicle Registration</label>
+        <input type="text" id="registration">
+      </div>
+
+      <div class="form-group">
+        <label>Engine Number</label>
+        <input type="text" id="engineNumber">
+      </div>
+
+      <div class="form-group">
+        <label>VIN Number</label>
+        <input type="text" id="vinNumber">
+      </div>
+
+      <div class="form-group">
+        <label>Purchase Date</label>
+        <input type="date" id="purchaseDate">
+      </div>
+
+      <div class="form-group">
+        <label>Purchased By</label>
+        <input type="text" id="purchasedBy">
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="description">
+      </div>
+
+      <div class="form-group">
+        <label>Body Type</label>
+        <input type="text" id="bodyType">
+      </div>
+
+      <div class="form-group">
+        <label>Engine Capacity</label>
+        <input type="text" id="engine">
+      </div>
+
+      <div class="form-group">
+        <label>Model</label>
+        <input type="text" id="model">
+      </div>
+
+      <div class="form-group">
+        <label>Cost</label>
+        <input type="number" id="cost">
+      </div>
+
+      <div class="form-group">
+        <label>Market Value</label>
+        <input type="number" id="marketValue">
+      </div>
+
+      <div class="form-group">
+        <label>In ZOHO</label>
+        <select id="zoho">
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Driver / Operator</label>
+        <input type="text" id="driver">
+      </div>
+
+      <div class="form-group">
+        <label>Allocation Department</label>
+        <input type="text" id="department">
+      </div>
+
+      <div class="form-group">
+        <label>Tracking Company</label>
+        <input type="text" id="trackingCompany">
+      </div>
+
+      <div class="form-group">
+        <label>Installment Amount</label>
+        <input type="number" id="installment">
+      </div>
+
+      <!-- New fields added after the original fields -->
+      <div class="form-group">
+        <label>Asset Category</label>
+        <select id="category">
+          <option value="Earthmoving">Earthmoving</option>
+          <option value="Trucks">Trucks</option>
+          <option value="Vehicles">Vehicles</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Upload Image/File</label>
+        <input type="file" id="assetFile">
+      </div>
+
+    </div>
+
+    <button type="submit" id="saveButton">Save Asset</button>
+    <button type="button" class="secondary-btn" onclick="clearForm()">Clear</button>
+
+  </form>
+
+  <div class="status" id="status"></div>
+
+  <table id="assetTable">
+    <thead>
+      <tr>
+        <th>Asset ID</th>
+        <th>Registration</th>
+        <th>Engine No</th>
+        <th>VIN</th>
+        <th>Model</th>
+        <th>Driver</th>
+        <th>Department</th>
+        <th>Category</th>
+        <th>Cost</th>
+        <th>Market Value</th>
+        <th>Attachment</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody></tbody>
+
+  </table>
+
+</div>
+
+<script>
+
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkEhRzq1GFVK6M14BScoiXUJX7myEFvw5VmtTT8ecJySzOWFDvVoxcHwFieRZzobKPXQ/exec";
+
+let assets = [];
+
+document.getElementById("assetForm").addEventListener("submit", function(e){
+
+  e.preventDefault();
+
+  const saveButton = document.getElementById("saveButton");
+  saveButton.disabled = true;
+  saveButton.innerHTML = "Synchronising...";
+
+  const fileInput = document.getElementById("assetFile");
+  const file = fileInput.files[0];
+
+  const data = {
+    assetId: document.getElementById("assetId").value,
+    registration: document.getElementById("registration").value,
+    engineNumber: document.getElementById("engineNumber").value,
+    vinNumber: document.getElementById("vinNumber").value,
+    purchaseDate: document.getElementById("purchaseDate").value,
+    purchasedBy: document.getElementById("purchasedBy").value,
+    description: document.getElementById("description").value,
+    bodyType: document.getElementById("bodyType").value,
+    engine: document.getElementById("engine").value,
+    model: document.getElementById("model").value,
+    cost: document.getElementById("cost").value,
+    marketValue: document.getElementById("marketValue").value,
+    zoho: document.getElementById("zoho").value,
+    driver: document.getElementById("driver").value,
+    department: document.getElementById("department").value,
+    trackingCompany: document.getElementById("trackingCompany").value,
+    installment: document.getElementById("installment").value,
+    category: document.getElementById("category").value,
+    attachmentName: file ? file.name : "",
+    attachmentData: "",
+    attachmentType: file ? file.type : "",
+    attachmentUrl: ""
+  };
+
+  const editIndex = document.getElementById("editIndex").value;
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      data.attachmentData = event.target.result;
+      saveAsset(data, editIndex);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    saveAsset(data, editIndex);
+  }
+
+});
+
+function saveAsset(data, editIndex){
+
+  const saveButton = document.getElementById("saveButton");
+
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify(data)
+  })
+  .then(res => res.json())
+  .then(response => {
+
+    if (response.status === "success") {
+      data.attachmentUrl = response.attachmentUrl || data.attachmentUrl;
+
+      if (editIndex !== "") {
+        assets[Number(editIndex)] = data;
+        document.getElementById("status").innerHTML = "Asset Updated Successfully";
+      } else {
+        assets.push(data);
+        document.getElementById("status").innerHTML = "Asset Saved Successfully";
+      }
+
+      renderTable(assets);
+      updateDashboard();
+      clearForm();
+
+      alert("Asset synchronised successfully");
+    } else {
+      document.getElementById("status").innerHTML = "Error: " + response.message;
+      alert("Error synchronising asset");
+    }
+
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById("status").innerHTML = "Error Saving Asset";
+    alert("Error synchronising asset");
+  })
+  .finally(() => {
+    saveButton.disabled = false;
+    saveButton.innerHTML = "Save Asset";
+  });
+
+}
+
+function renderTable(data){
+
+  const tbody = document.querySelector("#assetTable tbody");
+  tbody.innerHTML = "";
+
+  data.forEach((asset, index) => {
+
+    const realIndex = assets.indexOf(asset);
+
+    let attachment = "";
+
+    if (asset.attachmentType && asset.attachmentType.startsWith("image/")) {
+      const imageSource = asset.attachmentData || asset.attachmentUrl || "";
+      const imageLink = asset.attachmentUrl || imageSource;
+
+      attachment = imageSource
+        ? `<a class="file-link" href="${imageLink}" target="_blank"><img class="attachment-preview" src="${imageSource}" alt="Uploaded image">View Image</a>`
+        : (asset.attachmentName || "");
+    } else {
+      attachment = asset.attachmentUrl
+        ? `<a class="file-link" href="${asset.attachmentUrl}" target="_blank">Open File</a>`
+        : (asset.attachmentName || "");
+    }
+
+    const row = `
+      <tr>
+        <td>${asset.assetId || ""}</td>
+        <td>${asset.registration || ""}</td>
+        <td>${asset.engineNumber || ""}</td>
+        <td>${asset.vinNumber || ""}</td>
+        <td>${asset.model || ""}</td>
+        <td>${asset.driver || ""}</td>
+        <td>${asset.department || ""}</td>
+        <td>${asset.category || ""}</td>
+        <td>${asset.cost || ""}</td>
+        <td>${asset.marketValue || ""}</td>
+        <td>${attachment}</td>
+        <td><button class="edit-btn" type="button" onclick="editAsset(${realIndex})">Edit</button></td>
+      </tr>
+    `;
+
+    tbody.innerHTML += row;
+
+  });
+
+}
+
+function updateDashboard(){
+
+  document.getElementById("totalAssets").innerHTML = assets.length;
+  document.getElementById("earthmovingAssets").innerHTML = assets.filter(a => a.category === "Earthmoving").length;
+  document.getElementById("truckAssets").innerHTML = assets.filter(a => a.category === "Trucks").length;
+  document.getElementById("vehicleAssets").innerHTML = assets.filter(a => a.category === "Vehicles").length;
+  document.getElementById("otherAssets").innerHTML = assets.filter(a => a.category === "Other").length;
+
+}
+
+
+function loadAssetsFromSheet(){
+
+  fetch(SCRIPT_URL)
+  .then(res => res.json())
+  .then(data => {
+
+    if (Array.isArray(data)) {
+      assets = data;
+      renderTable(assets);
+      updateDashboard();
+    }
+
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById("status").innerHTML = "Could not load existing Google Sheet data";
+  });
+
+}
+
+document.addEventListener("DOMContentLoaded", loadAssetsFromSheet);
+
+function applyFilters(){
+
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const category = document.getElementById("filterCategory").value;
+
+  const filtered = assets.filter(asset => {
+
+    const searchText = [
+      asset.assetId,
+      asset.registration,
+      asset.engineNumber,
+      asset.vinNumber,
+      asset.model,
+      asset.driver,
+      asset.department,
+      asset.category
+    ].join(" ").toLowerCase();
+
+    const matchesSearch = searchText.includes(search);
+    const matchesCategory = category ? asset.category === category : true;
+
+    return matchesSearch && matchesCategory;
+
+  });
+
+  renderTable(filtered);
+
+}
+
+function editAsset(index){
+
+  const asset = assets[index];
+
+  document.getElementById("assetId").value = asset.assetId || "";
+  document.getElementById("registration").value = asset.registration || "";
+  document.getElementById("engineNumber").value = asset.engineNumber || "";
+  document.getElementById("vinNumber").value = asset.vinNumber || "";
+  document.getElementById("purchaseDate").value = asset.purchaseDate || "";
+  document.getElementById("purchasedBy").value = asset.purchasedBy || "";
+  document.getElementById("description").value = asset.description || "";
+  document.getElementById("bodyType").value = asset.bodyType || "";
+  document.getElementById("engine").value = asset.engine || "";
+  document.getElementById("model").value = asset.model || "";
+  document.getElementById("cost").value = asset.cost || "";
+  document.getElementById("marketValue").value = asset.marketValue || "";
+  document.getElementById("zoho").value = asset.zoho || "Yes";
+  document.getElementById("driver").value = asset.driver || "";
+  document.getElementById("department").value = asset.department || "";
+  document.getElementById("trackingCompany").value = asset.trackingCompany || "";
+  document.getElementById("installment").value = asset.installment || "";
+  document.getElementById("category").value = asset.category || "Other";
+  document.getElementById("editIndex").value = index;
+
+  document.getElementById("saveButton").innerHTML = "Update Asset";
+  document.getElementById("status").innerHTML = "Editing selected asset. Click Update Asset to save changes.";
+
+}
+
+function clearForm(){
+
+  document.getElementById("assetForm").reset();
+  document.getElementById("editIndex").value = "";
+  document.getElementById("saveButton").innerHTML = "Save Asset";
+
+}
+
+</script>
+
+</body>
+</html>
