@@ -527,6 +527,8 @@
       <div class="nav-link" data-section="bsc">🎯 BSC Metrics</div>
       <div class="nav-link" data-section="divisions">🏭 Divisions</div>
       <div class="nav-link" data-section="automatedTasks">🔄 Auto Tasks</div>
+      <div class="nav-link" data-section="approvals">✅ Approvals</div>
+      <div class="nav-link" data-section="hiringRequests">🧑‍💼 Hiring Requests</div>
     </div>
   </aside>
   <main class="main" id="mainContent">
@@ -537,17 +539,22 @@
 
 <script>
   // ==================== CONFIGURATION ====================
-  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwsd8UIeYojJWv5e9SoeGeBQ0BR6rnB-uoKN5an6CcNAuoCdDZ_6MiAqQfdv3dSwDfs/exec';
+  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAW-HRb99k_r7cJTvnIvrQQVQk5nOWMv2vcvYH_d7hv_pV0FBm5GPcA6VbBQIiekPwNg/exec';
   const SHEET_ID = '1KWYWSUmwGYcBVIuDzh7yo86eTrfnMZX35DuGnRAVNv8';
 
   const SHEET_ROUTES = {
+    users: { action: 'users', saveAction: 'addEmployee', sheetTab: 'Employees', displayTab: 'Users', columns: ['Employee ID', 'Employee Name', 'Department', 'Role', 'Status', 'Created Date'] },
     departments: { action: 'departments', saveAction: 'addDepartment', sheetTab: 'Department', displayTab: 'Departments', columns: ['Department ID', 'Department Name', 'Manager', 'Budget', 'Status', 'Created Date'] },
+    tickets: { action: 'tickets', saveAction: 'addTicket', sheetTab: 'Tasks', displayTab: 'Tickets', columns: ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'] },
     employees: { action: 'employees', saveAction: 'addEmployee', sheetTab: 'Employees', displayTab: 'Employees', columns: ['Employee ID', 'Employee Name', 'Department', 'Role', 'Status', 'Created Date'] },
     kpis: { action: 'kpis', saveAction: 'addKpi', sheetTab: 'KPIs', displayTab: 'KPIs', columns: ['KPIName', 'Target Value', 'Actual Value', 'Related Department', 'Frequency'] },
     sla: { action: 'sla', saveAction: 'addSla', sheetTab: 'SLA', displayTab: 'SLA', columns: ['SLA Name', 'Description', 'Priority', 'First Response', 'Resolution Target', 'Status'] },
     bsc: { action: 'bscMetrics', saveAction: 'addBscMetrics', sheetTab: 'BSC', displayTab: 'BSC Metrics', columns: ['BSC Name', 'BSC Description', 'Target Score', 'Actual Score', 'Related Department', 'Frequency'] },
     divisions: { action: 'divisions', saveAction: 'addDivision', sheetTab: 'divisions', displayTab: 'Divisions', columns: ['Division ID', 'Division Name', 'Head', 'Region', 'Status'] },
-    automatedTasks: { action: 'automatedTasks', saveAction: 'addAutomatedTask', sheetTab: 'Automated Tasks', displayTab: 'Automated Tasks', columns: ['Task ID', 'Task Name', 'Description', 'Frequency', 'Assigned To', 'Assigned Email', 'Department', 'Next Run', 'Status'] }
+    automatedTasks: { action: 'automatedTasks', saveAction: 'addAutomatedTask', sheetTab: 'Automated Tasks', displayTab: 'Automated Tasks', columns: ['Task ID', 'Task Name', 'Description', 'Frequency', 'Assigned To', 'Assigned Email', 'Department', 'Next Run', 'Status'] },
+    approvals: { action: 'approvals', saveAction: 'addApprovalRequest', sheetTab: 'Approval Requests', displayTab: 'Approvals', columns: ['Approval ID', 'Type', 'Title', 'Requested By', 'Requested By Email', 'Department', 'Status', 'Executive 1', 'Executive 1 Status', 'Executive 2', 'Executive 2 Status', 'Related Task ID', 'Requested Due Date', 'Reason', 'Created Date'] },
+    hiringRequests: { action: 'hiringRequests', saveAction: 'addHiringRequest', sheetTab: 'Hiring Requests', displayTab: 'Hiring Requests', columns: ['Request ID', 'Job Title', 'Department', 'Manager Name', 'Manager Email', 'Headcount', 'Reason', 'Required Date', 'Status', 'Executive 1', 'Executive 1 Status', 'Executive 2', 'Executive 2 Status', 'Created Date'] },
+    timeExtensionRequests: { action: 'timeExtensionRequests', saveAction: 'addTimeExtensionRequest', sheetTab: 'Time Extension Requests', displayTab: 'Time Extension Requests', columns: ['Request ID', 'Task ID', 'Task Title', 'Assignee', 'Assignee Email', 'Current Due Date', 'Requested Due Date', 'Reason', 'Approver', 'Status', 'Created Date'] }
   };
 
   function getRouteByAction(action) {
@@ -597,6 +604,9 @@
 
   const FALLBACK_USERS = Object.keys(SYSTEM_USER_EMAILS);
   let SYSTEM_USERS = [...FALLBACK_USERS];
+
+  const EXECUTIVE_NAMES = ['Lameck Chindove', 'Tafadzwa Magejo', 'Bothwell Gurure', 'System Admin'];
+  const HR_MANAGER_NAME = 'HR Manager';
 
   function escapeHtml(str) {
     if (str === undefined || str === null) return '';
@@ -654,7 +664,12 @@
       clearTimeout(timeout);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      const json = text ? JSON.parse(text) : [];
+      let json;
+      try {
+        json = text ? JSON.parse(text) : [];
+      } catch (parseErr) {
+        throw new Error(`API returned non-JSON response. Check that the Apps Script is deployed as a Web App and accessible. Response started: ${text.slice(0, 120)}`);
+      }
       if (Array.isArray(json)) return json;
       if (json && Array.isArray(json.data)) return json.data;
       if (json && Array.isArray(json.rows)) return json.rows;
@@ -673,7 +688,7 @@
     try {
       const route = getRouteByAction(action);
       const routedPayload = route ? Object.assign({}, payload, { sheetTab: route.sheetTab, sheetName: route.sheetTab, tabName: route.sheetTab }) : payload;
-      const requestBody = { action, payload: routedPayload, user: currentUser, sheetId: SHEET_ID, sheetTab: route ? route.sheetTab : (payload && payload.sheetTab), sheetName: route ? route.sheetTab : (payload && payload.sheetTab), tabName: route ? route.sheetTab : (payload && payload.sheetTab), sendEmail: SEND_EMAIL_NOTIFICATIONS };
+      const requestBody = { action, payload: routedPayload, user: currentUser, sheetId: SHEET_ID, sheetTab: route ? route.sheetTab : (payload && payload.sheetTab), sheetName: route ? route.sheetTab : (payload && payload.sheetTab), tabName: route ? route.sheetTab : (payload && payload.sheetTab), sendEmail: (action === 'addTicket' || action === 'addAutomatedTask') ? true : SEND_EMAIL_NOTIFICATIONS };
       const fetchOptions = {
         method: 'POST',
         headers: API_POST_MODE === 'form' ? { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' } : { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -699,11 +714,24 @@
 
   async function saveWithSync(buttonId, messageId, action, payload, successMessage, options = {}) {
     setButtonLoading(buttonId, true);
-    showMessage('Synchronising with Google Sheets...', 'info', messageId);
+    showMessage('Saving to Google Sheets and sending email notification...', 'info', messageId);
     try {
       const res = await apiPost(action, payload);
-      showMessage(successMessage, 'success', messageId);
-      alert(successMessage);
+      const email = res && res.email ? res.email : null;
+      let finalMessage = res.message || successMessage || 'Saved successfully.';
+      let finalType = 'success';
+
+      if ((action === 'addTicket' || action === 'addAutomatedTask') && email) {
+        if (email.sent) {
+          finalMessage = `Saved and email sent immediately to ${email.to || payload.emailTo || payload.assignedEmail || 'assignee'}.`;
+        } else {
+          finalType = 'error';
+          finalMessage = `Saved, but email was NOT sent: ${email.error || email.reason || 'unknown email error'}.`;
+        }
+      }
+
+      showMessage(finalMessage, finalType, messageId);
+      alert(finalMessage);
       if (typeof options.afterSuccess === 'function') options.afterSuccess(res);
       return res;
     } catch(e) {
@@ -794,18 +822,50 @@
     }
   }
 
+
+  function getPriorityBadgeClass(priority) {
+    switch(String(priority || '').toLowerCase()) {
+      case 'critical': return 'badge-critical';
+      case 'high': return 'badge-high';
+      case 'medium': return 'badge-medium';
+      case 'low': return 'badge-low';
+      default: return 'badge-open';
+    }
+  }
+
+  function calculateSlaMetrics(rows) {
+    let breached = 0;
+    let within = 0;
+
+    rows.forEach(t => {
+      const status = String(t['SLA Status'] || '').toLowerCase();
+      if (status.includes('breach')) breached++;
+      else within++;
+    });
+
+    const total = rows.length || 1;
+
+    return {
+      breached,
+      within,
+      compliance: Math.round((within / total) * 100)
+    };
+  }
+
   async function renderDashboard() {
     const main = document.getElementById('mainContent');
     main.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading dashboard data...</p></div>';
 
     try {
       await refreshPeopleCache();
-      const [tickets, departments, bscMetrics, kpis, sla, employees, automatedTasks] = await Promise.all([
+      const [tickets, departments, bscMetrics, kpis, sla, employees, automatedTasks, approvals] = await Promise.all([
         apiGet('tickets').catch(() => []), apiGet('departments').catch(() => []), apiGet('bscMetrics').catch(() => []),
-        apiGet('kpis').catch(() => []), apiGet('sla').catch(() => []), apiGet('employees').catch(() => []), apiGet('automatedTasks').catch(() => [])
+        apiGet('kpis').catch(() => []), apiGet('sla').catch(() => []), apiGet('employees').catch(() => []), apiGet('automatedTasks').catch(() => []), apiGet('approvals').catch(() => [])
       ]);
 
       const ticketsArray = Array.isArray(tickets) ? tickets : [];
+      const automatedArray = Array.isArray(automatedTasks) ? automatedTasks : [];
+      const approvalsArray = Array.isArray(approvals) ? approvals : [];
       const bsc = Array.isArray(bscMetrics) ? bscMetrics : [];
       const kpiArray = Array.isArray(kpis) ? kpis : [];
       const slaArray = Array.isArray(sla) ? sla : [];
@@ -828,6 +888,9 @@
           </div>
           <div class="user-chip">👤 ${escapeHtml(currentUser?.['Full Name'] || 'Admin')} · ${escapeHtml(currentUser?.Role || 'Executive')}</div>
         </div>
+
+        ${renderExecutiveWaitingApprovals(approvalsArray)}
+        ${renderAssigneeDashboardNotifications(ticketsArray, automatedArray)}
 
         <div class="task-status-grid">
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter='open';loadCurrentSection()" style="border-top:4px solid #3b82f6"><h3 style="color:#3b82f6">${ticketStats.open.length}</h3><p>📋 Tickets Open</p></div>
@@ -854,6 +917,7 @@
 
         ${renderNewTicketForm()}
         ${renderAutomatedTaskForm()}
+        ${renderManagerHiringRequestForm()}
 
         <div class="panel"><div class="panel-header"><h2>🎯 BSC Metrics by Department</h2><button class="btn-primary" onclick="currentSection='bsc';loadCurrentSection()">View All →</button></div>
           <div class="bsc-grid">${bsc.map(b => `<div class="bsc-card"><h4>${escapeHtml(getCellValue(b, 'BSC Name'))}</h4><p>${escapeHtml(getCellValue(b, 'BSC Description'))}</p><div class="bsc-metrics"><span class="metric-pill">🎯 Target: ${escapeHtml(getCellValue(b, 'Target Score'))}</span><span class="metric-pill">📊 Actual: ${escapeHtml(getCellValue(b, 'Actual Score'))}</span></div><div style="font-size:12px;color:#64748b">${escapeHtml(getCellValue(b, 'Related Department'))} · ${escapeHtml(b.Frequency || 'Monthly')}</div></div>`).join('') || '<div style="padding:20px;text-align:center">No BSC metrics found</div>'}</div>
@@ -864,10 +928,11 @@
         </div>
 
         <div class="panel"><div class="panel-header"><h2>⏱️ SLA Management</h2><button class="btn-primary" onclick="currentSection='sla';loadCurrentSection()">View All →</button></div>
-          <div class="table-wrapper"><table><thead><tr><th>SLA Name</th><th>Priority</th><th>First Response</th><th>Resolution Target</th><th>Status</th></tr></thead><tbody>${slaArray.slice(0,5).map(s => `<tr><td><strong>${escapeHtml(getCellValue(s, 'SLA Name'))}</strong></td><td><span class="badge badge-high">${escapeHtml(s.Priority || '')}</span></td><td>${escapeHtml(getCellValue(s, 'First Response'))}</td><td>${escapeHtml(getCellValue(s, 'Resolution Target'))}</td><td><span class="badge badge-low">${escapeHtml(s.Status || 'Active')}</span></td></tr>`).join('') || '<tr><td colspan="5">No SLA records</td></tr>'}</tbody></table></div>
+          <div class="table-wrapper"><table><thead><tr><th>SLA Name</th><th>Priority</th><th>First Response</th><th>Resolution Target</th><th>Status</th></tr></thead><tbody>${slaArray.slice(0,5).map(s => `<tr><td><strong>${escapeHtml(getCellValue(s, 'SLA Name'))}</strong></td><td><span class="badge ${getPriorityBadgeClass(s.Priority)}">${escapeHtml(s.Priority || '')}</span></td><td>${escapeHtml(getCellValue(s, 'First Response'))}</td><td>${escapeHtml(getCellValue(s, 'Resolution Target'))}</td><td><span class="badge badge-low">${escapeHtml(s.Status || 'Active')}</span></td></tr>`).join('') || '<tr><td colspan="5">No SLA records</td></tr>'}</tbody></table></div>
         </div>`;
 
       wireDashboardForms();
+      wireHiringRequestForm();
       renderDashboardCharts(priorityCounts, deptTicketCount, submittedByDept, deptScores);
     } catch (err) {
       main.innerHTML = `<div class="panel" style="padding:40px;text-align:center;color:#ef4444"><h2>⚠️ Error Loading Dashboard</h2><p>${escapeHtml(err.message)}</p><button class="refresh-btn" onclick="loadCurrentSection()">Try Again</button></div>`;
@@ -952,6 +1017,44 @@ Please log in to QuickBase to review and update this item.`
     };
   }
 
+
+
+  function applyAssignmentEmailPayload(actionName, payload) {
+    const isTicket = actionName === 'addTicket';
+    const isAuto = actionName === 'addAutomatedTask';
+    if (!isTicket && !isAuto) return payload;
+
+    const title = payload.title || payload.taskName || payload.Title || payload['Task Name'] || payload['Ticket ID'] || 'New task';
+    const assignee = payload.assignedTo || payload['Assigned To'] || 'Assignee';
+    const emailTo = payload.assignedEmail || payload['Assigned Email'] || findEmailForUser(assignee);
+    const dueText = payload.dueDate || payload['Due Date'] || payload.nextRun || payload['Next Run'] || 'Not set';
+    const description = payload.description || payload.Description || 'No description provided.';
+    const department = payload.department || payload.Department || 'Not set';
+    const priorityOrFrequency = isAuto ? (payload.frequency || payload.Frequency || 'Not set') : (payload.priority || payload.Priority || 'Not set');
+
+    payload.notifyAssignee = true;
+    payload.notifyDashboard = true;
+    payload['Dashboard Notification'] = isAuto ? 'New automated task assigned' : 'New task assigned';
+    payload.emailService = 'gmail';
+    payload.emailTo = emailTo;
+    payload.emailSubject = `${isAuto ? 'Automated recurring task' : 'New task/ticket'} assigned: ${title}`;
+    payload.emailBody = `Hi ${assignee},
+
+A ${isAuto ? 'recurring automated task' : 'task/ticket'} has been assigned to you.
+
+Task: ${title}
+Department: ${department}
+Priority/Frequency: ${priorityOrFrequency}
+Due/Next run: ${dueText}
+
+Description:
+${description}
+
+Created by: ${currentUser?.['Full Name'] || currentUser?.Email || 'QuickBase'}
+
+Please log in to QuickBase to review and update this item.`;
+    return payload;
+  }
   function wireDashboardForms() {
     wireAssigneeEmail('ticketAssignee', 'ticketAssigneeEmail');
     wireAssigneeEmail('autoAssignee', 'autoAssigneeEmail');
@@ -972,9 +1075,11 @@ Please log in to QuickBase to review and update this item.`
         sheetTab: 'Tasks'
       };
       Object.assign(payload, buildTaskEmailPayload('ticket', payload));
+      payload.notifyDashboard = true;
+      payload['Dashboard Notification'] = 'New task assigned';
       if (!payload.title) return showMessage('Title required', 'error', 'ticketFormMessage');
       if (SEND_EMAIL_NOTIFICATIONS && !payload.emailTo) return showMessage('Assignee email is required for Gmail notification. Select an assignee with an email address.', 'error', 'ticketFormMessage');
-      await saveWithSync('createTicketBtn', 'ticketFormMessage', 'addTicket', payload, 'Ticket saved, synchronised and assignee notified.', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
+      await saveWithSync('createTicketBtn', 'ticketFormMessage', 'addTicket', payload, 'Ticket saved. Checking email status...', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
     });
 
     document.getElementById('createAutoTaskBtn')?.addEventListener('click', async () => {
@@ -991,10 +1096,228 @@ Please log in to QuickBase to review and update this item.`
         sheetTab: 'Automated Tasks'
       };
       Object.assign(payload, buildTaskEmailPayload('automated', payload));
+      payload.notifyDashboard = true;
+      payload['Dashboard Notification'] = 'New automated task assigned';
       if (!payload.taskName) return showMessage('Task name required', 'error', 'autoTaskMessage');
       if (SEND_EMAIL_NOTIFICATIONS && !payload.emailTo) return showMessage('Assignee email is required for Gmail notification. Select an assignee with an email address.', 'error', 'autoTaskMessage');
-      await saveWithSync('createAutoTaskBtn', 'autoTaskMessage', 'addAutomatedTask', payload, 'Automated task saved, synchronised and assignee notified.', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
+      await saveWithSync('createAutoTaskBtn', 'autoTaskMessage', 'addAutomatedTask', payload, 'Automated task saved. Checking email status...', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
     });
+  }
+
+
+  function getCurrentUserAliases() {
+    const fullName = currentUser?.['Full Name'] || currentUser?.Name || currentUser?.User || '';
+    const email = currentUser?.Email || currentUser?.email || '';
+    const aliases = [fullName, email]
+      .map(value => normalizeName(value))
+      .filter(Boolean);
+    return [...new Set(aliases)];
+  }
+
+  function isAssignedToCurrentUser(row) {
+    const aliases = getCurrentUserAliases();
+    if (!aliases.length) return false;
+    const assignedName = normalizeName(row['Assigned To'] || row.assignedTo || row.Assignee || row.User || '');
+    const assignedEmail = normalizeName(row['Assigned Email'] || row.assignedEmail || row.Email || row['Email Address'] || '');
+    return aliases.includes(assignedName) || aliases.includes(assignedEmail);
+  }
+
+  function getDashboardTaskTitle(row) {
+    return row.Title || row.title || row['Task Name'] || row.taskName || row['Ticket ID'] || row['Task ID'] || 'Assigned task';
+  }
+
+  function getDashboardTaskDate(row) {
+    return row['Due Date'] || row.dueDate || row['Next Run'] || row.nextRun || row['Created Date'] || '';
+  }
+
+  function renderAssigneeDashboardNotifications(ticketsRows = [], automatedRows = []) {
+    const assignedTickets = ticketsRows
+      .filter(isAssignedToCurrentUser)
+      .filter(row => !isClosedTicket(row))
+      .map(row => Object.assign({ _kind: 'Task/Ticket' }, row));
+
+    const assignedAutomated = automatedRows
+      .filter(isAssignedToCurrentUser)
+      .filter(row => String(row.Status || row.status || 'Active').toLowerCase() !== 'paused')
+      .map(row => Object.assign({ _kind: 'Automated Task' }, row));
+
+    const assignedItems = [...assignedTickets, ...assignedAutomated].slice(0, 6);
+    if (!assignedItems.length) return '';
+
+    return `<div class="panel" style="border-left:4px solid #3b82f6">
+      <div class="panel-header">
+        <h2>🔔 New Tasks Assigned To You</h2>
+        <button class="btn-secondary" onclick="currentSection='tickets';window.taskFilter='open';loadCurrentSection()">Open My Tasks</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Type</th><th>Task</th><th>Department</th><th>Priority/Frequency</th><th>Due / Next Run</th><th>Status</th></tr></thead>
+          <tbody>${assignedItems.map(row => `<tr>
+            <td><strong>${escapeHtml(row._kind)}</strong></td>
+            <td>${escapeHtml(getDashboardTaskTitle(row))}</td>
+            <td>${escapeHtml(row.Department || row.department || '-')}</td>
+            <td>${escapeHtml(row.Priority || row.priority || row.Frequency || row.frequency || '-')}</td>
+            <td>${escapeHtml(getDashboardTaskDate(row) || '-')}</td>
+            <td><span class="badge badge-open">${escapeHtml(row.Status || row.status || 'Open')}</span></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+
+  function currentUserRoleText() {
+    return String(currentUser?.Role || currentUser?.role || '').toLowerCase();
+  }
+
+  function isExecutiveUser() {
+    const role = currentUserRoleText();
+    const name = normalizeName(currentUser?.['Full Name'] || currentUser?.Name || '');
+    const email = normalizeName(currentUser?.Email || '');
+    return role.includes('executive') || EXECUTIVE_NAMES.some(n => normalizeName(n) === name || normalizeName(SYSTEM_USER_EMAILS[n]) === email);
+  }
+
+  function isManagerUser() {
+    const role = currentUserRoleText();
+    return role.includes('manager') || role.includes('executive') || role.includes('admin');
+  }
+
+  function isPendingApproval(row) {
+    const status = String(row.Status || row.status || '').toLowerCase();
+    return !status || status.includes('pending') || status.includes('waiting') || status.includes('approved by executive 1');
+  }
+
+  function approvalNeedsCurrentUser(row) {
+    if (!isPendingApproval(row)) return false;
+    const type = String(row.Type || row.type || '').toLowerCase();
+    if (type.includes('time')) {
+      const approver = normalizeName(row.Approver || row['Approver Name'] || row['Issued By'] || '');
+      return isExecutiveUser() || approver === normalizeName(currentUser?.['Full Name'] || currentUser?.Name || '');
+    }
+    return isExecutiveUser();
+  }
+
+  function renderExecutiveWaitingApprovals(approvalRows = []) {
+    if (!isExecutiveUser()) return '';
+    const waiting = approvalRows.filter(approvalNeedsCurrentUser);
+    return `<div class="task-status-grid">
+      <div class="status-stat-card" onclick="currentSection='approvals';loadCurrentSection()" style="border-top:4px solid #f59e0b">
+        <h3 style="color:#f59e0b">${waiting.length}</h3>
+        <p>⏳ Waiting Approvals</p>
+      </div>
+    </div>`;
+  }
+
+  function renderManagerHiringRequestForm() {
+    if (!isManagerUser()) return '';
+    return `<div class="panel">
+      <div class="panel-header"><h2>🧑‍💼 Request Hiring New Staff</h2><button class="btn-secondary" onclick="currentSection='hiringRequests';loadCurrentSection()">View Hiring Requests</button></div>
+      <div style="padding:20px">
+        <div class="form-row">
+          <div class="form-field"><label>Job Title *</label><input id="hireJobTitle" placeholder="e.g., Network Technician"></div>
+          <div class="form-field"><label>Department</label><input id="hireDept" value="${escapeHtml(currentUser?.Department || '')}" placeholder="Department"></div>
+          <div class="form-field"><label>Headcount</label><input id="hireHeadcount" type="number" min="1" value="1"></div>
+          <div class="form-field"><label>Required Date</label><input id="hireRequiredDate" type="date"></div>
+        </div>
+        <div class="form-field"><label>Reason / Business Justification *</label><textarea id="hireReason" rows="3" placeholder="Why is this hire needed?"></textarea></div>
+        <button class="btn-primary" id="submitHiringRequestBtn">Submit Hiring Request</button>
+        <div id="hiringRequestMessage" class="message-bar"></div>
+      </div>
+    </div>`;
+  }
+
+  function wireHiringRequestForm() {
+    document.getElementById('submitHiringRequestBtn')?.addEventListener('click', async () => {
+      const payload = {
+        jobTitle: document.getElementById('hireJobTitle').value,
+        department: document.getElementById('hireDept').value,
+        headcount: document.getElementById('hireHeadcount').value || '1',
+        requiredDate: document.getElementById('hireRequiredDate').value,
+        reason: document.getElementById('hireReason').value,
+        managerName: currentUser?.['Full Name'] || currentUser?.Name || currentUser?.Email || 'Manager',
+        managerEmail: currentUser?.Email || '',
+        sheetTab: 'Hiring Requests'
+      };
+      if (!payload.jobTitle) return showMessage('Job title is required.', 'error', 'hiringRequestMessage');
+      if (!payload.reason) return showMessage('Reason is required.', 'error', 'hiringRequestMessage');
+      await saveWithSync('submitHiringRequestBtn', 'hiringRequestMessage', 'addHiringRequest', payload, 'Hiring request submitted to Executives for double approval.', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
+    });
+  }
+
+  function wireApprovalActionButtons() {
+    document.querySelectorAll('[data-approval-action]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const approvalId = btn.getAttribute('data-approval-id');
+        const decision = btn.getAttribute('data-approval-action');
+        const note = prompt(`Optional note for ${decision}:`) || '';
+        const payload = {
+          approvalId,
+          decision,
+          note,
+          approverName: currentUser?.['Full Name'] || currentUser?.Name || currentUser?.Email || 'Approver',
+          approverEmail: currentUser?.Email || ''
+        };
+        await saveWithSync(btn.id, 'approvalActionMessage', 'decideApproval', payload, `Approval ${decision} recorded.`, { afterSuccess: () => setTimeout(() => renderApprovals(), 1000) });
+      });
+    });
+  }
+
+  function getApprovalId(row, index) {
+    return row['Approval ID'] || row['Request ID'] || row.ID || row.Id || row.id || `ROW_${index + 2}`;
+  }
+
+  async function renderApprovals() {
+    const rowsRaw = await safeGet('approvals');
+    const rows = Array.isArray(rowsRaw) ? rowsRaw : [];
+    const actionable = rows.filter(approvalNeedsCurrentUser);
+    const main = document.getElementById('mainContent');
+    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>Approvals</h1><p>Requests needing action or already processed</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
+      <div id="approvalActionMessage" class="message-bar"></div>
+      <div class="panel"><div class="panel-header"><h2>⏳ Waiting Approvals (${actionable.length})</h2></div>
+      <div class="table-wrapper"><table><thead><tr><th>ID</th><th>Type</th><th>Title</th><th>Requested By</th><th>Status</th><th>Executive 1</th><th>Executive 2</th><th>Reason</th><th>Action</th></tr></thead><tbody>
+      ${rows.length ? rows.map((row, idx) => {
+        const id = getApprovalId(row, idx);
+        const canAct = approvalNeedsCurrentUser(row);
+        return `<tr><td>${escapeHtml(id)}</td><td>${escapeHtml(row.Type || '')}</td><td><strong>${escapeHtml(row.Title || row['Job Title'] || row['Task Title'] || '')}</strong></td><td>${escapeHtml(row['Requested By'] || row.Manager || row.Assignee || '')}</td><td><span class="badge ${String(row.Status || '').toLowerCase().includes('reject') ? 'badge-high' : 'badge-open'}">${escapeHtml(row.Status || 'Pending')}</span></td><td>${escapeHtml((row['Executive 1'] || '-') + ' ' + (row['Executive 1 Status'] || ''))}</td><td>${escapeHtml((row['Executive 2'] || '-') + ' ' + (row['Executive 2 Status'] || ''))}</td><td>${escapeHtml(row.Reason || '')}</td><td>${canAct ? `<button class="btn-primary" id="approve_${idx}" data-approval-id="${escapeHtml(id)}" data-approval-action="approve">Approve</button> <button class="btn-secondary" id="reject_${idx}" data-approval-id="${escapeHtml(id)}" data-approval-action="reject">Reject</button>` : '-'}</td></tr>`;
+      }).join('') : '<tr><td colspan="9" style="text-align:center">No approvals found</td></tr>'}
+      </tbody></table></div></div>`;
+    wireApprovalActionButtons();
+  }
+
+  async function renderHiringRequests() {
+    const route = SHEET_ROUTES.hiringRequests;
+    const data = await safeGet(route.action);
+    const rows = Array.isArray(data) ? data : [];
+    const main = document.getElementById('mainContent');
+    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>Hiring Requests</h1><p>Managers submit requests. Executives approve using double approval.</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
+      ${renderManagerHiringRequestForm()}
+      <div class="panel"><div class="panel-header"><h2>🧑‍💼 Hiring Requests</h2></div><div class="table-wrapper"><table><thead><tr>${route.columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(row => `<tr>${route.columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${route.columns.length}" style="text-align:center">No hiring requests found</td></tr>`}</tbody></table></div></div>`;
+    wireHiringRequestForm();
+  }
+
+  function renderTimeExtensionRequestButton(row, idx) {
+    if (!isAssignedToCurrentUser(row) || isClosedTicket(row)) return '';
+    return `<button class="btn-secondary" onclick="openTimeExtensionRequest('${escapeHtml(getCellValue(row, 'Ticket ID'))}', '${escapeHtml(getDashboardTaskTitle(row))}', '${escapeHtml(getDueDate(row))}')">Request More Time</button>`;
+  }
+
+  window.openTimeExtensionRequest = async function(taskId, taskTitle, currentDueDate) {
+    const requestedDueDate = prompt('Enter the new requested due date (YYYY-MM-DD):');
+    if (!requestedDueDate) return;
+    const reason = prompt('Reason for needing more time:') || '';
+    if (!reason) return alert('Reason is required.');
+    const payload = {
+      taskId,
+      taskTitle,
+      assignee: currentUser?.['Full Name'] || currentUser?.Name || currentUser?.Email || 'Assignee',
+      assigneeEmail: currentUser?.Email || '',
+      currentDueDate,
+      requestedDueDate,
+      reason,
+      approver: '',
+      sheetTab: 'Time Extension Requests'
+    };
+    await apiPost('addTimeExtensionRequest', payload);
+    alert('Time extension request sent for approval.');
   }
 
   function renderDashboardCharts(priorityCounts, deptTicketCount, submittedByDept, deptScores) {
@@ -1077,7 +1400,7 @@ Please log in to QuickBase to review and update this item.`
     };
   }
 
-  async function renderUsers() { const data = await safeGet('users'); renderSimpleTable('Users', data, ['Employee ID', 'Employee Name', 'Department', 'Role', 'Status', 'Created Date']); }
+  async function renderUsers() { const route = SHEET_ROUTES.users; const data = await safeGet(route.action); renderSimpleTable(route.displayTab, data, route.columns, route.sheetTab); }
 
 
   async function renderApiConnection() {
@@ -1165,7 +1488,8 @@ Please log in to QuickBase to review and update this item.`
 
       try {
         const headers = parseHeaders();
-        const options = { method, headers, redirect: 'follow', cache: 'no-store' };
+        const options = { method, redirect: 'follow', cache: 'no-store' };
+        if (method === 'POST') options.headers = headers;
         let url = API_ONLY_URL;
 
         if (method === 'POST') {
@@ -1257,8 +1581,19 @@ Please log in to QuickBase to review and update this item.`
   }
 
   async function safeGet(action) {
-    try { return await apiGet(action); }
-    catch(e) { return []; }
+    try {
+      return await apiGet(action);
+    } catch(e) {
+      const main = document.getElementById('mainContent');
+      if (main) {
+        main.innerHTML = `
+          <div class="error-banner">
+            <strong>API ERROR:</strong><br>
+            ${escapeHtml(e.message || 'Unknown API error')}
+          </div>`;
+      }
+      throw e;
+    }
   }
 
   async function renderDepartments() { const route = SHEET_ROUTES.departments; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
@@ -1308,6 +1643,7 @@ Please log in to QuickBase to review and update this item.`
   }
 
   async function renderTickets() {
+    await refreshPeopleCache();
     const allTicketsRaw = await safeGet('tickets');
     const allTickets = Array.isArray(allTicketsRaw) ? allTicketsRaw : [];
     const stats = calculateTicketStats(allTickets);
@@ -1321,7 +1657,7 @@ Please log in to QuickBase to review and update this item.`
     else if (window.taskFilter === 'closed-on-time') data = stats.closedOnTime;
     else if (window.taskFilter === 'closed-late') data = stats.closedLate;
 
-    const columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'];
+    const columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date', 'Action'];
     const main = document.getElementById('mainContent');
     const activeFilterText = window.taskFilter ? `Filtered: ${window.taskFilter.replace(/-/g, ' ')}` : 'All tickets';
 
@@ -1343,7 +1679,10 @@ Please log in to QuickBase to review and update this item.`
         <div class="chart-card"><h3>Tickets by Priority</h3><p>Current ticket count grouped by priority</p><canvas id="ticketsPriorityChart"></canvas></div>
         <div class="chart-card"><h3>Tickets by Department</h3><p>Current ticket count grouped by department</p><canvas id="ticketsDepartmentChart"></canvas></div>
       </div>
-      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${data.length ? data.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
+      ${renderNewTicketForm()}
+      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${data.length ? data.map((row, idx) => `<tr>${columns.map(c => c === 'Action' ? `<td>${renderTimeExtensionRequestButton(row, idx)}</td>` : `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
+
+    wireDashboardForms();
 
     if (typeof Chart !== 'undefined') {
       const pCtx = document.getElementById('ticketsPriorityChart')?.getContext('2d');
@@ -1368,7 +1707,58 @@ Please log in to QuickBase to review and update this item.`
   async function renderSLA() {
     const route = SHEET_ROUTES.sla;
     const data = await safeGet(route.action);
+
+    const metrics = calculateSlaMetrics(Array.isArray(data) ? data : []);
+
     renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab);
+
+    const top = document.querySelector('.top-bar');
+
+    if (top) {
+      top.insertAdjacentHTML('afterend', `
+        <div class="task-status-grid">
+          <div class="status-stat-card">
+            <h3 style="color:#22c55e">${metrics.within}</h3>
+            <p>Within SLA</p>
+          </div>
+
+          <div class="status-stat-card">
+            <h3 style="color:#ef4444">${metrics.breached}</h3>
+            <p>Breached SLA</p>
+          </div>
+
+          <div class="status-stat-card">
+            <h3 style="color:#3b82f6">${metrics.compliance}%</h3>
+            <p>SLA Compliance</p>
+          </div>
+        </div>
+      `);
+    }
+
+    const saveBtn = document.getElementById('saveDataEntryBtn');
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        const firstResponse =
+          document.getElementById('entry_First_Response')?.value || '';
+
+        const resolutionTarget =
+          document.getElementById('entry_Resolution_Target')?.value || '';
+
+        const valid =
+          /^([0-9]+)\s(minute|minutes|hour|hours|day|days)$/i;
+
+        if (!valid.test(firstResponse)) {
+          alert('Invalid First Response format. Example: 2 hours');
+          return;
+        }
+
+        if (!valid.test(resolutionTarget)) {
+          alert('Invalid Resolution Target format. Example: 24 hours');
+          return;
+        }
+      });
+    }
   }
 
   async function renderBSC() {
@@ -1406,9 +1796,11 @@ Please log in to QuickBase to review and update this item.`
       payload.sheetName = sheetTabName;
       payload.tabName = sheetTabName;
       if (columns.includes('Created Date') && !payload['Created Date']) payload['Created Date'] = new Date().toISOString().slice(0,10);
+      applyAssignmentEmailPayload(actionName, payload);
       const firstColumn = columns[0];
       if (!payload[firstColumn]) return showMessage(`${firstColumn} is required`, 'error', 'dataEntryMessage');
-      await saveWithSync('saveDataEntryBtn', 'dataEntryMessage', actionName, payload, `${title} record saved and synchronised.`, { afterSuccess: () => setTimeout(() => loadCurrentSection(), 1000) });
+      if ((actionName === 'addTicket' || actionName === 'addAutomatedTask') && !payload.emailTo) return showMessage('Assignee email is required for Gmail notification. Select an assignee with an email address.', 'error', 'dataEntryMessage');
+      await saveWithSync('saveDataEntryBtn', 'dataEntryMessage', actionName, payload, `${title} record saved, synchronised and assignee notified by Gmail.`, { afterSuccess: () => setTimeout(() => loadCurrentSection(), 1000) });
     });
   }
 
@@ -1433,6 +1825,8 @@ Please log in to QuickBase to review and update this item.`
     else if (currentSection === 'bsc') await renderBSC();
     else if (currentSection === 'divisions') await renderDivisions();
     else if (currentSection === 'automatedTasks') await renderAutomatedTasks();
+    else if (currentSection === 'approvals') await renderApprovals();
+    else if (currentSection === 'hiringRequests') await renderHiringRequests();
     else await renderDashboard();
 
     document.querySelectorAll('.nav-link').forEach(link => {
