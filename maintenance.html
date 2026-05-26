@@ -1149,7 +1149,7 @@
         // GOOGLE APPS SCRIPT WEB APP URL
         // REPLACE THIS WITH YOUR DEPLOYED APPS SCRIPT URL
         // =============================================
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2-svMdaUEVzPs9SAm8jpNKsN46i0nkgvUYayoOBzjro3GjdkJVNzhuWTsL4CABHSJ7A/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8QtK1GElaNeu3EmnJWMCob07MuKWiFxx9vVOVrTnzoXVOZO8r8nN3NeNnm5TFAusRWg/exec';
         
         // Google Sheets Configuration
         const SHEET_CONFIG = {
@@ -1529,7 +1529,7 @@
                     </td>
                     <td><strong>${formatCurrency(record.totalCost || record.totalRepairCost || 0)}</strong></td>
                     <td>
-                        <button type="button" class="btn-primary btn-small" onclick='editMaintenanceRecord(${JSON.stringify(record).replace(/'/g, "&#039;")})'>
+                        <button type="button" class="btn-primary btn-small" onclick="editMaintenanceRecordFromButton(this)" data-record="${escapeHtml(JSON.stringify(record))}">
                             <i class="fas fa-edit"></i> Edit
                         </button>
                     </td>
@@ -1775,6 +1775,16 @@
             return photoFiles;
         }
 
+        function editMaintenanceRecordFromButton(button) {
+            try {
+                const raw = button && button.getAttribute('data-record');
+                editMaintenanceRecord(raw ? JSON.parse(raw) : {});
+            } catch (error) {
+                console.error('Could not load record for editing:', error);
+                showMessage('Could not load this record for editing.', 'error');
+            }
+        }
+
         // Load an existing maintenance record into the form for editing
         function editMaintenanceRecord(record) {
             editingMaintenanceRecord = record || {};
@@ -1964,8 +1974,8 @@
 
         // Helper function: Escape HTML to prevent XSS
         function escapeHtml(unsafe) {
-            if (!unsafe) return '';
-            return unsafe
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
