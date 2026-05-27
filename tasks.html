@@ -507,6 +507,79 @@
     .auto-weekly { background: #ede9fe; color: #5b21b6; }
     .auto-monthly { background: #fce7f3; color: #9d174d; }
 
+    /* Login and rights layer */
+    .login-screen {
+      min-height: 100vh;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #3b82f6 100%);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      background: white;
+      border-radius: 28px;
+      padding: 32px;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+      border: 1px solid rgba(255,255,255,0.4);
+    }
+
+    .login-card h1 {
+      font-size: 30px;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+
+    .login-card p {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 22px;
+    }
+
+    .login-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .login-note {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .logout-btn {
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 8px 14px;
+      border-radius: 40px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .rights-chip {
+      background: #eef2ff;
+      color: #1e40af;
+      padding: 4px 10px;
+      border-radius: 40px;
+      font-size: 11px;
+      font-weight: 800;
+      margin-left: 6px;
+    }
+
+    .approval-card {
+      border-left: 4px solid #3b82f6;
+    }
+
     @media (max-width: 768px) {
       .sidebar { width: 80px; }
       .nav-link span:not(.emoji) { display: none; }
@@ -518,7 +591,27 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-<div class="app">
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <h1>QuickBase Login</h1>
+    <p>Sign in with your Users tab credentials.</p>
+    <div class="form-field" style="margin-bottom:14px">
+      <label>Email</label>
+      <input id="loginEmail" type="email" autocomplete="username" placeholder="name@onpointontime.co.za">
+    </div>
+    <div class="form-field">
+      <label>Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password">
+    </div>
+    <div class="login-actions">
+      <label style="font-size:13px;color:#475569"><input id="rememberLogin" type="checkbox" checked style="width:auto;margin-right:6px"> Remember me</label>
+      <button class="btn-primary" id="loginBtn">Sign in</button>
+    </div>
+    <div id="loginMessage" class="message-bar"></div>
+    <div class="login-note">Users are fetched from Google Sheet tab <strong>Users</strong>. Required columns: User ID, Full Name, Email, Department, Role, Status, Join Date, Password, User Rights.</div>
+  </div>
+</div>
+<div class="app" id="appShell" style="display:none">
   <aside class="sidebar">
     <div class="brand">Quick<span>Base</span></div>
     <div class="org-name">🏢 On Point Group<br>Operations Management</div>
@@ -533,6 +626,10 @@
       <div class="nav-link" data-section="departments">🏢 Departments</div>
       <div class="nav-link" data-section="employees">👔 Employees</div>
       <div class="nav-link" data-section="tickets">🎫 Tickets</div>
+      <div class="nav-link" data-section="myTickets">📥 My Tickets</div>
+      <div class="nav-link" data-section="sentTickets">📤 Sent Tickets</div>
+      <div class="nav-link" data-section="approvals">✅ Approvals</div>
+      <div class="nav-link" data-section="hiringRequests">🧑‍💼 Hiring Requests</div>
       <div class="nav-link" data-section="kpis">📊 KPIs</div>
       <div class="nav-link" data-section="sla">⏱️ SLA</div>
       <div class="nav-link" data-section="bsc">🎯 BSC Metrics</div>
@@ -547,7 +644,7 @@
 
 <script>
   // ==================== CONFIGURATION ====================
-  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwsd8UIeYojJWv5e9SoeGeBQ0BR6rnB-uoKN5an6CcNAuoCdDZ_6MiAqQfdv3dSwDfs/exec';
+  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxWpDjcvcgn1F8PvW7rCss9KZt-HeYc8AsGORmP4yXViWZROH2lmhHrfigtcpG6tCeQ/exec';
   const SHEET_ID = '1KWYWSUmwGYcBVIuDzh7yo86eTrfnMZX35DuGnRAVNv8';
 
   const SHEET_ROUTES = {
@@ -557,7 +654,9 @@
     sla: { action: 'sla', saveAction: 'addSla', sheetTab: 'SLA', displayTab: 'SLA', columns: ['SLA Name', 'Description', 'Priority', 'First Response', 'Resolution Target', 'Status'] },
     bsc: { action: 'bscMetrics', saveAction: 'addBscMetrics', sheetTab: 'BSC', displayTab: 'BSC Metrics', columns: ['BSC Name', 'BSC Description', 'Target Score', 'Actual Score', 'Related Department', 'Frequency'] },
     divisions: { action: 'divisions', saveAction: 'addDivision', sheetTab: 'divisions', displayTab: 'Divisions', columns: ['Division ID', 'Division Name', 'Head', 'Region', 'Status'] },
-    automatedTasks: { action: 'automatedTasks', saveAction: 'addAutomatedTask', sheetTab: 'Automated Tasks', displayTab: 'Automated Tasks', columns: ['Task ID', 'Task Name', 'Description', 'Frequency', 'Assigned To', 'Assigned Email', 'Department', 'Next Run', 'Status'] }
+    automatedTasks: { action: 'automatedTasks', saveAction: 'addAutomatedTask', sheetTab: 'Automated Tasks', displayTab: 'Automated Tasks', columns: ['Task ID', 'Task Name', 'Description', 'Frequency', 'Assigned To', 'Assigned Email', 'Department', 'Next Run', 'Status'] },
+    users: { action: 'users', saveAction: 'addUser', sheetTab: 'Users', displayTab: 'Users', columns: ['User ID', 'Full Name', 'Email', 'Department', 'Roles', 'Status', 'Join Date', 'Password', 'User Rights'] },
+    hiringRequests: { action: 'hiringRequests', saveAction: 'addHiringRequest', sheetTab: 'Hiring Requests', displayTab: 'Hiring Requests', columns: ['Ticket Number', 'Request Date', 'Requested By', 'Requested By Email', 'Department', 'Position', 'Reason', 'Priority', 'Status', 'Approval 1', 'Approval 1 By', 'Approval 1 Date', 'Approval 2', 'Approval 2 By', 'Approval 2 Date', 'HR Task Status'] }
   };
 
   function getRouteByAction(action) {
@@ -605,6 +704,12 @@
     'Innocent Shongwe': 'innocent.shongwe@onpointontime.co.za'
   };
 
+  const EXECUTIVE_MANAGERS = [
+    { name: 'Lameck Chindove', email: SYSTEM_USER_EMAILS['Lameck Chindove'] },
+    { name: 'Tafadzwa Magejo', email: SYSTEM_USER_EMAILS['Tafadzwa Magejo'] }
+  ];
+  const HR_MANAGER = { name: 'HR Manager', email: SYSTEM_USER_EMAILS['HR Manager'] };
+
   const FALLBACK_USERS = Object.keys(SYSTEM_USER_EMAILS);
   let SYSTEM_USERS = [...FALLBACK_USERS];
 
@@ -623,12 +728,100 @@
     } catch(e) { return null; }
   }
 
+  function normalizeRights(value) {
+    return String(value || '').split(/[;,|]/).map(v => v.trim().toLowerCase()).filter(Boolean);
+  }
+
+  function getUserRole(user = currentUser) {
+    return String(user?.Roles || user?.Role || user?.role || '').trim();
+  }
+
+  function userHasRight(right) {
+    if (!currentUser) return false;
+    const role = getUserRole(currentUser).toLowerCase();
+    const rights = normalizeRights(currentUser['User Rights'] || currentUser.UserRights || currentUser.Rights);
+    const wanted = String(right || '').toLowerCase();
+    if (role === 'executive') return true;
+    if (role === 'manager' && ['create', 'view', 'tickets', 'hiring', 'hiring requests', 'submit hiring request'].includes(wanted)) return true;
+    return rights.includes('all') || rights.includes(wanted);
+  }
+
+  function isExecutive(user = currentUser) {
+    return getUserRole(user).toLowerCase() === 'executive';
+  }
+
+  function isManager(user = currentUser) {
+    return getUserRole(user).toLowerCase() === 'manager';
+  }
+
   function requireLogin() {
     currentUser = getCurrentUser();
     if (!currentUser || !currentUser.Email) {
-      currentUser = { Email: 'admin@onpoint.com', Role: 'Executive', 'Full Name': 'Admin User', Department: 'Executive' };
+      showLoginScreen();
+      return false;
     }
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
     return true;
+  }
+
+  function showLoginScreen() {
+    document.getElementById('appShell').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+
+  function logout() {
+    localStorage.removeItem('quickbase_user');
+    sessionStorage.removeItem('quickbase_user');
+    currentUser = null;
+    showLoginScreen();
+  }
+
+  async function loginUser() {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const password = document.getElementById('loginPassword').value;
+    const remember = document.getElementById('rememberLogin').checked;
+    if (!email || !password) return showMessage('Email and password are required.', 'error', 'loginMessage');
+    setButtonLoading('loginBtn', true, 'Signing in...');
+    showMessage('Checking Users tab...', 'info', 'loginMessage');
+    try {
+      const loginPayload = { action: 'login', sheetId: SHEET_ID, sheetTab: 'Users', payload: { email, password } };
+      let json = null;
+      let lastError = null;
+
+      try {
+        const url = `${SCRIPT_URL}?action=login&sheetId=${encodeURIComponent(SHEET_ID)}&sheetTab=Users&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&_=${Date.now()}`;
+        const res = await fetch(url, { method: 'GET', cache: 'no-store', redirect: 'follow' });
+        const text = await res.text();
+        json = text ? JSON.parse(text) : {};
+        if (!res.ok || json.success === false) throw new Error(json.message || json.error || 'Login failed.');
+      } catch (getErr) {
+        lastError = getErr;
+        const res = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(loginPayload),
+          redirect: 'follow'
+        });
+        const text = await res.text();
+        json = text ? JSON.parse(text) : {};
+        if (!res.ok || json.success === false) throw new Error(json.message || json.error || lastError?.message || 'Login failed.');
+      }
+
+      currentUser = json.user || json.data || null;
+      if (!currentUser || !currentUser.Email) throw new Error('Login succeeded but no user details were returned. Check the Users tab headers.');
+      currentUser.Roles = currentUser.Roles || getUserRole(currentUser) || '';
+      const storage = remember ? localStorage : sessionStorage;
+      storage.setItem('quickbase_user', JSON.stringify(currentUser));
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appShell').style.display = 'flex';
+      await loadCurrentSection();
+    } catch(e) {
+      showMessage(e.message || 'Login failed. Check the Apps Script deployment and Users tab.', 'error', 'loginMessage');
+    } finally {
+      setButtonLoading('loginBtn', false);
+    }
   }
 
   function showMessage(msg, type, containerId) {
@@ -707,15 +900,40 @@
     }
   }
 
-  async function sendEmailViaBackend(assigneeEmail, assigneeName, taskTitle, dueDate, description, taskType) {
+  async function sendGeneralEmailViaBackend(emailTo, emailSubject, emailBody) {
     if (!SEND_EMAIL_NOTIFICATIONS) return { success: true, skipped: true };
-    if (!assigneeEmail || assigneeEmail.trim() === '') return { success: false, error: 'No email address provided' };
+    if (!emailTo || String(emailTo).trim() === '') return { success: false, error: 'No email address provided' };
     try {
       const emailPayload = {
         action: 'sendTaskEmail',
-        emailTo: assigneeEmail,
-        emailSubject: `${taskType} assigned: ${taskTitle}`,
-        emailBody: `Hi ${assigneeName || 'Assignee'},
+        emailTo,
+        emailSubject,
+        emailBody,
+        sheetId: SHEET_ID,
+        user: currentUser
+      };
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(emailPayload),
+        redirect: 'follow'
+      });
+      const text = await res.text();
+      let json = {};
+      try { json = text ? JSON.parse(text) : {}; } catch(e) { json = { success: res.ok, message: text || '' }; }
+      if (!res.ok || json.success === false) throw new Error(json.message || json.error || `HTTP ${res.status}`);
+      return { success: true, response: json };
+    } catch(e) {
+      console.error('Email send error:', e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  async function sendEmailViaBackend(assigneeEmail, assigneeName, taskTitle, dueDate, description, taskType) {
+    return sendGeneralEmailViaBackend(
+      assigneeEmail,
+      `${taskType} assigned: ${taskTitle}`,
+      `Hi ${assigneeName || 'Assignee'},
 
 A ${taskType.toLowerCase()} has been assigned to you via QuickBase.
 
@@ -725,24 +943,59 @@ Description: ${description || 'No description provided.'}
 
 Created by: ${currentUser?.['Full Name'] || currentUser?.Email || 'QuickBase System'}
 
-Please log in to QuickBase to review and update this item.`,
-        sheetId: SHEET_ID,
-        user: currentUser
-      };
-      const res = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emailPayload)
-      });
-      const text = await res.text();
-      let json = {};
-      try { json = JSON.parse(text); } catch(e) { json = { success: res.ok }; }
-      if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
-      return { success: true, response: json };
-    } catch(e) {
-      console.error('Email send error:', e);
-      return { success: false, error: e.message };
-    }
+Please log in to QuickBase to review and update this item.`
+    );
+  }
+
+  async function notifyHiringApprovers(payload) {
+    const subject = `Hiring request approval needed: ${payload['Ticket Number']} - ${payload.Position || 'New position'}`;
+    const body = `Hi Executive Manager,
+
+A new hiring request needs your approval in QuickBase.
+
+Ticket Number: ${payload['Ticket Number']}
+Position: ${payload.Position || 'Not specified'}
+Department: ${payload.Department || 'Not specified'}
+Priority: ${payload.Priority || 'Medium'}
+Requested by: ${payload['Requested By'] || currentUser?.['Full Name'] || ''}
+Reason: ${payload.Reason || 'No reason provided.'}
+
+Please log in to QuickBase and open Approvals to approve or reject this request.`;
+    const results = await Promise.all(EXECUTIVE_MANAGERS.map(m => sendGeneralEmailViaBackend(m.email, subject, body)));
+    return results;
+  }
+
+  async function notifyHiringRequester(payload, decision, decidedBy) {
+    const requesterEmail = payload['Requested By Email'] || payload.requestedByEmail || currentUser?.Email || '';
+    const subject = `Hiring request ${decision}: ${payload['Ticket Number']}`;
+    const body = `Hi ${payload['Requested By'] || 'Requester'},
+
+Your hiring request has been ${String(decision).toLowerCase()}.
+
+Ticket Number: ${payload['Ticket Number']}
+Position: ${payload.Position || 'Not specified'}
+Department: ${payload.Department || 'Not specified'}
+Decision by: ${decidedBy || 'Executive Manager'}
+
+${decision === 'Approved' ? 'HR has been notified to action this request.' : 'Please review the request or contact the executive manager for details.'}`;
+    return sendGeneralEmailViaBackend(requesterEmail, subject, body);
+  }
+
+  async function notifyHRForApprovedHiring(payload, approvedBy) {
+    const subject = `Approved hiring request to action: ${payload['Ticket Number']} - ${payload.Position || 'New position'}`;
+    const body = `Hi ${HR_MANAGER.name},
+
+A hiring request has been approved and is ready for HR action.
+
+Ticket Number: ${payload['Ticket Number']}
+Position: ${payload.Position || 'Not specified'}
+Department: ${payload.Department || 'Not specified'}
+Requested by: ${payload['Requested By'] || 'Not specified'}
+Approved by: ${approvedBy || 'Executive Manager'}
+Reason: ${payload.Reason || 'No reason provided.'}
+
+Please action this hiring request in QuickBase.`;
+    return sendGeneralEmailViaBackend(HR_MANAGER.email, subject, body);
   }
 
   async function saveWithSyncAndNotify(buttonId, messageId, action, payload, successMessage, options = {}) {
@@ -752,7 +1005,6 @@ Please log in to QuickBase to review and update this item.`,
       const res = await apiPost(action, payload);
       showMessage(successMessage, 'success', messageId);
       
-      // Auto-email assignee using Gmail (backend)
       let emailSent = false;
       if (SEND_EMAIL_NOTIFICATIONS && payload.assignedEmail && payload.assignedEmail.trim() !== '') {
         showMessage('Sending email notification to assignee via Gmail...', 'info', messageId);
@@ -774,9 +1026,8 @@ Please log in to QuickBase to review and update this item.`,
         showMessage('No assignee email provided. Email not sent.', 'info', messageId);
       }
       
-      // Ask user if they want to share via WhatsApp (only if email was attempted or not needed)
-      const assigneePhone = null; // We'll prompt user for WhatsApp number or use name to construct
-      const wantsWhatsApp = confirm(`Task "${payload.title || payload.taskName}" created successfully!\n\nDo you want to share this task with the assignee via WhatsApp?\n\nClick OK to share on WhatsApp, Cancel to skip.`);
+      const assigneePhone = null;
+      const wantsWhatsApp = options.skipWhatsApp ? false : confirm(`Task "${payload.title || payload.taskName}" created successfully!\n\nDo you want to share this task with the assignee via WhatsApp?\n\nClick OK to share on WhatsApp, Cancel to skip.`);
       if (wantsWhatsApp) {
         let phoneNumber = prompt("Enter assignee's WhatsApp phone number (with country code, e.g., +27...):\nIf you don't have the number, you can share the task link manually.", "");
         if (phoneNumber && phoneNumber.trim() !== '') {
@@ -880,6 +1131,137 @@ Please log in to QuickBase to review and update this item.`,
     }
   }
 
+
+  function isHiringRequest(payload) {
+    const text = `${payload.title || payload.taskName || ''} ${payload.description || ''}`.toLowerCase();
+    return text.includes('hiring') || text.includes('recruit') || text.includes('vacancy') || text.includes('new employee');
+  }
+
+  function isMoreTimeRequest(payload) {
+    const text = `${payload.title || payload.taskName || ''} ${payload.description || ''} ${payload.comments || ''}`.toLowerCase();
+    return text.includes('more time') || text.includes('extension') || text.includes('extend due') || text.includes('task extension');
+  }
+
+  function applyApprovalRules(payload) {
+    const needsExecutiveApproval = isHiringRequest(payload) || isMoreTimeRequest(payload);
+    if (needsExecutiveApproval && !isExecutive()) {
+      payload.approvalStatus = 'Pending Executive Approval';
+      payload.requiresExecutiveApproval = 'Yes';
+      payload.approvalType = isHiringRequest(payload) ? 'Hiring Request' : 'Task Time Extension';
+      payload.status = payload.status || 'Pending Approval';
+      payload.Status = payload.Status || 'Pending Approval';
+    } else if (needsExecutiveApproval && isExecutive()) {
+      payload.approvalStatus = 'Approved by Executive';
+      payload.requiresExecutiveApproval = 'No';
+      payload.approvedBy = currentUser?.['Full Name'] || currentUser?.Email || '';
+      payload.approvedDate = new Date().toISOString();
+    }
+    return payload;
+  }
+
+
+  function requiresTwoLevelApproval(payload) {
+    const text = `${payload.title || ''} ${payload.description || ''}`.toLowerCase();
+    return text.includes('hiring') || text.includes('recruit');
+  }
+
+  function createWorkflowPayload(payload) {
+    payload.createdBy = currentUser?.['Full Name'] || currentUser?.Email || '';
+    payload.createdByEmail = currentUser?.Email || '';
+    payload.workflowStatus = 'Created';
+
+    if (requiresTwoLevelApproval(payload)) {
+      payload.workflowStatus = 'Pending Executive Approval';
+      payload.firstApproval = 'Pending';
+      payload.secondApproval = 'Pending';
+      payload.requiresTwoApprovals = 'Yes';
+      payload.hrNotification = 'Pending';
+      payload.assignedTo = 'HR Manager';
+      payload.assignedEmail = 'hr@onpointontime.co.za';
+    }
+
+    return payload;
+  }
+
+  async function renderMyTickets() {
+    const tickets = await safeGet('tickets');
+    const mine = (tickets || []).filter(t =>
+      String(t['Assigned To'] || '').toLowerCase() === String(currentUser?.['Full Name'] || '').toLowerCase()
+    );
+    renderSimpleTable('My Tickets', mine, ['Ticket ID','Title','Priority','Status','Department','Assigned To','Due Date'], 'Tasks');
+  }
+
+  async function renderSentTickets() {
+    const tickets = await safeGet('tickets');
+    const mine = (tickets || []).filter(t =>
+      String(t.createdBy || t['Created By'] || '').toLowerCase() === String(currentUser?.['Full Name'] || '').toLowerCase()
+    );
+    renderSimpleTable('Tickets Sent Out', mine, ['Ticket ID','Title','Priority','Status','Department','Assigned To','Due Date'], 'Tasks');
+  }
+
+  async function renderApprovals() {
+    if (!isExecutive()) {
+      document.getElementById('mainContent').innerHTML = `
+        <div class="panel">
+          <div style="padding:40px;text-align:center">
+            <h2>Restricted Access</h2>
+            <p>Approvals waiting are only visible to Executives.</p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const rows = await safeGet('hiringRequests');
+    const approvals = (rows || []).filter(r =>
+      String(r.Status || '').toLowerCase().includes('waiting') ||
+      String(r['Approval 1'] || '').toLowerCase() === 'pending' ||
+      String(r['Approval 2'] || '').toLowerCase() === 'pending'
+    );
+
+    document.getElementById('mainContent').innerHTML = `
+      <div class="top-bar">
+        <div class="page-title">
+          <h1>Approvals Waiting</h1>
+          <p>Executive hiring approvals · two approvals required before HR task is sent</p>
+        </div>
+        <button class="refresh-btn" onclick="renderApprovals()">↻ Refresh</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h2>Hiring Requests Waiting Approval</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket Number</th>
+                <th>Position</th>
+                <th>Department</th>
+                <th>Requested By</th>
+                <th>Approval 1</th>
+                <th>Approval 2</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${approvals.length ? approvals.map(r=>`
+                <tr>
+                  <td>${escapeHtml(r['Ticket Number'])}</td>
+                  <td>${escapeHtml(r.Position)}</td>
+                  <td>${escapeHtml(r.Department)}</td>
+                  <td>${escapeHtml(r['Requested By'])}</td>
+                  <td>${escapeHtml(approvalText(r, 'Approval 1'))}</td>
+                  <td>${escapeHtml(approvalText(r, 'Approval 2'))}</td>
+                  <td>${escapeHtml(r.Status)}</td>
+                  <td><button class="btn-primary" onclick="submitHiringApproval('${escapeHtml(r['Ticket Number'])}')">Approve</button> <button class="btn-secondary" onclick="submitHiringRejection('${escapeHtml(r['Ticket Number'])}')">Reject</button></td>
+                </tr>
+              `).join('') : '<tr><td colspan="8" style="text-align:center">No approvals waiting</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
   async function renderDashboard() {
     const main = document.getElementById('mainContent');
     main.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading dashboard data...</p></div>';
@@ -912,7 +1294,7 @@ Please log in to QuickBase to review and update this item.`,
             <h1>Operations Dashboard</h1>
             <p>On Point Group · 📊 ${ticketsArray.length} tickets loaded</p>
           </div>
-          <div class="user-chip">👤 ${escapeHtml(currentUser?.['Full Name'] || 'Admin')} · ${escapeHtml(currentUser?.Role || 'Executive')}</div>
+          <div><span class="user-chip">👤 ${escapeHtml(currentUser?.['Full Name'] || 'User')} · ${escapeHtml(getUserRole(currentUser) || '')}<span class="rights-chip">${escapeHtml(currentUser?.['User Rights'] || 'standard')}</span></span> <button class="logout-btn" onclick="logout()">Logout</button></div>
         </div>
 
         <div class="task-status-grid">
@@ -925,8 +1307,8 @@ Please log in to QuickBase to review and update this item.`,
         <div class="task-status-grid">
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter='closed-late';loadCurrentSection()" style="border-top:4px solid #f59e0b"><h3 style="color:#f59e0b">${ticketStats.closedLate.length}</h3><p>🟠 Closed But Late</p></div>
           <div class="status-stat-card" onclick="currentSection='tickets';loadCurrentSection()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${ticketsArray.length}</h3><p>🎫 Total Tickets</p></div>
-          <div class="status-stat-card" style="border-top:4px solid #0ea5e9"><h3 style="color:#0ea5e9">${Object.keys(priorityCounts).length}</h3><p>🏷️ Tickets by Priority</p></div>
-          <div class="status-stat-card" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(deptTicketCount).length}</h3><p>🏢 Tickets by Department</p></div>
+          <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #0ea5e9"><h3 style="color:#0ea5e9">${Object.keys(priorityCounts).length}</h3><p>🏷️ Tickets by Priority</p></div>
+          <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(deptTicketCount).length}</h3><p>🏢 Tickets by Department</p></div>
         </div>
 
         <div class="chart-grid">
@@ -946,11 +1328,11 @@ Please log in to QuickBase to review and update this item.`,
         </div>
 
         <div class="panel"><div class="panel-header"><h2>📊 KPI Performance</h2><button class="btn-primary" onclick="currentSection='kpis';loadCurrentSection()">View All →</button></div>
-          <div class="table-wrapper"><table><thead><tr><th>KPI Name</th><th>Target</th><th>Actual</th><th>Department</th><th>Status</th></tr></thead><tbody>${kpiArray.slice(0,5).map(k => `<tr><td><strong>${escapeHtml(k.KPIName || k.Name || '')}</strong></td><td>${escapeHtml(k['Target Value'] || k.Target || '')}</td><td>${escapeHtml(k['Actual Value'] || k.Actual || '')}</td><td>${escapeHtml(k['Related Department'] || k.Department || '')}</td><td><span class="badge ${(parseFloat(k['Actual Value'] || k.Actual) >= parseFloat(k['Target Value'] || k.Target)) ? 'badge-low' : 'badge-high'}">${(parseFloat(k['Actual Value'] || k.Actual) >= parseFloat(k['Target Value'] || k.Target)) ? '✓ On Track' : '⚠️ Behind'}</span></td></tr>`).join('') || '<tr><td colspan="5">No KPI data</td></tr>'}</tbody>}</div>
+          <div class="table-wrapper"><table><thead><tr><th>KPI Name</th><th>Target</th><th>Actual</th><th>Department</th><th>Status</th></tr></thead><tbody>${kpiArray.slice(0,5).map(k => `<tr><td><strong>${escapeHtml(k.KPIName || k.Name || '')}</strong></td><td>${escapeHtml(k['Target Value'] || k.Target || '')}</td><td>${escapeHtml(k['Actual Value'] || k.Actual || '')}</td><td>${escapeHtml(k['Related Department'] || k.Department || '')}</td><td><span class="badge ${(parseFloat(k['Actual Value'] || k.Actual) >= parseFloat(k['Target Value'] || k.Target)) ? 'badge-low' : 'badge-high'}">${(parseFloat(k['Actual Value'] || k.Actual) >= parseFloat(k['Target Value'] || k.Target)) ? '✓ On Track' : '⚠️ Behind'}</span></td>`).join('') || '<tr><td colspan="5">No KPI data</td></tr>'}</tbody>}</div>
         </div>
 
         <div class="panel"><div class="panel-header"><h2>⏱️ SLA Management</h2><button class="btn-primary" onclick="currentSection='sla';loadCurrentSection()">View All →</button></div>
-          <div class="table-wrapper"><table><thead><tr><th>SLA Name</th><th>Priority</th><th>First Response</th><th>Resolution Target</th><th>Status</th></tr></thead><tbody>${slaArray.slice(0,5).map(s => `<tr><td><strong>${escapeHtml(getCellValue(s, 'SLA Name'))}</strong></td><td><span class="badge badge-high">${escapeHtml(s.Priority || '')}</span></td><td>${escapeHtml(getCellValue(s, 'First Response'))}</td><td>${escapeHtml(getCellValue(s, 'Resolution Target'))}</td><td><span class="badge badge-low">${escapeHtml(s.Status || 'Active')}</span></td></tr>`).join('') || '<tr><td colspan="5">No SLA records</td></tr>'}</tbody>}</div>
+          <div class="table-wrapper"><table><thead><tr><th>SLA Name</th><th>Priority</th><th>First Response</th><th>Resolution Target</th><th>Status</th></tr></thead><tbody>${slaArray.slice(0,5).map(s => `<tr><td><strong>${escapeHtml(getCellValue(s, 'SLA Name'))}</strong></td><td><span class="badge badge-high">${escapeHtml(s.Priority || '')}</span></td><td>${escapeHtml(getCellValue(s, 'First Response'))}</td><td>${escapeHtml(getCellValue(s, 'Resolution Target'))}</td><td><span class="badge badge-low">${escapeHtml(s.Status || 'Active')}</span></td>`).join('') || '<tr><td colspan="5">No SLA records</td></tr>'}</tbody>}</div>
         </div>`;
 
       wireDashboardForms();
@@ -1057,6 +1439,8 @@ Please log in to QuickBase to review and update this item.`
         attachmentLink: document.getElementById('ticketAttachment').value,
         sheetTab: 'Tasks'
       };
+      applyApprovalRules(payload);
+      createWorkflowPayload(payload);
       Object.assign(payload, buildTaskEmailPayload('ticket', payload));
       if (!payload.title) return showMessage('Title required', 'error', 'ticketFormMessage');
       if (SEND_EMAIL_NOTIFICATIONS && !payload.emailTo) return showMessage('Assignee email is required for Gmail notification. Select an assignee with an email address.', 'error', 'ticketFormMessage');
@@ -1163,7 +1547,7 @@ Please log in to QuickBase to review and update this item.`
     };
   }
 
-  async function renderUsers() { const data = await safeGet('users'); renderSimpleTable('Users', data, ['Employee ID', 'Employee Name', 'Department', 'Role', 'Status', 'Created Date']); }
+  async function renderUsers() { const route = SHEET_ROUTES.users; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
 
 
   async function renderApiConnection() {
@@ -1422,7 +1806,7 @@ Please log in to QuickBase to review and update this item.`
       <div class="task-status-grid">
         <div class="status-stat-card" onclick="window.taskFilter='closed-late';renderTickets()" style="border-top:4px solid #f59e0b"><h3 style="color:#f59e0b">${stats.closedLate.length}</h3><p>🟠 Closed But Late</p></div>
         <div class="status-stat-card" onclick="window.taskFilter=null;renderTickets()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${allTickets.length}</h3><p>🎫 Total Tickets</p></div>
-        <div class="status-stat-card" style="border-top:4px solid #0ea5e9"><h3 style="color:#0ea5e9">${Object.keys(priorityCounts).length}</h3><p>🏷️ Tickets by Priority</p></div>
+        <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #0ea5e9"><h3 style="color:#0ea5e9">${Object.keys(priorityCounts).length}</h3><p>🏷️ Tickets by Priority</p></div>
         <div class="status-stat-card" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(departmentCounts).length}</h3><p>🏢 Tickets by Department</p></div>
       </div>
       <div class="chart-grid">
@@ -1443,6 +1827,21 @@ Please log in to QuickBase to review and update this item.`
         charts.ticketsDepartment = new Chart(dCtx, { type: 'bar', data: { labels: Object.keys(departmentCounts), datasets: [{ label: 'Tickets', data: Object.values(departmentCounts), backgroundColor: '#6366f1' }] }, options: { responsive: true } });
       }
     }
+  }
+
+  // FIXED HIRING REQUESTS SECTION - now with stable form and proper API calls
+  async function renderHiringRequests() {
+    const route = SHEET_ROUTES.hiringRequests;
+    let data = [];
+    try {
+      data = await apiGet('hiringRequests');
+      if (!Array.isArray(data)) data = [];
+    } catch(e) {
+      console.warn("Hiring requests fetch failed", e);
+      data = [];
+    }
+    // Use renderDataEntryTable for consistency but ensure it never loops
+    renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab);
   }
 
   async function renderKPIs() {
@@ -1466,6 +1865,88 @@ Please log in to QuickBase to review and update this item.`
   async function renderDivisions() { const route = SHEET_ROUTES.divisions; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
   async function renderAutomatedTasks() { const route = SHEET_ROUTES.automatedTasks; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
 
+  // Helper function for approval display
+  window.approvalText = function(row, level) {
+    const status = row[level] || '';
+    if (status === 'Approved') return '✅ Approved';
+    if (status === 'Pending') return '⏳ Pending';
+    if (status === 'Rejected') return '❌ Rejected';
+    return status || 'Pending';
+  };
+
+  window.submitHiringDecision = async function(ticketNumber, decision) {
+    const normalizedDecision = decision === 'Rejected' ? 'Rejected' : 'Approved';
+    if (!confirm(`${normalizedDecision} hiring request ${ticketNumber}?`)) return;
+    try {
+      const rows = await safeGet('hiringRequests');
+      const requestRow = (rows || []).find(r => String(r['Ticket Number']) === String(ticketNumber)) || { 'Ticket Number': ticketNumber };
+      const decidedBy = currentUser?.['Full Name'] || currentUser?.Email || 'Executive Manager';
+      const updatePayload = {
+        action: 'updateHiringApproval',
+        sheetId: SHEET_ID,
+        ticketNumber: ticketNumber,
+        approvedBy: decidedBy,
+        decision: normalizedDecision,
+        approvalLevel: 'both',
+        status: normalizedDecision,
+        sheetTab: 'Hiring Requests',
+        notifyRequester: 'Yes',
+        requesterEmail: requestRow['Requested By Email'] || '',
+        hrManagerEmail: HR_MANAGER.email
+      };
+      const res = await apiPost('updateHiringApproval', updatePayload);
+      if (res && res.success !== false) {
+        const payloadForEmail = Object.assign({}, requestRow, updatePayload, { Status: normalizedDecision });
+        await notifyHiringRequester(payloadForEmail, normalizedDecision, decidedBy);
+        if (normalizedDecision === 'Approved') await notifyHRForApprovedHiring(payloadForEmail, decidedBy);
+        alert(`Hiring request ${ticketNumber} ${normalizedDecision.toLowerCase()}.${normalizedDecision === 'Approved' ? ' HR has been notified.' : ' Requester has been notified.'}`);
+        await renderApprovals();
+      } else {
+        throw new Error(res?.message || 'Approval update failed');
+      }
+    } catch(e) {
+      alert(`Approval error: ${e.message}`);
+    }
+  };
+
+  window.submitHiringApproval = function(ticketNumber) {
+    return window.submitHiringDecision(ticketNumber, 'Approved');
+  };
+
+  window.submitHiringRejection = function(ticketNumber) {
+    return window.submitHiringDecision(ticketNumber, 'Rejected');
+  };
+
+
+  function generateHiringTicketNumber() {
+    const now = new Date();
+    const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const timePart = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+    return `HR-${datePart}-${timePart}`;
+  }
+
+  function prepareHiringRequestPayload(payload) {
+    const today = new Date().toISOString().slice(0, 10);
+    payload['Ticket Number'] = payload['Ticket Number'] || generateHiringTicketNumber();
+    payload['Request Date'] = payload['Request Date'] || today;
+    payload['Requested By'] = payload['Requested By'] || currentUser?.['Full Name'] || currentUser?.Email || '';
+    payload['Requested By Email'] = payload['Requested By Email'] || currentUser?.Email || '';
+    payload.Status = 'Waiting Approval';
+    payload['Approval 1'] = payload['Approval 1'] || 'Pending';
+    payload['Approval 2'] = payload['Approval 2'] || 'Pending';
+    payload['Approval 1 By'] = payload['Approval 1 By'] || '';
+    payload['Approval 1 Date'] = payload['Approval 1 Date'] || '';
+    payload['Approval 2 By'] = payload['Approval 2 By'] || '';
+    payload['Approval 2 Date'] = payload['Approval 2 Date'] || '';
+    payload['HR Task Status'] = payload['HR Task Status'] || 'Pending Approval';
+    payload.assignedTo = HR_MANAGER.name;
+    payload.assignedEmail = HR_MANAGER.email;
+    payload.title = `Hiring Request: ${payload.Position || payload['Ticket Number']}`;
+    payload.taskName = payload.title;
+    payload.description = payload.Reason || '';
+    return payload;
+  }
+
   function renderDataEntryTable(title, data, columns, actionName, sheetTabName = title) {
     const main = document.getElementById('mainContent');
     const dataArray = Array.isArray(data) ? data : [];
@@ -1474,12 +1955,25 @@ Please log in to QuickBase to review and update this item.`
       <div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
       <div class="panel"><div class="panel-header"><h2>➕ Enter New ${title}</h2></div><div style="padding:20px">
         <div class="form-row">
-          ${columns.map(c => `<div class="form-field"><label>${escapeHtml(c)}</label>${c === 'Assigned To' ? `<select id="${fieldId(c)}">${userOptionsHtml()}</select>` : c === 'Assigned Email' ? `<input id="${fieldId(c)}" readonly placeholder="Auto-filled email">` : c === 'Description' || c.includes('Description') ? `<textarea id="${fieldId(c)}" rows="2"></textarea>` : c === 'Status' ? `<select id="${fieldId(c)}"><option>Active</option><option>Open</option><option>Closed</option><option>Inactive</option><option>Paused</option></select>` : c === 'Priority' ? `<select id="${fieldId(c)}"><option>Medium</option><option>Low</option><option>High</option><option>Critical</option></select>` : c === 'Frequency' ? `<select id="${fieldId(c)}"><option>Daily</option><option>Weekly</option><option>Monthly</option></select>` : (c === 'Next Run' || c === 'Created Date') ? `<input id="${fieldId(c)}" type="date">` : `<input id="${fieldId(c)}" placeholder="${escapeHtml(c)}">`}</div>`).join('')}
+          ${columns.map(c => `<div class="form-field"><label>${escapeHtml(c)}</label>${
+            c === 'Ticket Number' && sheetTabName === 'Hiring Requests' ? `<input id="${fieldId(c)}" readonly value="${generateHiringTicketNumber()}" placeholder="Auto-generated">` :
+            (c === 'Requested By' && sheetTabName === 'Hiring Requests') ? `<input id="${fieldId(c)}" readonly value="${escapeHtml(currentUser?.['Full Name'] || currentUser?.Email || '')}">` :
+            (c === 'Requested By Email' && sheetTabName === 'Hiring Requests') ? `<input id="${fieldId(c)}" readonly value="${escapeHtml(currentUser?.Email || '')}">` :
+            (['Approval 1','Approval 2','Approval 1 By','Approval 1 Date','Approval 2 By','Approval 2 Date','HR Task Status'].includes(c) && sheetTabName === 'Hiring Requests') ? `<input id="${fieldId(c)}" readonly placeholder="Workflow controlled">` :
+            c === 'Assigned To' ? `<select id="${fieldId(c)}">${userOptionsHtml()}</select>` : 
+            c === 'Assigned Email' ? `<input id="${fieldId(c)}" readonly placeholder="Auto-filled email">` : 
+            c === 'Description' || c.includes('Description') || c === 'Reason' ? `<textarea id="${fieldId(c)}" rows="2"></textarea>` : 
+            c === 'Status' ? `<select id="${fieldId(c)}"><option>Active</option><option>Open</option><option>Closed</option><option>Inactive</option><option>Paused</option><option>Waiting Approval</option><option>Approved</option><option>Rejected</option></select>` : 
+            c === 'Priority' ? `<select id="${fieldId(c)}"><option>Medium</option><option>Low</option><option>High</option><option>Critical</option></select>` : 
+            c === 'Frequency' ? `<select id="${fieldId(c)}"><option>Daily</option><option>Weekly</option><option>Monthly</option></select>` : 
+            (c === 'Next Run' || c === 'Created Date' || c === 'Request Date') ? `<input id="${fieldId(c)}" type="date">` : 
+            `<input id="${fieldId(c)}" placeholder="${escapeHtml(c)}">`
+          }</div>`).join('')}
         </div>
         <button class="btn-primary" id="saveDataEntryBtn">💾 Save ${title}</button>
         <div id="dataEntryMessage" class="message-bar"></div>
       </div></div>
-      <div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody>}</div></div>`;
+      <div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></div></div>`;
 
     if (columns.includes('Assigned To') && columns.includes('Assigned Email')) {
       wireAssigneeEmail(fieldId('Assigned To'), fieldId('Assigned Email'));
@@ -1492,20 +1986,39 @@ Please log in to QuickBase to review and update this item.`
       payload.sheetName = sheetTabName;
       payload.tabName = sheetTabName;
       if (columns.includes('Created Date') && !payload['Created Date']) payload['Created Date'] = new Date().toISOString().slice(0,10);
+      if (columns.includes('Request Date') && !payload['Request Date']) payload['Request Date'] = new Date().toISOString().slice(0,10);
+      if (columns.includes('Assigned To')) payload.assignedTo = payload['Assigned To'];
+      if (columns.includes('Assigned Email')) payload.assignedEmail = payload['Assigned Email'];
+      if (columns.includes('Task Name')) payload.taskName = payload['Task Name'];
+      if (columns.includes('Description')) payload.description = payload.Description;
+      if (columns.includes('Next Run')) payload.nextRun = payload['Next Run'];
+      const isHiring = sheetTabName === 'Hiring Requests';
+      if (isHiring) prepareHiringRequestPayload(payload);
       const firstColumn = columns[0];
       if (!payload[firstColumn]) return showMessage(`${firstColumn} is required`, 'error', 'dataEntryMessage');
-      await saveWithSyncAndNotify('saveDataEntryBtn', 'dataEntryMessage', actionName, payload, `${title} record saved and synchronised.`, { afterSuccess: () => setTimeout(() => loadCurrentSection(), 1000) });
+      if (isHiring && !payload.Position) return showMessage('Position is required', 'error', 'dataEntryMessage');
+      await saveWithSyncAndNotify('saveDataEntryBtn', 'dataEntryMessage', actionName, payload, `${title} record saved and synchronised.`, {
+        skipWhatsApp: isHiring,
+        afterSuccess: async () => {
+          if (isHiring) {
+            showMessage('Sending approval emails to both executive managers...', 'info', 'dataEntryMessage');
+            await notifyHiringApprovers(payload);
+            showMessage('Hiring request submitted. Both executive managers have been notified for approval.', 'success', 'dataEntryMessage');
+          }
+          setTimeout(() => loadCurrentSection(), 1000);
+        }
+      });
     });
   }
 
   function renderSimpleTable(title, data, columns, sheetTabName = title) {
     const main = document.getElementById('mainContent');
     const dataArray = Array.isArray(data) ? data : [];
-    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div><div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody>}</div></div>`;
+    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div><div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></div></div>`;
   }
 
   async function loadCurrentSection() {
-    requireLogin();
+    if (!requireLogin()) return;
     document.getElementById('mainContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading...</p></div>';
     if (currentSection === 'dashboard') await renderDashboard();
     else if (currentSection === 'users') await renderUsers();
@@ -1514,6 +2027,10 @@ Please log in to QuickBase to review and update this item.`
     else if (currentSection === 'departments') await renderDepartments();
     else if (currentSection === 'employees') await renderEmployees();
     else if (currentSection === 'tickets') await renderTickets();
+    else if (currentSection === 'myTickets') await renderMyTickets();
+    else if (currentSection === 'sentTickets') await renderSentTickets();
+    else if (currentSection === 'approvals') await renderApprovals();
+    else if (currentSection === 'hiringRequests') await renderHiringRequests();
     else if (currentSection === 'kpis') await renderKPIs();
     else if (currentSection === 'sla') await renderSLA();
     else if (currentSection === 'bsc') await renderBSC();
@@ -1535,7 +2052,9 @@ Please log in to QuickBase to review and update this item.`
     });
   });
 
-  loadCurrentSection();
+  document.getElementById('loginBtn')?.addEventListener('click', loginUser);
+  document.getElementById('loginPassword')?.addEventListener('keydown', e => { if (e.key === 'Enter') loginUser(); });
+  showLoginScreen();
 </script>
 
 </body>
