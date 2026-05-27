@@ -812,6 +812,21 @@
                 </button>
             </div>
 
+
+
+            <!-- Report Print Controls -->
+            <div class="search-filter" style="background:#f8f9fa; padding:15px; border-radius:12px; border:1px solid #e0e0e0;">
+                <select id="printSection" class="filter-select">
+                    <option value="maintenance">New Vehicle Maintenance Record</option>
+                    <option value="pool">Serious Breakdown Pool</option>
+                </select>
+                <input type="date" id="printFromDate" class="search-box" style="min-width:180px; flex:1;" title="From date">
+                <input type="date" id="printToDate" class="search-box" style="min-width:180px; flex:1;" title="To date">
+                <button onclick="printReportByPeriod()" class="btn-primary" style="background:#111827;">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+            </div>
+
             <!-- Stats Cards -->
             <div class="stats-container">
                 <div class="stat-card">
@@ -882,12 +897,13 @@
                             <th>Completion Date</th>
                             <th>Breakdown #</th>
                             <th>Total Repair Cost</th>
+                            <th>Photos</th>
                             <th>Edit</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
                         <tr>
-                            <td colspan="13" style="text-align: center; padding: 40px;">
+                            <td colspan="14" style="text-align: center; padding: 40px;">
                                 <i class="fas fa-spinner fa-spin" style="font-size: 2em; color: var(--secondary-color);"></i>
                                 <br>Loading data from Google Sheets...
                             </td>
@@ -1165,7 +1181,7 @@
         // =============================================
         // FIXED: Corrected Apps Script URL format - needs to be the EXEC URL, not the edit URL
         // Please replace YOUR_SCRIPT_ID with your actual Apps Script deployment ID
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUiVdYKCAglFAExwq_yggCsglZjyKjG7LM7FP-5tn6GJlK7xMXsHikf3OxTWG8IfUZzg/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz6hfDvKcYuw7DJ96JnKFHBUBVyADjAOs8U-wTkqcdrEwFfsWne1ONOnrMxmc87tFjT/exec';
         
         // Google Sheets Configuration
         const SHEET_CONFIG = {
@@ -1368,7 +1384,7 @@
             'Current Fuel KM',
             'Service Status'
         ];
-        const EXTRA_PHOTO_LINK_HEADINGS = ['Photo Link 1', 'Photo Link 2', 'Photo Link 3', 'Photo Link 4', 'Photo Link 5'];
+        const EXTRA_PHOTO_LINK_HEADINGS = ['Photo Link 1', 'Photo Link 2', 'Photo Link 3', 'Photo Link 4', 'Photo Link 5', 'Photo Link 6', 'Photo Link 7', 'Photo Link 8', 'Photo Link 9', 'Photo Link 10'];
         const SHEET_HEADINGS = [...BASE_SHEET_HEADINGS, ...EXTRA_PHOTO_LINK_HEADINGS];
 
         const DEFAULT_REGISTRATION_NUMBERS = [
@@ -1427,7 +1443,7 @@
                         // Show fallback message but don't break the UI
                         document.getElementById('tableBody').innerHTML = `
                             <tr>
-                                <td colspan="13" style="text-align: center; padding: 35px; color:#e74c3c;">
+                                <td colspan="14" style="text-align: center; padding: 35px; color:#e74c3c;">
                                     <strong>⚠️ Cannot connect to Google Sheets</strong><br><br>
                                     Click the "Test Connection" button above for troubleshooting help.<br>
                                     Once connected, data will load automatically.
@@ -1441,6 +1457,13 @@
             document.getElementById('maintenanceForm').addEventListener('submit', handleSubmit);
             const photoInput = document.getElementById('maintenancePhotos');
             if (photoInput) photoInput.addEventListener('change', previewSelectedPhotos);
+            const partsBody = document.getElementById('partsBody');
+            if (partsBody) partsBody.addEventListener('input', function(event) {
+                if (event.target.classList.contains('part-qty') || event.target.classList.contains('part-price') || event.target.classList.contains('part-total')) {
+                    if (!event.target.classList.contains('part-total')) calculateRowTotal(event.target);
+                    calculatePartsGrandTotal();
+                }
+            });
         });
 
         async function fetchData() {
@@ -1449,7 +1472,7 @@
 
             document.getElementById('tableBody').innerHTML = `
                 <tr>
-                    <td colspan="13" style="text-align: center; padding: 40px;">
+                    <td colspan="14" style="text-align: center; padding: 40px;">
                         <i class="fas fa-spinner fa-spin" style="font-size: 2em; color: var(--secondary-color);"></i>
                         <br>Fetching data from Google Sheets...
                     </td>
@@ -1478,7 +1501,7 @@
                 showMessage('❌ Error connecting to Google Sheets: ' + getFriendlyError(error), 'error');
                 document.getElementById('tableBody').innerHTML = `
                     <tr>
-                        <td colspan="13" style="text-align: center; padding: 35px; color:#e74c3c;">
+                        <td colspan="14" style="text-align: center; padding: 35px; color:#e74c3c;">
                             <strong>Could not connect to Google Sheets.</strong><br>
                             ${escapeHtml(getFriendlyError(error))}<br><br>
                             <button onclick="testGoogleConnection()" class="btn-primary" style="margin: 0 auto; display:inline-flex;">Test Connection</button>
@@ -1494,7 +1517,7 @@
             if (!records || records.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="13" style="text-align: center; padding: 40px;">
+                        <td colspan="14" style="text-align: center; padding: 40px;">
                             <i class="fas fa-folder-open" style="font-size: 2em; color: var(--secondary-color);"></i>
                             <br>No maintenance records found
                          </td>
@@ -1524,6 +1547,7 @@
                         </span>
                     </td>
                     <td><strong>${formatCurrency(record.totalCost || record.totalRepairCost || 0)}</strong></td>
+                    <td>${formatPhotoLinks(record)}</td>
                     <td>
                         <button type="button" class="btn-primary btn-small" onclick='editMaintenanceRecordFromButton(this)' data-record='${JSON.stringify(record).replace(/'/g, "&#39;")}'>
                             <i class="fas fa-edit"></i> Edit
@@ -1897,6 +1921,15 @@
             row.querySelector('.part-total').value = total.toFixed(2);
         }
 
+        function calculatePartsGrandTotal() {
+            let total = 0;
+            document.querySelectorAll('.part-total').forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+            const totalCost = document.getElementById('totalCost');
+            if (totalCost) totalCost.value = total.toFixed(2);
+        }
+
         function getBreakdownColor(count) {
             const num = parseInt(count) || 1;
             if (num <= 2) return '#27ae60';
@@ -1917,6 +1950,51 @@
         function formatCurrency(value) {
             const num = Number(String(value).replace(/[^0-9.-]/g, '')) || 0;
             return 'R ' + num.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+
+        function formatPhotoLinks(record) {
+            const links = EXTRA_PHOTO_LINK_HEADINGS
+                .map((heading, index) => record[heading] || record[`photoLink${index + 1}`] || record[`photo${index + 1}`] || '')
+                .filter(Boolean);
+
+            if (!links.length) return '';
+
+            return links.map((url, index) => {
+                const safeUrl = escapeHtml(url);
+                return `<a href="${safeUrl}" target="_blank" style="display:inline-block; margin:2px 4px; font-weight:700; color:var(--secondary-color);">Photo ${index + 1}</a>`;
+            }).join('');
+        }
+
+        async function printReportByPeriod() {
+            const section = document.getElementById('printSection').value;
+            const fromDate = document.getElementById('printFromDate').value;
+            const toDate = document.getElementById('printToDate').value;
+
+            if (!fromDate || !toDate) {
+                showMessage('Please choose both From and To dates for the report.', 'warning');
+                return;
+            }
+
+            try {
+                showMessage('Preparing printable report...', 'warning');
+                const result = await appsScriptGet({
+                    action: 'printReport',
+                    section: section,
+                    fromDate: fromDate,
+                    toDate: toDate
+                });
+                if (!result.success) throw new Error(result.error || 'Could not prepare report');
+
+                const reportWindow = window.open('', '_blank');
+                reportWindow.document.open();
+                reportWindow.document.write(result.html);
+                reportWindow.document.close();
+                reportWindow.focus();
+                setTimeout(() => reportWindow.print(), 500);
+            } catch (error) {
+                showMessage('Print report error: ' + getFriendlyError(error), 'error');
+            }
         }
 
         function escapeHtml(unsafe) {
@@ -2193,6 +2271,7 @@
         window.fetchData = fetchData;
         window.testGoogleConnection = testGoogleConnection;
         window.exportToCSV = exportToCSV;
+        window.printReportByPeriod = printReportByPeriod;
         window.fetchServiceDue = fetchServiceDue;
         window.runServiceCheck = runServiceCheck;
         window.fetchPoolData = fetchPoolData;
