@@ -665,41 +665,37 @@
             color: green;
             background-color: yellow;
         }
-        .nav-actions {
+            .top-link-bar {
             display: flex;
+            gap: 12px;
             flex-wrap: wrap;
-            gap: 0.75rem;
-            margin: 0.5rem 0 1.5rem;
+            margin: 0.5rem 0 1.4rem;
         }
 
-        .nav-btn {
+        .bow, .top-link-bar a {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            text-decoration: none;
-            background: linear-gradient(135deg, #0f3348 0%, #1b5577 100%);
-            color: #ffffff;
-            border: 2px solid #7aa7c9;
+            min-height: 42px;
+            padding: 0.75rem 1.25rem;
             border-radius: 999px;
-            padding: 0.75rem 1.15rem;
-            font-weight: 700;
+            background: linear-gradient(135deg, #0f3348 0%, #1d6f94 100%);
+            color: #ffffff;
             font-size: 0.95rem;
-            box-shadow: 0 10px 20px -14px #061b28;
-            transition: 0.2s ease;
+            font-weight: 700;
+            text-decoration: none;
+            border: 1px solid rgba(255,255,255,0.65);
+            box-shadow: 0 10px 20px -12px rgba(6,27,40,0.75);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
         }
 
-        .nav-btn:hover {
+        .bow:hover, .top-link-bar a:hover {
             transform: translateY(-2px);
-            background: linear-gradient(135deg, #1b5577 0%, #0f3348 100%);
-            box-shadow: 0 14px 24px -16px #061b28;
-        }
-
-        .odo-helper {
-            margin-top: 0.45rem;
-            color: #4a6f8a;
-            font-size: 0.78rem;
-            font-weight: 600;
+            box-shadow: 0 16px 26px -14px rgba(6,27,40,0.9);
+            opacity: 0.92;
+            cursor: pointer;
+            color: #ffffff;
         }
     </style>
 </head>
@@ -742,9 +738,9 @@
                 <div class="badge"><i class="fas fa-gas-pump"></i> ONPOINT</div>
                 <div class="sheet-id"><i class="fas fa-file-excel"></i> Fuel Entries</div>
             </div><br><br>
-            <div class="nav-actions">
-                <a class="nav-btn" href="accident.html"><i class="fas fa-home"></i> Home</a>
-                <a class="nav-btn" href="contacts.html"><i class="fas fa-clipboard-check"></i> Hand Over</a>
+            <div class="top-link-bar">
+                <a class="bow" href="accident.html"><i class="fas fa-home"></i> Home</a>
+                <a href="contacts.html"><i class="fas fa-truck-moving"></i> Hand Over</a>
             </div>
 
             <form id="fuelForm">
@@ -904,11 +900,18 @@
                             <option value="HG75GMGP">HG75GMGP</option>
                             <option value="LK76BGGP">LK76BGGP</option>
                             <option value="MK85PWGP">MK85PWGP</option>
+                            <option value="MY81TYGP">MY81TYGP</option>
+                            <option value="MV12KLGP">MV12KLGP</option>
+                            <option value="MV12KGGP">MV12KGGP</option>
+                            <option value="MS43DXGP">MS43DXGP</option>
+                            <option value="MS41ZHGP">MS41ZHGP</option>
+                            <option value="MY73KHGP">MY73KHGP</option>
+                            <option value="MY73JWGP">MY73JWGP</option>
+                            <option value="MY73JYGP">MY73JYGP</option>
+                            <option value="MT69BXGP">MT69BXGP</option>
+                            <option value="D20Sub">D20 Sub</option>
+                            
                         </select>
-                        <button type="button" class="add-btn" style="margin-top:8px;" onclick="addNewOption('vehicleReg')">
-                            <i class="fas fa-plus"></i> Add Vehicle
-                        </button>
-                        <div id="odoAutoFillNote" class="odo-helper"></div>
                     </div>
                     <div class="field">
                         <label><i class="fas fa-hashtag"></i>ER No.</label>
@@ -1167,59 +1170,24 @@
             
             let tollEntries = [];
 
-            const vehicleRegSelect = document.getElementById('vehicleReg');
-            const odoAutoFillNote = document.getElementById('odoAutoFillNote');
-            const ODO_MEMORY_KEY = 'onpointFuelLastOdoFinishByVehicle';
-
-            function getOdoMemory() {
-                try {
-                    return JSON.parse(localStorage.getItem(ODO_MEMORY_KEY) || '{}');
-                } catch (error) {
-                    return {};
-                }
+            function getOdoMemoryKey() {
+                const vehicle = document.getElementById('vehicleReg')?.value || '';
+                return vehicle ? 'onpoint_last_odo_finish_' + vehicle : 'onpoint_last_odo_finish_general';
             }
 
-            function saveLastOdoFinish(vehicle, finishValue) {
-                const reg = String(vehicle || '').trim();
-                const finish = parseFloat(finishValue);
-
-                if (!reg || isNaN(finish) || finish <= 0) return;
-
-                const memory = getOdoMemory();
-                memory[reg] = finish;
-                localStorage.setItem(ODO_MEMORY_KEY, JSON.stringify(memory));
-            }
-
-            function autoFillOdoStartForVehicle() {
-                if (!vehicleRegSelect || !odoStart) return;
-
-                const reg = String(vehicleRegSelect.value || '').trim();
-                const memory = getOdoMemory();
-                const savedFinish = memory[reg];
-
-                if (reg && savedFinish !== undefined && savedFinish !== null && savedFinish !== '') {
-                    odoStart.value = savedFinish;
-                    if (odoAutoFillNote) {
-                        odoAutoFillNote.innerHTML = `<i class="fas fa-sync-alt"></i> Odo start auto-filled from previous Odo finish: ${savedFinish}`;
-                    }
+            function loadRememberedOdoStart() {
+                const key = getOdoMemoryKey();
+                const remembered = localStorage.getItem(key);
+                if (remembered && odoStart && !odoStart.value) {
+                    odoStart.value = remembered;
                     updateTotals();
-                } else if (odoAutoFillNote) {
-                    odoAutoFillNote.innerHTML = '';
                 }
             }
 
-            if (vehicleRegSelect) {
-                vehicleRegSelect.addEventListener('change', autoFillOdoStartForVehicle);
+            function rememberOdoFinish() {
+                if (!odoFinish || !odoFinish.value) return;
+                localStorage.setItem(getOdoMemoryKey(), odoFinish.value);
             }
-
-            if (odoFinish) {
-                odoFinish.addEventListener('blur', function() {
-                    if (vehicleRegSelect && vehicleRegSelect.value) {
-                        saveLastOdoFinish(vehicleRegSelect.value, this.value);
-                    }
-                });
-            }
-
 
             const erNumberInput = document.getElementById('erNumber');
 
@@ -1295,6 +1263,14 @@
 
             // Set today's date
             document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
+
+            const vehicleRegInput = document.getElementById('vehicleReg');
+            if (vehicleRegInput) {
+                vehicleRegInput.addEventListener('change', function() {
+                    if (!odoStart.value) loadRememberedOdoStart();
+                });
+            }
+            loadRememberedOdoStart();
 
             // Update all calculations
             function updateTotals() {
@@ -1424,7 +1400,6 @@
 
             // Initial update
             updateTotals();
-            setTimeout(autoFillOdoStartForVehicle, 0);
 
             // Submit to Google Sheets
             document.getElementById('fuelForm').addEventListener('submit', async function(e) {
@@ -1528,11 +1503,11 @@
                     });
                     
                     showMessage('✅ Successfully logged to Google Sheets' + (receiptFileData ? ' with receipt upload!' : '!'), 'success');
-                    saveLastOdoFinish(vehicle, finish);
                     
                     // Reset form but keep date
                     document.getElementById('fuelForm').reset();
                     document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
+                    if (odoStart) odoStart.value = localStorage.getItem(getOdoMemoryKey()) || '';
                     
                     // Clear toll entries
                     tollContainer.innerHTML = '';
@@ -1644,21 +1619,14 @@
 <script>
 function addNewOption(selectId) {
     const select = document.getElementById(selectId);
-    const newValue = prompt(selectId === 'vehicleReg' ? "Enter new vehicle registration:" : "Enter new name if not listed:");
-
+    const newValue = prompt("Enter new name if not listed:");
+    
     if (newValue && newValue.trim() !== "") {
-        const cleanValue = selectId === 'vehicleReg' ? newValue.trim().toUpperCase() : newValue.trim();
-        const exists = Array.from(select.options).some(option => option.value.toUpperCase() === cleanValue.toUpperCase());
-
-        if (!exists) {
-            const option = document.createElement("option");
-            option.value = cleanValue;
-            option.text = cleanValue;
-            select.appendChild(option);
-        }
-
-        select.value = cleanValue;
-        select.dispatchEvent(new Event('change'));
+        const option = document.createElement("option");
+        option.value = newValue.trim();
+        option.text = newValue.trim();
+        select.appendChild(option);
+        select.value = newValue.trim();
     }
 }
 </script>
