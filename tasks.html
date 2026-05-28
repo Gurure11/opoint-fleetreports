@@ -498,6 +498,36 @@
 
 
 
+    .performance-score-card {
+      background: white;
+      border-radius: 24px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+
+    .performance-score-card .score-note {
+      font-size: 12px;
+      color: #64748b;
+      margin: 0 24px 14px 24px;
+      line-height: 1.5;
+    }
+
+    .score-pill {
+      display: inline-block;
+      min-width: 58px;
+      text-align: center;
+      padding: 5px 10px;
+      border-radius: 40px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .score-good { background: #dcfce7; color: #166534; }
+    .score-warning { background: #fef3c7; color: #92400e; }
+    .score-poor { background: #fee2e2; color: #991b1b; }
+
+
 
     .connection-status {
       display: inline-flex;
@@ -1483,6 +1513,8 @@ Please action this hiring request in QuickBase.`;
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(deptTicketCount).length}</h3><p>🏢 Tickets by Department</p></div>
         </div>
 
+        ${performanceScoreSystemHtml(ticketsArray, automatedTasks)}
+
         <div class="chart-grid">
           <div class="chart-card"><h3>Tickets by Priority</h3><canvas id="priorityChart"></canvas></div>
           <div class="chart-card"><h3>Tickets Assigned by Department</h3><canvas id="assignedChart"></canvas></div>
@@ -1818,6 +1850,146 @@ Please log in to QuickBase to review and update this item.`
       closedLate,
       closedOnTime: closed.filter(t => !isClosedLate(t))
     };
+  }
+
+
+
+  function getCreatedDate(t) {
+    return t['Created Date'] || t['Created Date/Time'] || t['Date Created'] || t.CreatedDate || t.createdDate || t.CreatedAt || t.createdAt || t['Request Date'] || '';
+  }
+
+  function getFirstResponseDate(t) {
+    return t['First Response Date'] || t['First Response'] || t.firstResponseDate || t.firstResponse || t['Response Date'] || t.responseDate || t['Updated Date'] || t.updatedDate || '';
+  }
+
+  function getTaskDueDate(t) {
+    return t['Due Date'] || t.DueDate || t.dueDate || t['Next Run'] || t.nextRun || t.NextRun || '';
+  }
+
+  function getPerformancePriority(t) {
+    return String(t.Priority || t.priority || 'Medium').trim() || 'Medium';
+  }
+
+  function getPriorityWeight(priority) {
+    const key = String(priority || '').toLowerCase();
+    if (key.includes('critical')) return 1.5;
+    if (key.includes('high')) return 1.25;
+    if (key.includes('low')) return 0.75;
+    return 1;
+  }
+
+  function dateOnly(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (isNaN(date)) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  function daysBetween(start, end) {
+    const a = dateOnly(start);
+    const b = dateOnly(end);
+    if (!a || !b) return null;
+    return Math.max(0, Math.round((b - a) / 86400000));
+  }
+
+  function isAutomatedTaskClosed(t) {
+    const status = getStatus(t);
+    return ['closed', 'resolved', 'done', 'completed', 'complete'].some(s => status === s || status.includes(s));
+  }
+
+  function getPerformanceAssigneeKey(item) {
+    const name = getAssigneeName(item) || item['Assigned To'] || item.assignedTo || 'Unassigned';
+    const email = getAssigneeEmail(item);
+    return email || normalizeName(name) || 'unassigned';
+  }
+
+  function getPerformanceAssigneeName(item) {
+    return getAssigneeName(item) || item['Assigned To'] || item.assignedTo || 'Unassigned';
+  }
+
+  function scorePerformanceItem(item, type) {
+    const isAuto = type === 'Automated';
+    const priority = isAuto ? 'Medium' : getPerformancePriority(item);
+    const weight = getPriorityWeight(priority);
+    const possible = 100 * weight;
+    const due = getTaskDueDate(item);
+    const created = getCreatedDate(item);
+    const responded = getFirstResponseDate(item);
+    const completed = getCompletionDate(item);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = dateOnly(due);
+    const completedDate = dateOnly(completed);
+    const responseDate = dateOnly(responded);
+    const isClosed = isAuto ? isAutomatedTaskClosed(item) : isClosedTicket(item);
+    const isOpenLate = !isClosed && dueDate && dueDate < today;
+    const isClosedLate = isClosed && dueDate && ((completedDate && completedDate > dueDate) || (!completedDate && dueDate < today));
+    const responseDays = daysBetween(created, responded);
+
+    let responsePoints = 0;
+    if (responseDate && dueDate && responseDate <= dueDate) responsePoints = 25;
+    else if (responseDate) responsePoints = 12;
+    else if (isAuto) responsePoints = 18;
+
+    let closurePoints = 0;
+    if (isClosed && !isClosedLate) closurePoints = 60;
+    else if (isClosedLate) closurePoints = 30;
+    else if (isOpenLate) closurePoints = 0;
+    else closurePoints = 35;
+
+    let priorityPoints = 15;
+    if (isOpenLate) priorityPoints = 0;
+    else if (isClosedLate) priorityPoints = 7;
+    else if (!isClosed && String(priority).toLowerCase().includes('critical')) priorityPoints = 10;
+
+    const earned = Math.max(0, (responsePoints + closurePoints + priorityPoints) * weight);
+    return { earned, possible, isClosed, isOpenLate, isClosedLate, responseDays, type };
+  }
+
+  function calculatePerformanceScores(tickets, automatedTasks) {
+    const people = {};
+    const addItem = (item, type) => {
+      const key = getPerformanceAssigneeKey(item);
+      const name = getPerformanceAssigneeName(item);
+      if (!people[key]) people[key] = { name, tickets: 0, automated: 0, total: 0, open: 0, closed: 0, openLate: 0, closedLate: 0, earned: 0, possible: 0, responseDayTotal: 0, responseDayCount: 0 };
+      const score = scorePerformanceItem(item, type);
+      people[key].total += 1;
+      if (type === 'Ticket') people[key].tickets += 1;
+      if (type === 'Automated') people[key].automated += 1;
+      if (score.isClosed) people[key].closed += 1;
+      else people[key].open += 1;
+      if (score.isOpenLate) people[key].openLate += 1;
+      if (score.isClosedLate) people[key].closedLate += 1;
+      people[key].earned += score.earned;
+      people[key].possible += score.possible;
+      if (score.responseDays !== null) {
+        people[key].responseDayTotal += score.responseDays;
+        people[key].responseDayCount += 1;
+      }
+    };
+    (tickets || []).forEach(item => addItem(item, 'Ticket'));
+    (automatedTasks || []).forEach(item => addItem(item, 'Automated'));
+    return Object.values(people).map(person => {
+      const finalScore = person.possible ? Math.round((person.earned / person.possible) * 100) : 0;
+      const avgResponse = person.responseDayCount ? (person.responseDayTotal / person.responseDayCount).toFixed(1) : '-';
+      return Object.assign(person, { finalScore, avgResponse });
+    }).sort((a, b) => b.finalScore - a.finalScore || b.total - a.total || a.name.localeCompare(b.name));
+  }
+
+  function scoreClass(score) {
+    if (score >= 80) return 'score-good';
+    if (score >= 60) return 'score-warning';
+    return 'score-poor';
+  }
+
+  function performanceScoreSystemHtml(tickets, automatedTasks) {
+    const scores = calculatePerformanceScores(tickets, automatedTasks);
+    return `<div class="performance-score-card">
+      <div class="panel-header"><h2>🏆 Performance Scoring System</h2></div>
+      <p class="score-note">Score includes normal tickets and automated recurring tasks assigned to each person. Response, priority handling, time taken to close, open-but-late and closed-but-late penalties are included in the final percentage.</p>
+      <div class="table-wrapper"><table><thead><tr><th>Person</th><th>Total Assigned</th><th>Tickets</th><th>Automated</th><th>Open</th><th>Closed</th><th>Open Late</th><th>Closed Late</th><th>Avg Response Days</th><th>Final Score</th></tr></thead><tbody>${scores.length ? scores.map(row => `<tr><td><strong>${escapeHtml(row.name)}</strong></td><td>${row.total}</td><td>${row.tickets}</td><td>${row.automated}</td><td>${row.open}</td><td>${row.closed}</td><td>${row.openLate}</td><td>${row.closedLate}</td><td>${row.avgResponse}</td><td><span class="score-pill ${scoreClass(row.finalScore)}">${row.finalScore}%</span></td></tr>`).join('') : '<tr><td colspan="10" style="text-align:center">No assigned tickets or automated tasks found</td></tr>'}</tbody></table></div>
+    </div>`;
   }
 
   async function renderUsers() { const route = SHEET_ROUTES.users; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
