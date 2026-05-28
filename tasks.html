@@ -1328,11 +1328,11 @@ Please action this hiring request in QuickBase.`;
         </div>
 
         <div class="panel"><div class="panel-header"><h2>📊 KPI Performance</h2><button class="btn-primary" onclick="currentSection='kpis';loadCurrentSection()">View All →</button></div>
-          <div class="table-wrapper"><table><thead><tr><th>KPI Name</th><th>Target</th><th>Actual</th><th>Department</th><th>Status</th></tr></thead><tbody>${kpiArray.slice(0,5).map(k => `<tr><td><strong>${escapeHtml(k.KPIName || k.Name || '')}</strong></td><td>${escapeHtml(k['Target Value'] || k.Target || '')}</td><td>${escapeHtml(k['Actual Value'] || k.Actual || '')}</td><td>${escapeHtml(k['Related Department'] || k.Department || '')}</td><td><span class="badge ${(parseFloat(k['Actual Value'] || k.Actual) >= parseFloat(k['Target Value'] || k.Target)) ? 'badge-low' : 'badge-high'}">${(parseFloat(k['Actual Value'] || k.Actual) >= parseFloat(k['Target Value'] || k.Target)) ? '✓ On Track' : '⚠️ Behind'}</span></td>`).join('') || '<tr><td colspan="5">No KPI data</td></tr>'}</tbody>}</div>
+          <div class="table-wrapper"><table><thead><tr><th>KPI Name</th><th>Target</th><th>Actual</th><th>Department</th><th>Status</th></tr></thead><tbody>${kpiArray.slice(0,5).map(k => `<tr><td><strong>${escapeHtml(k.KPIName || k.Name || '')}</strong></td><td>${escapeHtml(k['Target Value'] || k.Target || '')}</td><td>${escapeHtml(k['Actual Value'] || k.Actual || '')}</td><td>${escapeHtml(k['Related Department'] || k.Department || '')}</td><td><span class="badge ${(parseFloat(k['Actual Value'] || k.Actual) >= parseFloat(k['Target Value'] || k.Target)) ? 'badge-low' : 'badge-high'}">${(parseFloat(k['Actual Value'] || k.Actual) >= parseFloat(k['Target Value'] || k.Target)) ? '✓ On Track' : '⚠️ Behind'}</span></td>`).join('') || '<tr><td colspan="5">No KPI data</td></tr>'}</tbody></table></div>
         </div>
 
         <div class="panel"><div class="panel-header"><h2>⏱️ SLA Management</h2><button class="btn-primary" onclick="currentSection='sla';loadCurrentSection()">View All →</button></div>
-          <div class="table-wrapper"><table><thead><tr><th>SLA Name</th><th>Priority</th><th>First Response</th><th>Resolution Target</th><th>Status</th></tr></thead><tbody>${slaArray.slice(0,5).map(s => `<tr><td><strong>${escapeHtml(getCellValue(s, 'SLA Name'))}</strong></td><td><span class="badge badge-high">${escapeHtml(s.Priority || '')}</span></td><td>${escapeHtml(getCellValue(s, 'First Response'))}</td><td>${escapeHtml(getCellValue(s, 'Resolution Target'))}</td><td><span class="badge badge-low">${escapeHtml(s.Status || 'Active')}</span></td>`).join('') || '<tr><td colspan="5">No SLA records</td></tr>'}</tbody>}</div>
+          <div class="table-wrapper"><table><thead><tr><th>SLA Name</th><th>Priority</th><th>First Response</th><th>Resolution Target</th><th>Status</th></tr></thead><tbody>${slaArray.slice(0,5).map(s => `<tr><td><strong>${escapeHtml(getCellValue(s, 'SLA Name'))}</strong></td><td><span class="badge badge-high">${escapeHtml(s.Priority || '')}</span></td><td>${escapeHtml(getCellValue(s, 'First Response'))}</td><td>${escapeHtml(getCellValue(s, 'Resolution Target'))}</td><td><span class="badge badge-low">${escapeHtml(s.Status || 'Active')}</span></td>`).join('') || '<tr><td colspan="5">No SLA records</td></tr>'}</tbody></table></div>
         </div>`;
 
       wireDashboardForms();
@@ -1347,6 +1347,7 @@ Please action this hiring request in QuickBase.`;
       <div class="panel-header"><h2>➕ New Task / Ticket</h2><button class="btn-secondary" onclick="document.getElementById('newTicketForm').style.display='block'">Show Form</button></div>
       <div id="newTicketForm" style="padding:20px; display:block">
         <div class="form-row">
+          <div class="form-field"><label>Ticket Number</label><input id="ticketNumber" readonly value="${generateTicketNumber()}" placeholder="Auto-generated"></div>
           <div class="form-field"><label>Title *</label><input id="ticketTitle" placeholder="Task/Ticket title"></div>
           <div class="form-field"><label>Priority</label><select id="ticketPriority"><option>Medium</option><option>Low</option><option>High</option><option>Critical</option></select></div>
           <div class="form-field"><label>Status</label><select id="ticketStatus"><option>Open</option><option>In Progress</option><option>Pending</option><option>Closed</option></select></div>
@@ -1425,7 +1426,12 @@ Please log in to QuickBase to review and update this item.`
     wireAssigneeEmail('autoAssignee', 'autoAssigneeEmail');
 
     document.getElementById('createTicketBtn')?.addEventListener('click', async () => {
+      const ticketNumber = document.getElementById('ticketNumber')?.value || generateTicketNumber();
       const payload = {
+        'Ticket ID': ticketNumber,
+        'Ticket Number': ticketNumber,
+        ticketId: ticketNumber,
+        ticketNumber: ticketNumber,
         title: document.getElementById('ticketTitle').value,
         taskName: document.getElementById('ticketTitle').value,
         priority: document.getElementById('ticketPriority').value,
@@ -1552,9 +1558,9 @@ Please log in to QuickBase to review and update this item.`
 
   async function renderApiConnection() {
     document.getElementById('mainContent').innerHTML = `
-      <div class="top-bar"><div class="page-title"><h1>API Connection</h1><p>API-only posting and fetching test area</p></div></div>
+      <div class="top-bar"><div class="page-title"><h1>New API Creating Section</h1><p>Fetch or post data from another app or system</p></div></div>
       <div class="panel">
-        <div class="panel-header"><h2>🔌 API Only - Fetch / Post</h2></div>
+        <div class="panel-header"><h2>🔌 New API - Fetch / Post Data</h2></div>
         <div style="padding:20px">
           <div class="form-field" style="margin-bottom:16px">
             <label>API Endpoint URL</label>
@@ -1813,7 +1819,7 @@ Please log in to QuickBase to review and update this item.`
         <div class="chart-card"><h3>Tickets by Priority</h3><p>Current ticket count grouped by priority</p><canvas id="ticketsPriorityChart"></canvas></div>
         <div class="chart-card"><h3>Tickets by Department</h3><p>Current ticket count grouped by department</p><canvas id="ticketsDepartmentChart"></canvas></div>
       </div>
-      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${data.length ? data.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody>}</div></div>`;
+      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${data.length ? data.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
 
     if (typeof Chart !== 'undefined') {
       const pCtx = document.getElementById('ticketsPriorityChart')?.getContext('2d');
@@ -1918,6 +1924,13 @@ Please log in to QuickBase to review and update this item.`
   };
 
 
+  function generateTicketNumber() {
+    const now = new Date();
+    const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const timePart = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+    return `TKT-${datePart}-${timePart}`;
+  }
+
   function generateHiringTicketNumber() {
     const now = new Date();
     const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -1973,7 +1986,7 @@ Please log in to QuickBase to review and update this item.`
         <button class="btn-primary" id="saveDataEntryBtn">💾 Save ${title}</button>
         <div id="dataEntryMessage" class="message-bar"></div>
       </div></div>
-      <div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></div></div>`;
+      <div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
 
     if (columns.includes('Assigned To') && columns.includes('Assigned Email')) {
       wireAssigneeEmail(fieldId('Assigned To'), fieldId('Assigned Email'));
@@ -2014,7 +2027,7 @@ Please log in to QuickBase to review and update this item.`
   function renderSimpleTable(title, data, columns, sheetTabName = title) {
     const main = document.getElementById('mainContent');
     const dataArray = Array.isArray(data) ? data : [];
-    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div><div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></div></div>`;
+    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div><div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
   }
 
   async function loadCurrentSection() {
