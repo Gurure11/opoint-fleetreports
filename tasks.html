@@ -812,6 +812,97 @@
   ];
   const HR_MANAGER = { name: 'HR Manager', email: SYSTEM_USER_EMAILS['HR Manager'] };
 
+  const AUTO_TASK_EXECUTIVE_REVIEW_KEY = 'quickbase_auto_task_executive_reviews';
+
+  function getMonthKey(value) {
+    const date = dateOnly(value);
+    if (!date) return '';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function getAutomatedTaskIdentity(task) {
+    return task['Task ID'] || task.taskId || task.ID || task['Task Name'] || task.taskName || task.Title || '';
+  }
+
+  function getStoredAutomatedTaskReviews() {
+    try { return JSON.parse(localStorage.getItem(AUTO_TASK_EXECUTIVE_REVIEW_KEY) || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function saveStoredAutomatedTaskReviews(reviews) {
+    localStorage.setItem(AUTO_TASK_EXECUTIVE_REVIEW_KEY, JSON.stringify(reviews || {}));
+  }
+
+  function getAutomatedTaskReviewKey(task) {
+    const id = getAutomatedTaskIdentity(task);
+    const month = getMonthKey(getTaskDueDate(task));
+    return `${id}__${month}`;
+  }
+
+  function getAutomatedTaskExecutiveReview(task) {
+    const sheetValue = task['Executive On Time Review'] || task.executiveOnTimeReview || task['Was Actioned On Time'] || task.wasActionedOnTime || '';
+    if (String(sheetValue).trim()) return String(sheetValue).trim();
+    const reviews = getStoredAutomatedTaskReviews();
+    return reviews[getAutomatedTaskReviewKey(task)]?.decision || '';
+  }
+
+  async function saveAutomatedTaskExecutiveReview(task, decision) {
+    const reviews = getStoredAutomatedTaskReviews();
+    const key = getAutomatedTaskReviewKey(task);
+    const reviewedBy = currentUser?.['Full Name'] || currentUser?.Email || 'Executive Manager';
+    const reviewedDate = new Date().toISOString();
+    reviews[key] = { decision, reviewedBy, reviewedDate };
+    saveStoredAutomatedTaskReviews(reviews);
+
+    try {
+      await apiPost('updateAutomatedTaskReview', {
+        taskId: getAutomatedTaskIdentity(task),
+        taskName: task['Task Name'] || task.taskName || task.Title || '',
+        month: getMonthKey(getTaskDueDate(task)),
+        executiveOnTimeReview: decision,
+        reviewedBy,
+        reviewedDate,
+        sheetTab: 'Automated Tasks'
+      });
+    } catch(e) {
+      console.warn('Automated task executive review saved locally only:', e.message);
+    }
+  }
+
+  async function showAutomatedTaskDueExecutiveAlerts() {
+    if (!isExecutive()) return;
+    try {
+      const automatedTasks = await safeGet('automatedTasks');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueTasks = (automatedTasks || []).filter(task => {
+        const due = dateOnly(getTaskDueDate(task));
+        if (!due || due > today) return false;
+        if (String(task.Status || task.status || '').toLowerCase().includes('paused')) return false;
+        return !getAutomatedTaskExecutiveReview(task);
+      });
+
+      for (const task of dueTasks) {
+        const name = task['Task Name'] || task.taskName || task.Title || 'Automated task';
+        const assignee = getAssigneeName(task) || 'Assignee';
+        const dueText = getTaskDueDate(task) || 'this month';
+        const wasOnTime = confirm(`Automated task due alert for executives:
+
+${name}
+Assigned to: ${assignee}
+Due date: ${dueText}
+
+Was the ticket for this month actioned and delivered on time?
+
+OK = Yes, on time
+Cancel = No, not on time`);
+        await saveAutomatedTaskExecutiveReview(task, wasOnTime ? 'Yes' : 'No');
+      }
+    } catch(e) {
+      console.warn('Executive automated task due alert failed:', e);
+    }
+  }
+
   const FALLBACK_USERS = Object.keys(SYSTEM_USER_EMAILS);
   let SYSTEM_USERS = [...FALLBACK_USERS];
   const DEPARTMENT_OPTIONS = ['Admin', 'Business Development', 'Finance & IT', 'Fleet', 'HR', 'Operations', 'Procurements', 'Sales', 'SHEQ', 'Tendering', 'Warehouse'];
@@ -1335,6 +1426,7 @@ Please action this hiring request in QuickBase.`;
 
   async function showAssignedTasksLoginAlert() {
     try {
+      await showAutomatedTaskDueExecutiveAlerts();
       const assigned = await getMyAssignedTaskData();
       const total = assigned.tickets.length + assigned.automatedTasks.length;
       if (!total) return;
@@ -1923,20 +2015,29 @@ Please log in to QuickBase to review and update this item.`
     const completedDate = dateOnly(completed);
     const responseDate = dateOnly(responded);
     const isClosed = isAuto ? isAutomatedTaskClosed(item) : isClosedTicket(item);
+    const executiveReview = isAuto ? getAutomatedTaskExecutiveReview(item) : '';
+    const reviewedLate = String(executiveReview).trim().toLowerCase() === 'no';
+    const reviewedOnTime = String(executiveReview).trim().toLowerCase() === 'yes';
     const isOpenLate = !isClosed && dueDate && dueDate < today;
-    const isClosedLate = isClosed && dueDate && ((completedDate && completedDate > dueDate) || (!completedDate && dueDate < today));
+    const isClosedLate = (isClosed && dueDate && ((completedDate && completedDate > dueDate) || (!completedDate && dueDate < today))) || reviewedLate;
     const responseDays = daysBetween(created, responded);
+
+    if (isAuto && (!dueDate || dueDate >= today) && !executiveReview) {
+      return { earned: 0, possible: 0, isClosed: false, isOpenLate: false, isClosedLate: false, responseDays, type, notYetScored: true };
+    }
 
     let responsePoints = 0;
     if (responseDate && dueDate && responseDate <= dueDate) responsePoints = 25;
     else if (responseDate) responsePoints = 12;
-    else if (isAuto) responsePoints = 18;
+    else if (isAuto && executiveReview) responsePoints = 18;
 
     let closurePoints = 0;
-    if (isClosed && !isClosedLate) closurePoints = 60;
+    if (reviewedOnTime) closurePoints = 60;
+    else if (reviewedLate) closurePoints = 0;
+    else if (isClosed && !isClosedLate) closurePoints = 60;
     else if (isClosedLate) closurePoints = 30;
     else if (isOpenLate) closurePoints = 0;
-    else closurePoints = 35;
+    else closurePoints = isAuto ? 0 : 35;
 
     let priorityPoints = 15;
     if (isOpenLate) priorityPoints = 0;
@@ -1957,7 +2058,7 @@ Please log in to QuickBase to review and update this item.`
       people[key].total += 1;
       if (type === 'Ticket') people[key].tickets += 1;
       if (type === 'Automated') people[key].automated += 1;
-      if (score.isClosed) people[key].closed += 1;
+      if (score.isClosed || (type === 'Automated' && getAutomatedTaskExecutiveReview(item))) people[key].closed += 1;
       else people[key].open += 1;
       if (score.isOpenLate) people[key].openLate += 1;
       if (score.isClosedLate) people[key].closedLate += 1;
