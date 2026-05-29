@@ -833,24 +833,26 @@
     localStorage.setItem(AUTO_TASK_EXECUTIVE_REVIEW_KEY, JSON.stringify(reviews || {}));
   }
 
-  function getAutomatedTaskReviewKey(task) {
+  function getAutomatedTaskReviewKey(task, monthOverride = '') {
     const id = getAutomatedTaskIdentity(task);
-    const month = getMonthKey(getTaskDueDate(task));
+    const month = monthOverride || task.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(task));
     return `${id}__${month}`;
   }
 
-  function getAutomatedTaskExecutiveReview(task) {
+  function getAutomatedTaskExecutiveReview(task, monthOverride = '') {
+    const month = monthOverride || task.__autoOccurrenceMonth || '';
     const sheetValue = task['Executive On Time Review'] || task.executiveOnTimeReview || task['Was Actioned On Time'] || task.wasActionedOnTime || '';
-    if (String(sheetValue).trim()) return String(sheetValue).trim();
+    if (String(sheetValue).trim() && (!month || month === getMonthKey(getTaskDueDate(task)))) return String(sheetValue).trim();
     const reviews = getStoredAutomatedTaskReviews();
-    return reviews[getAutomatedTaskReviewKey(task)]?.decision || '';
+    return reviews[getAutomatedTaskReviewKey(task, month)]?.decision || '';
   }
 
-  async function saveAutomatedTaskExecutiveReview(task, decision) {
+  async function saveAutomatedTaskExecutiveReview(task, decision, monthOverride = '') {
     const reviews = getStoredAutomatedTaskReviews();
-    const key = getAutomatedTaskReviewKey(task);
+    const key = getAutomatedTaskReviewKey(task, monthOverride);
     const reviewedBy = currentUser?.['Full Name'] || currentUser?.Email || 'Executive Manager';
     const reviewedDate = new Date().toISOString();
+    const month = monthOverride || task.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(task));
     reviews[key] = { decision, reviewedBy, reviewedDate };
     saveStoredAutomatedTaskReviews(reviews);
 
@@ -858,7 +860,7 @@
       await apiPost('updateAutomatedTaskReview', {
         taskId: getAutomatedTaskIdentity(task),
         taskName: task['Task Name'] || task.taskName || task.Title || '',
-        month: getMonthKey(getTaskDueDate(task)),
+        month,
         executiveOnTimeReview: decision,
         reviewedBy,
         reviewedDate,
@@ -875,28 +877,29 @@
       const automatedTasks = await safeGet('automatedTasks');
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const dueTasks = (automatedTasks || []).filter(task => {
+      const dueTasks = expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], true).filter(task => {
         const due = dateOnly(getTaskDueDate(task));
         if (!due || due > today) return false;
         if (String(task.Status || task.status || '').toLowerCase().includes('paused')) return false;
-        return !getAutomatedTaskExecutiveReview(task);
+        return !getAutomatedTaskExecutiveReview(task, task.__autoOccurrenceMonth);
       });
 
       for (const task of dueTasks) {
         const name = task['Task Name'] || task.taskName || task.Title || 'Automated task';
         const assignee = getAssigneeName(task) || 'Assignee';
         const dueText = getTaskDueDate(task) || 'this month';
-        const wasOnTime = confirm(`Automated task due alert for executives:
-
-${name}
-Assigned to: ${assignee}
-Due date: ${dueText}
-
-Was the ticket for this month actioned and delivered on time?
-
-OK = Yes, on time
-Cancel = No, not on time`);
-        await saveAutomatedTaskExecutiveReview(task, wasOnTime ? 'Yes' : 'No');
+        const answer = prompt(`Automated task due alert for executives:\n\n${name}\nAssigned to: ${assignee}\nDue date: ${dueText}\nMonth: ${monthLabelFromKey(task.__autoOccurrenceMonth)}\n\nSelect result for this month:\n1 = Done early / on time (100%)\n2 = Done late (50%)\n3 = Not done (0%)`, '1');
+        if (answer === null) continue;
+        const cleanAnswer = String(answer).trim().toLowerCase();
+        let decision = '';
+        if (cleanAnswer === '1' || cleanAnswer.includes('early') || cleanAnswer.includes('on time') || cleanAnswer === 'yes') decision = 'On Time';
+        else if (cleanAnswer === '2' || cleanAnswer.includes('late done') || cleanAnswer.includes('done late')) decision = 'Late Done';
+        else if (cleanAnswer === '3' || cleanAnswer.includes('not') || cleanAnswer === 'no') decision = 'Not Done';
+        if (!decision) {
+          alert('No valid option selected. Please enter 1, 2, or 3 next time.');
+          continue;
+        }
+        await saveAutomatedTaskExecutiveReview(task, decision, task.__autoOccurrenceMonth);
       }
     } catch(e) {
       console.warn('Executive automated task due alert failed:', e);
@@ -1633,6 +1636,7 @@ Please action this hiring request in QuickBase.`;
 
       wireDashboardForms();
       renderDashboardCharts(priorityCounts, deptTicketCount, submittedByDept, deptScores);
+      renderMonthlyPerformanceChart(ticketsArray, automatedTasks);
     } catch (err) {
       main.innerHTML = `<div class="panel" style="padding:40px;text-align:center;color:#ef4444"><h2>⚠️ Error Loading Dashboard</h2><p>${escapeHtml(err.message)}</p><button class="refresh-btn" onclick="loadCurrentSection()">Try Again</button></div>`;
     }
@@ -2015,29 +2019,43 @@ Please log in to QuickBase to review and update this item.`
     const completedDate = dateOnly(completed);
     const responseDate = dateOnly(responded);
     const isClosed = isAuto ? isAutomatedTaskClosed(item) : isClosedTicket(item);
-    const executiveReview = isAuto ? getAutomatedTaskExecutiveReview(item) : '';
-    const reviewedLate = String(executiveReview).trim().toLowerCase() === 'no';
-    const reviewedOnTime = String(executiveReview).trim().toLowerCase() === 'yes';
+    const executiveReview = isAuto ? getAutomatedTaskExecutiveReview(item, item.__autoOccurrenceMonth) : '';
+    const reviewText = String(executiveReview).trim().toLowerCase();
+    const reviewedOnTime = ['yes', 'on time', 'early', 'done early', 'done on time'].includes(reviewText);
+    const reviewedLateDone = ['late done', 'done late', 'late'].includes(reviewText);
+    const reviewedNotDone = ['no', 'not done', 'not delivered'].includes(reviewText);
     const isOpenLate = !isClosed && dueDate && dueDate < today;
-    const isClosedLate = (isClosed && dueDate && ((completedDate && completedDate > dueDate) || (!completedDate && dueDate < today))) || reviewedLate;
+    const isClosedLate = (isClosed && dueDate && ((completedDate && completedDate > dueDate) || (!completedDate && dueDate < today))) || reviewedLateDone || reviewedNotDone;
     const responseDays = daysBetween(created, responded);
 
-    if (isAuto && (!dueDate || dueDate >= today) && !executiveReview) {
-      return { earned: 0, possible: 0, isClosed: false, isOpenLate: false, isClosedLate: false, responseDays, type, notYetScored: true };
+    if (isAuto) {
+      if (!dueDate || (dueDate >= today && !executiveReview)) {
+        return { earned: 0, possible: 0, isClosed: false, isOpenLate: false, isClosedLate: false, responseDays, type, notYetScored: true };
+      }
+      if (!executiveReview) {
+        return { earned: 0, possible: 0, isClosed: false, isOpenLate: true, isClosedLate: false, responseDays, type, waitingExecutiveReview: true };
+      }
+      const autoEarned = reviewedOnTime ? 100 : (reviewedLateDone ? 50 : 0);
+      return {
+        earned: autoEarned,
+        possible: 100,
+        isClosed: reviewedOnTime || reviewedLateDone,
+        isOpenLate: false,
+        isClosedLate: reviewedLateDone || reviewedNotDone,
+        responseDays,
+        type
+      };
     }
 
     let responsePoints = 0;
     if (responseDate && dueDate && responseDate <= dueDate) responsePoints = 25;
     else if (responseDate) responsePoints = 12;
-    else if (isAuto && executiveReview) responsePoints = 18;
 
     let closurePoints = 0;
-    if (reviewedOnTime) closurePoints = 60;
-    else if (reviewedLate) closurePoints = 0;
-    else if (isClosed && !isClosedLate) closurePoints = 60;
+    if (isClosed && !isClosedLate) closurePoints = 60;
     else if (isClosedLate) closurePoints = 30;
     else if (isOpenLate) closurePoints = 0;
-    else closurePoints = isAuto ? 0 : 35;
+    else closurePoints = 35;
 
     let priorityPoints = 15;
     if (isOpenLate) priorityPoints = 0;
@@ -2084,13 +2102,168 @@ Please log in to QuickBase to review and update this item.`
     return 'score-poor';
   }
 
+  function monthLabelFromKey(monthKey) {
+    if (!monthKey) return 'No Month';
+    const parts = String(monthKey).split('-');
+    const date = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+    if (isNaN(date)) return monthKey;
+    return date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+  }
+
+  function getPerformanceMonthKey(item) {
+    return item.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(item) || getCompletionDate(item) || getCreatedDate(item));
+  }
+
+  function monthStart(date) {
+    const d = dateOnly(date);
+    if (!d) return null;
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  }
+
+  function addMonths(date, count) {
+    return new Date(date.getFullYear(), date.getMonth() + count, 1);
+  }
+
+  function getRecurringDayOfMonth(task, fallbackDate) {
+    const value = task['Day of Month'] || task.recurrenceDayOfMonth || task['Recurring Day'] || '';
+    const parsed = parseInt(value, 10);
+    if (parsed >= 1 && parsed <= 31) return parsed;
+    const d = dateOnly(fallbackDate || getTaskDueDate(task) || getCreatedDate(task));
+    return d ? d.getDate() : 1;
+  }
+
+  function occurrenceDueDateForMonth(monthDate, day) {
+    const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+    return new Date(monthDate.getFullYear(), monthDate.getMonth(), Math.min(day, lastDay));
+  }
+
+  function expandAutomatedTaskMonthlyOccurrences(automatedTasks, includeWaitingMonth = true) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endMonth = addMonths(new Date(today.getFullYear(), today.getMonth(), 1), includeWaitingMonth ? 1 : 0);
+    const occurrences = [];
+
+    (automatedTasks || []).forEach(task => {
+      if (String(task.Status || task.status || '').toLowerCase().includes('paused')) return;
+      const frequency = String(task.Frequency || task.frequency || '').toLowerCase();
+      const isMonthly = frequency.includes('month') || !frequency;
+      if (!isMonthly) {
+        occurrences.push(task);
+        return;
+      }
+
+      const firstDue = dateOnly(getTaskDueDate(task));
+      const created = dateOnly(getCreatedDate(task));
+      const startBase = firstDue || created;
+      if (!startBase) return;
+      let cursor = monthStart(startBase);
+      const dueDay = getRecurringDayOfMonth(task, firstDue || created);
+
+      while (cursor <= endMonth) {
+        const dueDate = occurrenceDueDateForMonth(cursor, dueDay);
+        const monthKey = getMonthKey(dueDate);
+        occurrences.push(Object.assign({}, task, {
+          __autoOccurrenceMonth: monthKey,
+          __autoOccurrenceDueDate: dueDate.toISOString().slice(0, 10),
+          'Next Run': dueDate.toISOString().slice(0, 10),
+          nextRun: dueDate.toISOString().slice(0, 10),
+          DueDate: dueDate.toISOString().slice(0, 10),
+          dueDate: dueDate.toISOString().slice(0, 10)
+        }));
+        cursor = addMonths(cursor, 1);
+      }
+    });
+
+    return occurrences;
+  }
+
+  function calculateMonthlyPerformanceScores(tickets, automatedTasks) {
+    const people = {};
+    const monthKeys = new Set();
+    const expandedAutomatedTasks = expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], true);
+    const addItem = (item, type) => {
+      const score = scorePerformanceItem(item, type);
+      const monthKey = getPerformanceMonthKey(item);
+      if (!monthKey) return;
+      const key = getPerformanceAssigneeKey(item);
+      const name = getPerformanceAssigneeName(item);
+      if (!people[key]) people[key] = { name, months: {}, earned: 0, possible: 0 };
+      if (!people[key].months[monthKey]) people[key].months[monthKey] = { tickets: 0, automated: 0, total: 0, earned: 0, possible: 0, waiting: 0 };
+      const month = people[key].months[monthKey];
+      month.total += 1;
+      if (type === 'Ticket') month.tickets += 1;
+      if (type === 'Automated') month.automated += 1;
+      if (score.possible) {
+        month.earned += score.earned;
+        month.possible += score.possible;
+        people[key].earned += score.earned;
+        people[key].possible += score.possible;
+      } else if (score.notYetScored || score.waitingExecutiveReview) {
+        month.waiting += 1;
+      }
+      monthKeys.add(monthKey);
+    };
+    (tickets || []).forEach(item => addItem(item, 'Ticket'));
+    expandedAutomatedTasks.forEach(item => addItem(item, 'Automated'));
+    const sortedMonths = Array.from(monthKeys).sort();
+    const rows = Object.values(people).map(person => {
+      const overallScore = person.possible ? Math.round((person.earned / person.possible) * 100) : 0;
+      return Object.assign(person, { overallScore });
+    }).sort((a, b) => b.overallScore - a.overallScore || a.name.localeCompare(b.name));
+    return { months: sortedMonths, rows };
+  }
+
+  function monthlyPerformanceSummaryHtml(tickets, automatedTasks) {
+    const summary = calculateMonthlyPerformanceScores(tickets, automatedTasks);
+    const months = summary.months;
+    const rows = summary.rows;
+    if (!months.length || !rows.length) {
+      return `<div class="performance-score-card"><div class="panel-header"><h2>📅 Monthly Performance Summary</h2></div><p class="score-note">Monthly scores will show after tickets are scored and automated tasks have passed due date with executive review.</p></div>`;
+    }
+    return `<div class="performance-score-card">
+      <div class="panel-header"><h2>📅 Monthly Performance Summary</h2></div>
+      <p class="score-note">Monthly score by person. Monthly automated tasks repeat continuously from their first due month until paused. Executive scoring for recurring tasks: done early/on time = 100%, done late = 50%, not done = 0%. Future due months show as waiting.</p>
+      <div class="chart-card" style="margin:0 24px 18px 24px"><h3>Monthly Performance Trend</h3><p>Continuous monthly score trend per person</p><canvas id="monthlyPerformanceChart"></canvas></div>
+      <div class="table-wrapper"><table><thead><tr><th>Person</th>${months.map(m => `<th>${escapeHtml(monthLabelFromKey(m))}</th>`).join('')}<th>Overall</th></tr></thead><tbody>${rows.map(row => `<tr><td><strong>${escapeHtml(row.name)}</strong></td>${months.map(monthKey => {
+        const month = row.months[monthKey];
+        if (!month) return '<td>-</td>';
+        if (!month.possible) return `<td><span style="font-size:12px;color:#64748b;font-weight:700">Waiting</span><div style="font-size:11px;color:#64748b;margin-top:3px">${month.total} task${month.total === 1 ? '' : 's'}</div></td>`;
+        const score = Math.round((month.earned / month.possible) * 100);
+        return `<td><span class="score-pill ${scoreClass(score)}">${score}%</span><div style="font-size:11px;color:#64748b;margin-top:3px">${month.total} task${month.total === 1 ? '' : 's'}</div></td>`;
+      }).join('')}<td><span class="score-pill ${scoreClass(row.overallScore)}">${row.overallScore}%</span></td></tr>`).join('')}</tbody></table></div>
+    </div>`;
+  }
+
+  function renderMonthlyPerformanceChart(tickets, automatedTasks) {
+    if (typeof Chart === 'undefined') return;
+    const canvas = document.getElementById('monthlyPerformanceChart');
+    if (!canvas) return;
+    const summary = calculateMonthlyPerformanceScores(tickets, automatedTasks);
+    const labels = summary.months.map(monthLabelFromKey);
+    const datasets = summary.rows.map(row => ({
+      label: row.name,
+      data: summary.months.map(monthKey => {
+        const month = row.months[monthKey];
+        return month && month.possible ? Math.round((month.earned / month.possible) * 100) : null;
+      }),
+      tension: 0.25,
+      spanGaps: true
+    }));
+    destroyChart('monthlyPerformance');
+    charts.monthlyPerformance = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: { responsive: true, scales: { y: { min: 0, max: 100, ticks: { callback: value => `${value}%` } } } }
+    });
+  }
+
   function performanceScoreSystemHtml(tickets, automatedTasks) {
-    const scores = calculatePerformanceScores(tickets, automatedTasks);
+    const scores = calculatePerformanceScores(tickets, expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], false));
     return `<div class="performance-score-card">
       <div class="panel-header"><h2>🏆 Performance Scoring System</h2></div>
       <p class="score-note">Score includes normal tickets and automated recurring tasks assigned to each person. Response, priority handling, time taken to close, open-but-late and closed-but-late penalties are included in the final percentage.</p>
       <div class="table-wrapper"><table><thead><tr><th>Person</th><th>Total Assigned</th><th>Tickets</th><th>Automated</th><th>Open</th><th>Closed</th><th>Open Late</th><th>Closed Late</th><th>Avg Response Days</th><th>Final Score</th></tr></thead><tbody>${scores.length ? scores.map(row => `<tr><td><strong>${escapeHtml(row.name)}</strong></td><td>${row.total}</td><td>${row.tickets}</td><td>${row.automated}</td><td>${row.open}</td><td>${row.closed}</td><td>${row.openLate}</td><td>${row.closedLate}</td><td>${row.avgResponse}</td><td><span class="score-pill ${scoreClass(row.finalScore)}">${row.finalScore}%</span></td></tr>`).join('') : '<tr><td colspan="10" style="text-align:center">No assigned tickets or automated tasks found</td></tr>'}</tbody></table></div>
-    </div>`;
+    </div>${monthlyPerformanceSummaryHtml(tickets, automatedTasks)}`;
   }
 
   async function renderUsers() { const route = SHEET_ROUTES.users; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
