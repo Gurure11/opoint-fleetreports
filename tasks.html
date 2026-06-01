@@ -844,36 +844,14 @@
     return String(user?.Email || user?.email || user?.['Full Name'] || user?.Name || '').trim().toLowerCase();
   }
 
-  function normalizeAutomatedTaskDecision(value) {
-    const text = String(value || '').trim().toLowerCase();
-    if (!text) return '';
-    if (text === '100' || text === '100%' || text.includes('on time') || text.includes('early') || text === 'yes') return 'On Time';
-    if (text === '50' || text === '50%' || text.includes('late')) return 'Late Done';
-    if (text === '0' || text === '0%' || text.includes('not') || text === 'no') return 'Not Done';
-    return String(value || '').trim();
-  }
-
-  function automatedDecisionScore(decision) {
-    const normalized = normalizeAutomatedTaskDecision(decision).toLowerCase();
-    if (normalized === 'on time') return 100;
-    if (normalized === 'late done') return 50;
-    if (normalized === 'not done') return 0;
-    return null;
-  }
-
-  function getAutomatedTaskExecutiveScores(task, monthOverride = '') {
-    const month = monthOverride || task.__autoOccurrenceMonth || '';
-    const reviews = getStoredAutomatedTaskReviews();
-    const reviewRow = reviews[getAutomatedTaskReviewKey(task, month)] || {};
-    const byExecutive = reviewRow.byExecutive || {};
-    const executiveKeys = EXECUTIVE_MANAGERS.map(m => String(m.email || m.name || '').trim().toLowerCase()).filter(Boolean);
-    return executiveKeys.map(key => automatedDecisionScore(byExecutive[key]?.decision)).filter(score => score !== null);
-  }
-
-  function getAutomatedTaskExecutiveAverageScore(task, monthOverride = '') {
-    const scores = getAutomatedTaskExecutiveScores(task, monthOverride);
-    if (scores.length < EXECUTIVE_MANAGERS.length) return null;
-    return Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
+  function normalizeAutomatedTaskReviewValue(value) {
+    const text = String(value || '').trim();
+    const key = text.toLowerCase();
+    if (!key) return '';
+    if (key.includes('not') || key.includes('no') || key.includes('0%') || key === '0') return 'Not Done';
+    if (key.includes('late') || key.includes('50%') || key === '50') return 'Late Done';
+    if (key.includes('task done') || key.includes('done') || key.includes('complete') || key.includes('yes') || key.includes('on time') || key.includes('early') || key.includes('100%') || key === '100') return 'On Time';
+    return text;
   }
 
   function getAutomatedTaskExecutiveReview(task, monthOverride = '', executiveKey = '') {
@@ -883,17 +861,21 @@
     const byExecutive = reviewRow.byExecutive || {};
     const requestedExecutiveKey = String(executiveKey || '').trim().toLowerCase();
 
-    if (requestedExecutiveKey) return normalizeAutomatedTaskDecision(byExecutive[requestedExecutiveKey]?.decision || '');
+    if (requestedExecutiveKey) return normalizeAutomatedTaskReviewValue(byExecutive[requestedExecutiveKey]?.decision || '');
 
-    const averageScore = getAutomatedTaskExecutiveAverageScore(task, month);
-    if (averageScore !== null) return `${averageScore}%`;
+    if (reviewRow.decision) return normalizeAutomatedTaskReviewValue(reviewRow.decision);
 
-    if (reviewRow.decision) return normalizeAutomatedTaskDecision(reviewRow.decision);
+    const sheetValue = task['Executive On Time Review'] || task.executiveOnTimeReview || task['Task Done'] || task['Task done'] || task.taskDone || task['Task Done Record'] || task.taskDoneRecord || task['Was Actioned On Time'] || task.wasActionedOnTime || '';
+    if (String(sheetValue).trim() && (!month || month === getMonthKey(getTaskDueDate(task)))) return normalizeAutomatedTaskReviewValue(sheetValue);
 
-    const sheetValue = task['Executive On Time Review'] || task.executiveOnTimeReview || task['Was Actioned On Time'] || task.wasActionedOnTime || task['Executive Average Score'] || task.executiveAverageScore || '';
-    if (String(sheetValue).trim() && (!month || month === getMonthKey(getTaskDueDate(task)))) return normalizeAutomatedTaskDecision(sheetValue);
-
-    return '';
+    const executiveKeys = EXECUTIVE_MANAGERS.map(m => String(m.email || m.name || '').trim().toLowerCase()).filter(Boolean);
+    const decisions = executiveKeys.map(key => normalizeAutomatedTaskReviewValue(byExecutive[key]?.decision || '')).filter(Boolean);
+    if (executiveKeys.length && decisions.length < executiveKeys.length) return '';
+    if (!decisions.length) return '';
+    const normalized = decisions.map(d => String(d).toLowerCase());
+    if (normalized.some(d => d.includes('not'))) return 'Not Done';
+    if (normalized.some(d => d.includes('late'))) return 'Late Done';
+    return 'On Time';
   }
 
   function getStoredAutomatedTaskAlertSuppressions() {
@@ -927,7 +909,9 @@
     const currentKey = getExecutiveReviewUserKey();
     if (!currentKey) return false;
     if (isAutomatedTaskExecutiveAlertSuppressed(task, monthOverride)) return true;
-    return !!getAutomatedTaskExecutiveReview(task, monthOverride, currentKey);
+    if (getAutomatedTaskExecutiveReview(task, monthOverride, currentKey)) return true;
+    // If the score/review was already updated in the sheet, do not keep alerting this executive for the same month.
+    return !!getAutomatedTaskExecutiveReview(task, monthOverride);
   }
 
   async function saveAutomatedTaskExecutiveReview(task, decision, monthOverride = '') {
@@ -942,16 +926,13 @@
     reviews[key].byExecutive = reviews[key].byExecutive || {};
     reviews[key].byExecutive[executiveKey] = { decision, reviewedBy, reviewedByEmail, reviewedDate };
     saveStoredAutomatedTaskReviews(reviews);
-    suppressAutomatedTaskExecutiveAlert(task, month);
-    const averageScore = getAutomatedTaskExecutiveAverageScore(task, month);
 
     try {
       await apiPost('updateAutomatedTaskReview', {
         taskId: getAutomatedTaskIdentity(task),
         taskName: task['Task Name'] || task.taskName || task.Title || '',
         month,
-        executiveOnTimeReview: averageScore !== null ? `${averageScore}%` : decision,
-        executiveAverageScore: averageScore !== null ? `${averageScore}%` : '',
+        executiveOnTimeReview: decision,
         reviewedBy,
         reviewedByEmail,
         reviewedDate,
@@ -973,8 +954,6 @@
       const dueTasks = expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], true).filter(task => {
         const due = dateOnly(getTaskDueDate(task));
         if (!due || due > today) return false;
-        if (!hasPerformanceAssignee(task)) return false;
-        if (String(getAssigneeName(task)).trim().toLowerCase() === 'unassigned') return false;
         if (String(task.Status || task.status || '').toLowerCase().includes('paused')) return false;
         return !hasCurrentExecutiveReviewedAutomatedTask(task, task.__autoOccurrenceMonth);
       });
@@ -998,7 +977,8 @@
           continue;
         }
         await saveAutomatedTaskExecutiveReview(task, decision, task.__autoOccurrenceMonth);
-        alert(`Score saved for ${name} (${monthText}). This alert will not appear again for you for this task/month.`);
+        const hideAgain = confirm(`Score saved for ${name} (${monthText}).\n\nDo not show this same ticket alert again for this month?\n\nClick OK / Yes to stop this alert from repeating.`);
+        if (hideAgain) suppressAutomatedTaskExecutiveAlert(task, task.__autoOccurrenceMonth);
       }
     } catch(e) {
       console.warn('Executive automated task due alert failed:', e);
@@ -1330,11 +1310,18 @@ Please action this hiring request in QuickBase.`;
     setButtonLoading(buttonId, true);
     showMessage('Synchronising with Google Sheets...', 'info', messageId);
     try {
-      const res = await apiPost(action, payload);
+      const suppressAssigneeEmail = options.suppressAssigneeEmail === true;
+      const syncPayload = suppressAssigneeEmail ? Object.assign({}, payload, {
+        notifyAssignee: false,
+        emailTo: '',
+        emailSubject: '',
+        emailBody: ''
+      }) : payload;
+      const res = await apiPost(action, syncPayload);
       showMessage(successMessage, 'success', messageId);
       
       let emailSent = false;
-      if (SEND_EMAIL_NOTIFICATIONS && payload.assignedEmail && payload.assignedEmail.trim() !== '') {
+      if (!suppressAssigneeEmail && SEND_EMAIL_NOTIFICATIONS && payload.assignedEmail && payload.assignedEmail.trim() !== '') {
         showMessage('Sending email notification to assignee via Gmail...', 'info', messageId);
         const emailResult = await sendEmailViaBackend(
           payload.assignedEmail,
@@ -1350,8 +1337,6 @@ Please action this hiring request in QuickBase.`;
         } else {
           showMessage(`Email failed: ${emailResult.error}`, 'error', messageId);
         }
-      } else if (SEND_EMAIL_NOTIFICATIONS && (!payload.assignedEmail || payload.assignedEmail.trim() === '')) {
-        showMessage('No assignee email provided. Email not sent.', 'info', messageId);
       }
       
       const assigneePhone = null;
@@ -1422,9 +1407,9 @@ Please action this hiring request in QuickBase.`;
 
   function getCellValue(row, column) {
     if (!row) return '-';
-    if (column === '% Performance') return getTaskPerformancePercent(row);
+    if (column === 'Status' && isAutomatedTaskRow(row)) return getAutomatedTaskDisplayStatus(row);
     const aliases = {
-      'Ticket ID': ['Ticket ID', 'Task ID', 'ID'],
+      'Ticket ID': ['Ticket ID', 'Ticket Number', 'Task ID', 'ID'],
       'Title': ['Title', 'Task Name', 'Name'],
       'Task Name': ['Task Name', 'Title', 'Name'],
       'Due Date': ['Due Date', 'DueDate', 'Next Run'],
@@ -1447,7 +1432,8 @@ Please action this hiring request in QuickBase.`;
       'Department ID': ['Department ID', 'ID'],
       'Department Name': ['Department Name', 'Department', 'Name'],
       'Budget': ['Budget'],
-      'Status': ['Status']
+      'Status': ['Status'],
+      'Task ID': ['Task ID', 'Ticket ID', 'Ticket Number', 'ID']
     };
     const keys = aliases[column] || [column];
     for (const key of keys) {
@@ -1500,10 +1486,6 @@ Please action this hiring request in QuickBase.`;
   function createWorkflowPayload(payload) {
     payload.createdBy = currentUser?.['Full Name'] || currentUser?.Email || '';
     payload.createdByEmail = currentUser?.Email || '';
-    payload['Created By'] = payload['Created By'] || payload.createdBy;
-    payload['Created By Email'] = payload['Created By Email'] || payload.createdByEmail;
-    payload['Issued By'] = payload['Issued By'] || payload.createdBy;
-    payload['Issued By Email'] = payload['Issued By Email'] || payload.createdByEmail;
     payload.workflowStatus = 'Created';
 
     if (requiresTwoLevelApproval(payload)) {
@@ -1535,7 +1517,7 @@ Please action this hiring request in QuickBase.`;
     const [ticketsRaw, autoTasksRaw] = await Promise.all([safeGet('tickets'), safeGet('automatedTasks')]);
     const tickets = Array.isArray(ticketsRaw) ? ticketsRaw : [];
     const automatedTasks = Array.isArray(autoTasksRaw) ? autoTasksRaw : [];
-    const expandedAutomatedTasks = expandAutomatedTaskMonthlyOccurrences(automatedTasks, true);
+    const expandedAutomatedTasks = expandAutomatedTaskMonthlyOccurrences((automatedTasks || []).filter(hasPerformanceAssignee), true);
     return {
       tickets: tickets.filter(t => hasPerformanceAssignee(t) && isTaskAssignedToCurrentUser(t)),
       automatedTasks: expandedAutomatedTasks.filter(t => hasPerformanceAssignee(t) && isTaskAssignedToCurrentUser(t))
@@ -1558,8 +1540,8 @@ Please action this hiring request in QuickBase.`;
 
   async function renderMyTickets() {
     const assigned = await getMyAssignedTaskData();
-    const ticketColumns = ['Ticket ID','Title','Priority','Status','Department','Assigned To','Due Date','% Performance'];
-    const autoColumns = ['Task ID','Task Name','Description','Frequency','Department','Next Run','Status','% Performance'];
+    const ticketColumns = ['Ticket ID','Title','Priority','Status','Department','Assigned To','Due Date'];
+    const autoColumns = ['Task ID','Task Name','Description','Frequency','Department','Next Run','Status'];
     const main = document.getElementById('mainContent');
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>My Tickets</h1><p>Tickets and automated recurring tasks assigned to me</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
@@ -1596,19 +1578,17 @@ Please action this hiring request in QuickBase.`;
     }
 
     const rows = await safeGet('hiringRequests');
-    const approvals = (rows || []).filter(r => {
-      const status = String(r.Status || '').toLowerCase();
-      const hrStatus = String(r['HR Task Status'] || '').toLowerCase();
-      if (status.includes('rejected') || status.includes('approved') || status.includes('completed')) return false;
-      if (hrStatus.includes('sent') || hrStatus.includes('created') || hrStatus.includes('completed')) return false;
-      return String(r['Approval 1'] || '').toLowerCase() !== 'approved' || String(r['Approval 2'] || '').toLowerCase() !== 'approved';
-    });
+    const approvals = (rows || []).filter(r =>
+      String(r.Status || '').toLowerCase().includes('waiting') ||
+      String(r['Approval 1'] || '').toLowerCase() === 'pending' ||
+      String(r['Approval 2'] || '').toLowerCase() === 'pending'
+    );
 
     document.getElementById('mainContent').innerHTML = `
       <div class="top-bar">
         <div class="page-title">
           <h1>Approvals Waiting</h1>
-          <p>Executive hiring approvals · each executive approves once · HR task is created only after both approvals</p>
+          <p>Executive hiring approvals · two approvals required before HR task is sent</p>
         </div>
         <button class="refresh-btn" onclick="renderApprovals()">↻ Refresh</button>
       </div>
@@ -1636,10 +1616,10 @@ Please action this hiring request in QuickBase.`;
                   <td>${escapeHtml(r.Position)}</td>
                   <td>${escapeHtml(r.Department)}</td>
                   <td>${escapeHtml(r['Requested By'])}</td>
-                  <td>${approvalText(r, 'Approval 1')}</td>
-                  <td>${approvalText(r, 'Approval 2')}</td>
-                  <td>${escapeHtml(r.Status || 'Waiting Approval')}</td>
-                  <td>${hiringApprovalActionHtml(r)}</td>
+                  <td>${escapeHtml(approvalText(r, 'Approval 1'))}</td>
+                  <td>${escapeHtml(approvalText(r, 'Approval 2'))}</td>
+                  <td>${escapeHtml(r.Status)}</td>
+                  <td><button class="btn-primary" onclick="submitHiringApproval('${escapeHtml(r['Ticket Number'])}')">Approve</button> <button class="btn-secondary" onclick="submitHiringRejection('${escapeHtml(r['Ticket Number'])}')">Reject</button></td>
                 </tr>
               `).join('') : '<tr><td colspan="8" style="text-align:center">No approvals waiting</td></tr>'}
             </tbody>
@@ -1725,7 +1705,7 @@ Please action this hiring request in QuickBase.`;
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(deptTicketCount).length}</h3><p>🏢 Tickets by Department</p></div>
         </div>
 
-        ${performanceScoreSystemHtml(ticketsArray, automatedTasks)}
+        ${performanceScoreSystemHtml(ticketsArray, automatedTasks.filter(hasPerformanceAssignee))}
 
         <div class="chart-grid">
           <div class="chart-card"><h3>Tickets by Priority</h3><canvas id="priorityChart"></canvas></div>
@@ -1753,7 +1733,7 @@ Please action this hiring request in QuickBase.`;
 
       wireDashboardForms();
       renderDashboardCharts(priorityCounts, deptTicketCount, submittedByDept, deptScores);
-      renderMonthlyPerformanceChart(ticketsArray, automatedTasks);
+      renderMonthlyPerformanceChart(ticketsArray, automatedTasks.filter(hasPerformanceAssignee));
     } catch (err) {
       main.innerHTML = `<div class="panel" style="padding:40px;text-align:center;color:#ef4444"><h2>⚠️ Error Loading Dashboard</h2><p>${escapeHtml(err.message)}</p><button class="refresh-btn" onclick="loadCurrentSection()">Try Again</button></div>`;
     }
@@ -1874,11 +1854,18 @@ Please log in to QuickBase to review and update this item.`
       Object.assign(payload, buildTaskEmailPayload('ticket', payload));
       if (!payload.title) return showMessage('Title required', 'error', 'ticketFormMessage');
       if (SEND_EMAIL_NOTIFICATIONS && !payload.emailTo) return showMessage('Assignee email is required for Gmail notification. Select an assignee with an email address.', 'error', 'ticketFormMessage');
-      await saveWithSyncAndNotify('createTicketBtn', 'ticketFormMessage', 'addTicket', payload, 'Ticket saved, synchronised and assignee notified.', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
+      await saveWithSyncAndNotify('createTicketBtn', 'ticketFormMessage', 'addTicket', payload, 'Ticket saved and synchronised.', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
     });
 
     document.getElementById('createAutoTaskBtn')?.addEventListener('click', async () => {
+      const autoTaskNumber = generateAutomatedTaskNumber();
       const payload = {
+        'Task ID': autoTaskNumber,
+        'Ticket ID': autoTaskNumber,
+        'Ticket Number': autoTaskNumber,
+        taskId: autoTaskNumber,
+        ticketId: autoTaskNumber,
+        ticketNumber: autoTaskNumber,
         taskName: document.getElementById('autoTaskName').value,
         title: document.getElementById('autoTaskName').value,
         frequency: document.getElementById('autoFrequency').value,
@@ -1898,8 +1885,9 @@ Please log in to QuickBase to review and update this item.`
       };
       Object.assign(payload, buildTaskEmailPayload('automated', payload));
       if (!payload.taskName) return showMessage('Task name required', 'error', 'autoTaskMessage');
+      if (!payload.assignedTo || !payload.assignedEmail) return showMessage('Assigned To and Assignee Email are required. Unassigned recurring tasks are not created.', 'error', 'autoTaskMessage');
       if (SEND_EMAIL_NOTIFICATIONS && !payload.emailTo) return showMessage('Assignee email is required for Gmail notification. Select an assignee with an email address.', 'error', 'autoTaskMessage');
-      await saveWithSyncAndNotify('createAutoTaskBtn', 'autoTaskMessage', 'addAutomatedTask', payload, 'Automated task saved, synchronised and assignee notified.', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
+      await saveWithSyncAndNotify('createAutoTaskBtn', 'autoTaskMessage', 'addAutomatedTask', payload, 'Automated task saved and synchronised.', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
     });
   }
 
@@ -1946,8 +1934,8 @@ Please log in to QuickBase to review and update this item.`
 
   function getAssigneeName(t) { return String(t['Assigned To'] || t.assignedTo || t.Assignee || t.Owner || t['Assigned User'] || t['Assigned Name'] || '').trim(); }
   function getAssigneeEmail(t) { return getRowEmail(t, ['Assigned Email', 'assignedEmail', 'AssigneeEmail', 'Assignee Email', 'Assigned To Email', 'assignedToEmail', 'Email To']); }
-  function getTaskIssuerName(t) { return String(t['Created By'] || t['Created by'] || t.createdBy || t.CreatedBy || t['Submitted By'] || t.submittedBy || t['Requested By'] || t.requestedBy || t.Issuer || t['Issued By'] || t['CreatedBy'] || t['Requester'] || t['Raised By'] || '').trim(); }
-  function getTaskIssuerEmail(t) { return getRowEmail(t, ['Created By Email', 'createdByEmail', 'Created by Email', 'CreatedByEmail', 'Submitted By Email', 'submittedByEmail', 'Requested By Email', 'requestedByEmail', 'Issuer Email', 'Issued By Email', 'Requester Email', 'Raised By Email']); }
+  function getTaskIssuerName(t) { return String(t['Created By'] || t.createdBy || t['Requested By'] || t.requestedBy || t.Issuer || t['Issued By'] || t['CreatedBy'] || t['Requester'] || '').trim(); }
+  function getTaskIssuerEmail(t) { return getRowEmail(t, ['Created By Email', 'createdByEmail', 'Requested By Email', 'requestedByEmail', 'Issuer Email', 'Issued By Email', 'Requester Email']); }
   function getCurrentUserName() { return String(currentUser?.['Full Name'] || currentUser?.Name || currentUser?.Email || '').trim(); }
   function isSamePerson(a, b) { return nameMatches(a, b); }
 
@@ -1985,6 +1973,40 @@ Please log in to QuickBase to review and update this item.`
     };
   }
 
+  function isAutomatedTaskRow(row) {
+    if (!row) return false;
+    return !!(row.__autoOccurrenceMonth || row.__autoOccurrenceDueDate || row['Task ID'] || row.taskId || row['Task Name'] || row.taskName || row['Next Run'] || row.nextRun || row.recurrenceDayOfMonth || row['Day of Month']);
+  }
+
+  function hasBothExecutiveAutomatedTaskReviews(task, monthOverride = '') {
+    const month = monthOverride || task.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(task));
+    const reviews = getStoredAutomatedTaskReviews();
+    const reviewRow = reviews[getAutomatedTaskReviewKey(task, month)] || {};
+    const byExecutive = reviewRow.byExecutive || {};
+    const executiveKeys = EXECUTIVE_MANAGERS.map(m => String(m.email || m.name || '').trim().toLowerCase()).filter(Boolean);
+    if (executiveKeys.length && executiveKeys.every(key => normalizeAutomatedTaskReviewValue(byExecutive[key]?.decision || ''))) return true;
+    const aggregateReview = normalizeAutomatedTaskReviewValue(task['Executive On Time Review'] || task.executiveOnTimeReview || task['Task Done'] || task['Task done'] || task.taskDone || task['Task Done Record'] || task.taskDoneRecord || task['Was Actioned On Time'] || task.wasActionedOnTime || '');
+    return !!aggregateReview;
+  }
+
+  function getAutomatedTaskDisplayStatus(task) {
+    const rawStatus = String(task.Status || task.status || '').trim();
+    if (rawStatus.toLowerCase().includes('paused')) return rawStatus || 'Paused';
+    const due = dateOnly(getTaskDueDate(task));
+    if (!due) return rawStatus || 'Waiting';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const dueMonthStart = new Date(due.getFullYear(), due.getMonth(), 1);
+    if (dueMonthStart >= currentMonthStart) return 'Waiting';
+    if (hasBothExecutiveAutomatedTaskReviews(task, task.__autoOccurrenceMonth)) return 'Closed';
+    return rawStatus || 'Waiting Executive Review';
+  }
+
+  function clickableSummaryNamesHtml(type) {
+    return `<button type="button" onclick="showTicketSummaryTransactions('${escapeHtml(type)}')" style="background:none;border:none;padding:0;color:#3b82f6;font:inherit;font-weight:700;cursor:pointer;text-align:left">No names to show</button>`;
+  }
+
   function namesListHtml(rows, getter = getAssigneeName) {
     const names = [...new Set((rows || []).map(getter).filter(Boolean))];
     return names.length ? names.map(escapeHtml).join(', ') : 'No names to show';
@@ -1997,7 +2019,7 @@ Please log in to QuickBase to review and update this item.`
         <div class="ticket-summary-item">
           <div class="ticket-summary-number">${automatedTasks.length}</div>
           <div class="ticket-summary-label">Total Automated Tasks</div>
-          <div class="ticket-summary-names">Assigned to: ${namesListHtml(automatedTasks, row => row['Assigned To'] || row.assignedTo || row.Assignee)}</div>
+          <div class="ticket-summary-names">Assigned to: ${clickableSummaryNamesHtml('automated')}</div>
         </div>
         <div class="ticket-summary-item">
           <div class="ticket-summary-number">${stats.openLate.length}</div>
@@ -2012,6 +2034,23 @@ Please log in to QuickBase to review and update this item.`
       </div>
     </div>`;
   }
+
+  window.showTicketSummaryTransactions = async function(type) {
+    const [ticketsRaw, automatedTasksRaw] = await Promise.all([safeGet('tickets'), safeGet('automatedTasks')]);
+    const tickets = Array.isArray(ticketsRaw) ? ticketsRaw : [];
+    const automatedTasks = expandAutomatedTaskMonthlyOccurrences((Array.isArray(automatedTasksRaw) ? automatedTasksRaw : []).filter(hasPerformanceAssignee), true);
+    const stats = calculateTicketStats(tickets);
+    let title = 'Summary Transactions';
+    let rows = [];
+    let columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'];
+    if (type === 'automated') {
+      title = 'Automated Task Transactions';
+      rows = automatedTasks;
+      columns = ['Task ID', 'Task Name', 'Description', 'Frequency', 'Department', 'Next Run', 'Status'];
+    } else if (type === 'openLate') rows = stats.openLate;
+    else if (type === 'closedLate') rows = stats.closedLate;
+    renderSimpleTable(title, rows, columns, type === 'automated' ? 'Automated Tasks' : 'Tasks');
+  };
 
   function getTicketIdentity(task) {
     return task['Ticket ID'] || task['Ticket Number'] || task.ticketId || task.ticketNumber || task.ID || '';
@@ -2145,9 +2184,9 @@ Please log in to QuickBase to review and update this item.`
   }
 
   function getPerformanceAssigneeKey(item) {
-    const name = getAssigneeName(item) || item['Assigned To'] || item.assignedTo || '';
+    const name = canonicalPersonName(getAssigneeName(item) || item['Assigned To'] || item.assignedTo || '');
     const email = getAssigneeEmail(item);
-    return email || normalizeName(name);
+    return normalizeName(name) || email;
   }
 
   function getPerformanceAssigneeName(item) {
@@ -2171,26 +2210,27 @@ Please log in to QuickBase to review and update this item.`
     const isClosed = isAuto ? isAutomatedTaskClosed(item) : isClosedTicket(item);
     const executiveReview = isAuto ? getAutomatedTaskExecutiveReview(item, item.__autoOccurrenceMonth) : '';
     const reviewText = String(executiveReview).trim().toLowerCase();
-    const reviewScore = isAuto ? automatedDecisionScore(executiveReview) : null;
-    const reviewedOnTime = reviewScore === 100 || ['yes', 'on time', 'early', 'done early', 'done on time'].includes(reviewText);
-    const reviewedLateDone = reviewScore === 50 || ['late done', 'done late', 'late'].includes(reviewText);
-    const reviewedNotDone = reviewScore === 0 || ['no', 'not done', 'not delivered'].includes(reviewText);
+    const reviewedOnTime = ['yes', 'on time', 'early', 'done early', 'done on time'].includes(reviewText);
+    const reviewedLateDone = ['late done', 'done late', 'late'].includes(reviewText);
+    const reviewedNotDone = ['no', 'not done', 'not delivered'].includes(reviewText);
     const isOpenLate = !isClosed && dueDate && dueDate < today;
     const isClosedLate = (isClosed && dueDate && ((completedDate && completedDate > dueDate) || (!completedDate && dueDate < today))) || reviewedLateDone || reviewedNotDone;
     const responseDays = daysBetween(created, responded);
 
     if (isAuto) {
-      if (!dueDate || (dueDate >= today && !executiveReview)) {
+      const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const dueMonthStart = dueDate ? new Date(dueDate.getFullYear(), dueDate.getMonth(), 1) : null;
+      if (!dueDate || (dueMonthStart && dueMonthStart >= currentMonthStart)) {
         return { earned: 0, possible: 0, isClosed: false, isOpenLate: false, isClosedLate: false, responseDays, type, notYetScored: true };
       }
-      if (!executiveReview) {
+      if (!executiveReview || !hasBothExecutiveAutomatedTaskReviews(item, item.__autoOccurrenceMonth)) {
         return { earned: 0, possible: 0, isClosed: false, isOpenLate: true, isClosedLate: false, responseDays, type, waitingExecutiveReview: true };
       }
-      const autoEarned = reviewScore !== null ? reviewScore : (reviewedOnTime ? 100 : (reviewedLateDone ? 50 : 0));
+      const autoEarned = reviewedOnTime ? 100 : (reviewedLateDone ? 50 : 0);
       return {
         earned: autoEarned,
         possible: 100,
-        isClosed: reviewedOnTime || reviewedLateDone,
+        isClosed: true,
         isOpenLate: false,
         isClosedLate: reviewedLateDone || reviewedNotDone,
         responseDays,
@@ -2217,23 +2257,6 @@ Please log in to QuickBase to review and update this item.`
     return { earned, possible, isClosed, isOpenLate, isClosedLate, responseDays, type };
   }
 
-  function getTaskPerformancePercent(item, type = '') {
-    const inferredType = type || (item.__autoOccurrenceMonth || item.Frequency || item.frequency || item['Task Name'] ? 'Automated' : 'Ticket');
-    if (inferredType === 'Automated') {
-      const averageScore = getAutomatedTaskExecutiveAverageScore(item, item.__autoOccurrenceMonth);
-      if (averageScore !== null) return `${averageScore}%`;
-      const reviewScore = automatedDecisionScore(getAutomatedTaskExecutiveReview(item, item.__autoOccurrenceMonth));
-      return `${reviewScore === null ? 0 : reviewScore}%`;
-    }
-
-    const dueDate = dateOnly(getTaskDueDate(item));
-    const completedDate = dateOnly(getCompletionDate(item));
-    const submitted = isClosedTicket(item) || !!completedDate || String(item.Status || item.status || '').toLowerCase().includes('submitted');
-    if (!submitted) return '0%';
-    if (dueDate && completedDate && completedDate > dueDate) return '50%';
-    return '100%';
-  }
-
   function calculatePerformanceScores(tickets, automatedTasks) {
     const people = {};
     const addItem = (item, type) => {
@@ -2245,7 +2268,7 @@ Please log in to QuickBase to review and update this item.`
       people[key].total += 1;
       if (type === 'Ticket') people[key].tickets += 1;
       if (type === 'Automated') people[key].automated += 1;
-      if (score.isClosed || (type === 'Automated' && getAutomatedTaskExecutiveReview(item))) people[key].closed += 1;
+      if (score.isClosed || (type === 'Automated' && hasBothExecutiveAutomatedTaskReviews(item, item.__autoOccurrenceMonth))) people[key].closed += 1;
       else people[key].open += 1;
       if (score.isOpenLate) people[key].openLate += 1;
       if (score.isClosedLate) people[key].closedLate += 1;
@@ -2313,11 +2336,15 @@ Please log in to QuickBase to review and update this item.`
     const occurrences = [];
 
     (automatedTasks || []).forEach(task => {
+      if (!hasPerformanceAssignee(task)) return;
       if (String(task.Status || task.status || '').toLowerCase().includes('paused')) return;
       const frequency = String(task.Frequency || task.frequency || '').toLowerCase();
       const isMonthly = frequency.includes('month') || !frequency;
       if (!isMonthly) {
-        occurrences.push(task);
+        const occurrence = Object.assign({}, task);
+        occurrence.Status = getAutomatedTaskDisplayStatus(occurrence);
+        occurrence.status = occurrence.Status;
+        occurrences.push(occurrence);
         return;
       }
 
@@ -2331,14 +2358,17 @@ Please log in to QuickBase to review and update this item.`
       while (cursor <= endMonth) {
         const dueDate = occurrenceDueDateForMonth(cursor, dueDay);
         const monthKey = getMonthKey(dueDate);
-        occurrences.push(Object.assign({}, task, {
+        const occurrence = Object.assign({}, task, {
           __autoOccurrenceMonth: monthKey,
           __autoOccurrenceDueDate: dueDate.toISOString().slice(0, 10),
           'Next Run': dueDate.toISOString().slice(0, 10),
           nextRun: dueDate.toISOString().slice(0, 10),
           DueDate: dueDate.toISOString().slice(0, 10),
           dueDate: dueDate.toISOString().slice(0, 10)
-        }));
+        });
+        occurrence.Status = getAutomatedTaskDisplayStatus(occurrence);
+        occurrence.status = occurrence.Status;
+        occurrences.push(occurrence);
         cursor = addMonths(cursor, 1);
       }
     });
@@ -2681,15 +2711,14 @@ Please log in to QuickBase to review and update this item.`
     else if (window.taskFilter === 'closed-on-time') data = stats.closedOnTime;
     else if (window.taskFilter === 'closed-late') data = stats.closedLate;
 
-    const columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date', '% Performance'];
-    const automatedColumns = ['Task ID', 'Task Name', 'Description', 'Frequency', 'Department', 'Assigned To', 'Next Run', 'Status', '% Performance'];
+    const columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'];
     window.currentTicketRows = data;
     const main = document.getElementById('mainContent');
     const activeFilterText = window.taskFilter ? `Filtered: ${window.taskFilter.replace(/-/g, ' ')}` : 'All tickets';
 
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>Tickets</h1><p>Sheet tab: Tasks · ${escapeHtml(activeFilterText)}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
-      ${ticketSummaryWindowHtml(automatedTasks, stats)}
+      ${ticketSummaryWindowHtml(automatedTasks.filter(hasPerformanceAssignee), stats)}
       <div class="task-status-grid">
         <div class="status-stat-card" onclick="window.taskFilter='open';renderTickets()" style="border-top:4px solid #3b82f6"><h3 style="color:#3b82f6">${stats.open.length}</h3><p>📋 Tickets Open</p></div>
         <div class="status-stat-card" onclick="window.taskFilter='closed';renderTickets()" style="border-top:4px solid #22c55e"><h3 style="color:#22c55e">${stats.closed.length}</h3><p>✅ Tickets Closed</p></div>
@@ -2706,8 +2735,7 @@ Please log in to QuickBase to review and update this item.`
         <div class="chart-card"><h3>Tickets by Priority</h3><p>Current ticket count grouped by priority</p><canvas id="ticketsPriorityChart"></canvas></div>
         <div class="chart-card"><h3>Tickets by Department</h3><p>Current ticket count grouped by department</p><canvas id="ticketsDepartmentChart"></canvas></div>
       </div>
-      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>
-      <div class="panel"><div class="panel-header"><h2>🔄 Automated Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${automatedColumns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${automatedTasks.length ? automatedTasks.map(row => `<tr>${automatedColumns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${automatedColumns.length}" style="text-align:center">No automated tickets found</td></tr>`}</tbody></table></div></div>`;
+      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
 
     if (typeof Chart !== 'undefined') {
       const pCtx = document.getElementById('ticketsPriorityChart')?.getContext('2d');
@@ -2757,112 +2785,16 @@ Please log in to QuickBase to review and update this item.`
   }
 
   async function renderDivisions() { const route = SHEET_ROUTES.divisions; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
-  async function renderAutomatedTasks() { const route = SHEET_ROUTES.automatedTasks; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
+  async function renderAutomatedTasks() { const route = SHEET_ROUTES.automatedTasks; const data = await safeGet(route.action); const rows = expandAutomatedTaskMonthlyOccurrences((Array.isArray(data) ? data : []).filter(hasPerformanceAssignee), true); renderDataEntryTable(route.displayTab, rows, route.columns, route.saveAction, route.sheetTab); }
 
   // Helper function for approval display
-  function getApprovalNumber(level) {
-    return String(level || '').includes('2') ? '2' : '1';
-  }
-
-  function getApprovalByField(level) {
-    return `Approval ${getApprovalNumber(level)} By`;
-  }
-
-  function getApprovalDateField(level) {
-    return `Approval ${getApprovalNumber(level)} Date`;
-  }
-
-  function isApprovalApproved(row, level) {
-    return String(row?.[`Approval ${getApprovalNumber(level)}`] || '').toLowerCase() === 'approved';
-  }
-
-  function bothHiringApprovalsApproved(row) {
-    return isApprovalApproved(row, 'Approval 1') && isApprovalApproved(row, 'Approval 2');
-  }
-
-  function currentExecutiveApprovalLevel(row) {
-    const currentEmail = String(currentUser?.Email || '').trim().toLowerCase();
-    const currentName = normalizeName(currentUser?.['Full Name'] || currentUser?.Name || '');
-    const first = EXECUTIVE_MANAGERS[0] || {};
-    const second = EXECUTIVE_MANAGERS[1] || {};
-    if ((first.email && currentEmail === String(first.email).toLowerCase()) || (first.name && currentName === normalizeName(first.name))) return 'Approval 1';
-    if ((second.email && currentEmail === String(second.email).toLowerCase()) || (second.name && currentName === normalizeName(second.name))) return 'Approval 2';
-    if (!isApprovalApproved(row, 'Approval 1')) return 'Approval 1';
-    return 'Approval 2';
-  }
-
-  function hasCurrentExecutiveApprovedHiring(row) {
-    const level = currentExecutiveApprovalLevel(row);
-    return isApprovalApproved(row, level);
-  }
-
   window.approvalText = function(row, level) {
-    const n = getApprovalNumber(level);
-    const status = row[`Approval ${n}`] || 'Pending';
-    const by = row[`Approval ${n} By`] || '';
-    const date = row[`Approval ${n} Date`] || '';
-    if (String(status).toLowerCase() === 'approved') return `✅ Approved${by ? ` by ${escapeHtml(by)}` : ''}${date ? ` on ${escapeHtml(date)}` : ''}`;
-    if (String(status).toLowerCase() === 'rejected') return `❌ Rejected${by ? ` by ${escapeHtml(by)}` : ''}${date ? ` on ${escapeHtml(date)}` : ''}`;
-    return '⏳ Pending';
+    const status = row[level] || '';
+    if (status === 'Approved') return '✅ Approved';
+    if (status === 'Pending') return '⏳ Pending';
+    if (status === 'Rejected') return '❌ Rejected';
+    return status || 'Pending';
   };
-
-  function hiringApprovalActionHtml(row) {
-    if (hasCurrentExecutiveApprovedHiring(row)) return '<span class="badge badge-low">Already approved by you</span>';
-    if (bothHiringApprovalsApproved(row)) return '<span class="badge badge-low">HR task sent</span>';
-    const ticket = escapeHtml(row['Ticket Number']);
-    return `<button class="btn-primary" onclick="submitHiringApproval('${ticket}')">Approve</button> <button class="btn-secondary" onclick="submitHiringRejection('${ticket}')">Reject</button>`;
-  }
-
-  function getHiringHrTaskSentStore() {
-    try { return JSON.parse(localStorage.getItem('quickbase_hiring_hr_tasks_sent') || '{}'); }
-    catch(e) { return {}; }
-  }
-
-  function setHiringHrTaskSent(ticketNumber) {
-    const sent = getHiringHrTaskSentStore();
-    sent[String(ticketNumber)] = true;
-    localStorage.setItem('quickbase_hiring_hr_tasks_sent', JSON.stringify(sent));
-  }
-
-  function wasHiringHrTaskSent(ticketNumber) {
-    const sent = getHiringHrTaskSentStore();
-    return !!sent[String(ticketNumber)];
-  }
-
-  function buildHiringHrTaskPayload(row) {
-    const ticketNumber = row['Ticket Number'] || generateHiringTicketNumber();
-    const today = new Date().toISOString().slice(0, 10);
-    return {
-      'Task ID': `HR-${ticketNumber}`,
-      taskId: `HR-${ticketNumber}`,
-      taskName: `HR Action: ${row.Position || 'Hiring Request'} (${ticketNumber})`,
-      title: `HR Action: ${row.Position || 'Hiring Request'} (${ticketNumber})`,
-      description: `Approved hiring request.\n\nTicket Number: ${ticketNumber}\nPosition: ${row.Position || ''}\nDepartment: ${row.Department || ''}\nRequested By: ${row['Requested By'] || ''}\nReason: ${row.Reason || ''}`,
-      frequency: 'Monthly',
-      'Frequency': 'Monthly',
-      assignedTo: HR_MANAGER.name,
-      'Assigned To': HR_MANAGER.name,
-      assignedEmail: HR_MANAGER.email,
-      'Assigned Email': HR_MANAGER.email,
-      department: row.Department || 'HR',
-      Department: row.Department || 'HR',
-      nextRun: today,
-      'Next Run': today,
-      status: 'Active',
-      Status: 'Active',
-      sheetTab: 'Automated Tasks'
-    };
-  }
-
-  async function createHrTaskForApprovedHiring(row, approvedBy) {
-    const ticketNumber = row['Ticket Number'];
-    const hrStatus = String(row['HR Task Status'] || '').toLowerCase();
-    if (hrStatus.includes('sent') || hrStatus.includes('created') || wasHiringHrTaskSent(ticketNumber)) return false;
-    await apiPost('addAutomatedTask', buildHiringHrTaskPayload(row));
-    setHiringHrTaskSent(ticketNumber);
-    await notifyHRForApprovedHiring(row, approvedBy);
-    return true;
-  }
 
   window.submitHiringDecision = async function(ticketNumber, decision) {
     const normalizedDecision = decision === 'Rejected' ? 'Rejected' : 'Approved';
@@ -2871,58 +2803,29 @@ Please log in to QuickBase to review and update this item.`
       const rows = await safeGet('hiringRequests');
       const requestRow = (rows || []).find(r => String(r['Ticket Number']) === String(ticketNumber)) || { 'Ticket Number': ticketNumber };
       const decidedBy = currentUser?.['Full Name'] || currentUser?.Email || 'Executive Manager';
-      const decidedByEmail = currentUser?.Email || '';
-      const decidedDate = new Date().toISOString().slice(0, 10);
-      const approvalLevel = currentExecutiveApprovalLevel(requestRow);
-      const approvalNumber = getApprovalNumber(approvalLevel);
-
-      if (normalizedDecision === 'Approved' && hasCurrentExecutiveApprovedHiring(requestRow)) {
-        alert('You have already approved this hiring request.');
-        await renderApprovals();
-        return;
-      }
-
-      const updatedRow = Object.assign({}, requestRow, {
-        [`Approval ${approvalNumber}`]: normalizedDecision,
-        [`Approval ${approvalNumber} By`]: decidedBy,
-        [`Approval ${approvalNumber} Date`]: decidedDate
-      });
-
-      const bothApprovedAfter = normalizedDecision === 'Approved' && bothHiringApprovalsApproved(updatedRow);
-      updatedRow.Status = normalizedDecision === 'Rejected' ? 'Rejected' : (bothApprovedAfter ? 'Approved' : 'Waiting Approval');
-      updatedRow['HR Task Status'] = bothApprovedAfter ? 'Sent' : 'Pending Approval';
-
-      const updatePayload = Object.assign({}, updatedRow, {
+      const updatePayload = {
         action: 'updateHiringApproval',
         sheetId: SHEET_ID,
-        ticketNumber,
+        ticketNumber: ticketNumber,
         approvedBy: decidedBy,
-        approvedByEmail: decidedByEmail,
         decision: normalizedDecision,
-        approvalLevel,
-        approvalNumber,
-        status: updatedRow.Status,
+        approvalLevel: 'both',
+        status: normalizedDecision,
         sheetTab: 'Hiring Requests',
         notifyRequester: 'Yes',
         requesterEmail: requestRow['Requested By Email'] || '',
         hrManagerEmail: HR_MANAGER.email
-      });
-
+      };
       const res = await apiPost('updateHiringApproval', updatePayload);
-      if (res && res.success === false) throw new Error(res.message || 'Approval update failed');
-
-      if (normalizedDecision === 'Rejected') {
-        await notifyHiringRequester(updatedRow, 'Rejected', decidedBy);
-        alert(`Hiring request ${ticketNumber} rejected. Requester has been notified.`);
-      } else if (bothApprovedAfter) {
-        const created = await createHrTaskForApprovedHiring(updatedRow, decidedBy);
-        await notifyHiringRequester(updatedRow, 'Approved', decidedBy);
-        alert(`Hiring request ${ticketNumber} approved by both executives.${created ? ' Automated task sent to HR Manager.' : ' HR task was already sent.'}`);
+      if (res && res.success !== false) {
+        const payloadForEmail = Object.assign({}, requestRow, updatePayload, { Status: normalizedDecision });
+        await notifyHiringRequester(payloadForEmail, normalizedDecision, decidedBy);
+        if (normalizedDecision === 'Approved') await notifyHRForApprovedHiring(payloadForEmail, decidedBy);
+        alert(`Hiring request ${ticketNumber} ${normalizedDecision.toLowerCase()}.${normalizedDecision === 'Approved' ? ' HR has been notified.' : ' Requester has been notified.'}`);
+        await renderApprovals();
       } else {
-        alert(`Hiring request ${ticketNumber} approved by ${decidedBy}. Waiting for the second executive approval.`);
+        throw new Error(res?.message || 'Approval update failed');
       }
-
-      await renderApprovals();
     } catch(e) {
       alert(`Approval error: ${e.message}`);
     }
@@ -2942,6 +2845,13 @@ Please log in to QuickBase to review and update this item.`
     const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
     const timePart = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
     return `TKT-${datePart}-${timePart}`;
+  }
+
+  function generateAutomatedTaskNumber() {
+    const now = new Date();
+    const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const timePart = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+    return `AUTO-${datePart}-${timePart}`;
   }
 
   function generateHiringTicketNumber() {
@@ -2982,6 +2892,7 @@ Please log in to QuickBase to review and update this item.`
       <div class="panel"><div class="panel-header"><h2>➕ Enter New ${title}</h2></div><div style="padding:20px">
         <div class="form-row">
           ${columns.map(c => `<div class="form-field"><label>${escapeHtml(c)}</label>${
+            c === 'Task ID' && sheetTabName === 'Automated Tasks' ? `<input id="${fieldId(c)}" readonly value="${generateAutomatedTaskNumber()}" placeholder="Auto-generated">` :
             c === 'Ticket Number' && sheetTabName === 'Hiring Requests' ? `<input id="${fieldId(c)}" readonly value="${generateHiringTicketNumber()}" placeholder="Auto-generated">` :
             (c === 'Requested By' && sheetTabName === 'Hiring Requests') ? `<input id="${fieldId(c)}" readonly value="${escapeHtml(currentUser?.['Full Name'] || currentUser?.Email || '')}">` :
             (c === 'Requested By Email' && sheetTabName === 'Hiring Requests') ? `<input id="${fieldId(c)}" readonly value="${escapeHtml(currentUser?.Email || '')}">` :
@@ -3015,11 +2926,20 @@ Please log in to QuickBase to review and update this item.`
       if (columns.includes('Request Date') && !payload['Request Date']) payload['Request Date'] = new Date().toISOString().slice(0,10);
       if (columns.includes('Assigned To')) payload.assignedTo = payload['Assigned To'];
       if (columns.includes('Assigned Email')) payload.assignedEmail = payload['Assigned Email'];
+      if (columns.includes('Task ID')) {
+        payload.taskId = payload['Task ID'];
+        payload.ticketId = payload['Task ID'];
+        payload.ticketNumber = payload['Task ID'];
+        payload['Ticket ID'] = payload['Task ID'];
+        payload['Ticket Number'] = payload['Task ID'];
+      }
       if (columns.includes('Task Name')) payload.taskName = payload['Task Name'];
       if (columns.includes('Description')) payload.description = payload.Description;
       if (columns.includes('Next Run')) payload.nextRun = payload['Next Run'];
       const isHiring = sheetTabName === 'Hiring Requests';
       if (isHiring) prepareHiringRequestPayload(payload);
+      const isAutomated = sheetTabName === 'Automated Tasks';
+      if (isAutomated && (!payload['Assigned To'] || !payload['Assigned Email'])) return showMessage('Assigned To and Assigned Email are required. Unassigned recurring tasks are not created.', 'error', 'dataEntryMessage');
       const firstColumn = columns[0];
       if (!payload[firstColumn]) return showMessage(`${firstColumn} is required`, 'error', 'dataEntryMessage');
       if (isHiring && !payload.Position) return showMessage('Position is required', 'error', 'dataEntryMessage');
