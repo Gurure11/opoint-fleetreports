@@ -844,6 +844,38 @@
     return String(user?.Email || user?.email || user?.['Full Name'] || user?.Name || '').trim().toLowerCase();
   }
 
+  function normalizeAutomatedTaskDecision(value) {
+    const text = String(value || '').trim().toLowerCase();
+    if (!text) return '';
+    if (text === '100' || text === '100%' || text.includes('on time') || text.includes('early') || text === 'yes') return 'On Time';
+    if (text === '50' || text === '50%' || text.includes('late')) return 'Late Done';
+    if (text === '0' || text === '0%' || text.includes('not') || text === 'no') return 'Not Done';
+    return String(value || '').trim();
+  }
+
+  function automatedDecisionScore(decision) {
+    const normalized = normalizeAutomatedTaskDecision(decision).toLowerCase();
+    if (normalized === 'on time') return 100;
+    if (normalized === 'late done') return 50;
+    if (normalized === 'not done') return 0;
+    return null;
+  }
+
+  function getAutomatedTaskExecutiveScores(task, monthOverride = '') {
+    const month = monthOverride || task.__autoOccurrenceMonth || '';
+    const reviews = getStoredAutomatedTaskReviews();
+    const reviewRow = reviews[getAutomatedTaskReviewKey(task, month)] || {};
+    const byExecutive = reviewRow.byExecutive || {};
+    const executiveKeys = EXECUTIVE_MANAGERS.map(m => String(m.email || m.name || '').trim().toLowerCase()).filter(Boolean);
+    return executiveKeys.map(key => automatedDecisionScore(byExecutive[key]?.decision)).filter(score => score !== null);
+  }
+
+  function getAutomatedTaskExecutiveAverageScore(task, monthOverride = '') {
+    const scores = getAutomatedTaskExecutiveScores(task, monthOverride);
+    if (scores.length < EXECUTIVE_MANAGERS.length) return null;
+    return Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
+  }
+
   function getAutomatedTaskExecutiveReview(task, monthOverride = '', executiveKey = '') {
     const month = monthOverride || task.__autoOccurrenceMonth || '';
     const reviews = getStoredAutomatedTaskReviews();
@@ -851,21 +883,17 @@
     const byExecutive = reviewRow.byExecutive || {};
     const requestedExecutiveKey = String(executiveKey || '').trim().toLowerCase();
 
-    if (requestedExecutiveKey) return byExecutive[requestedExecutiveKey]?.decision || '';
+    if (requestedExecutiveKey) return normalizeAutomatedTaskDecision(byExecutive[requestedExecutiveKey]?.decision || '');
 
-    if (reviewRow.decision) return reviewRow.decision;
+    const averageScore = getAutomatedTaskExecutiveAverageScore(task, month);
+    if (averageScore !== null) return `${averageScore}%`;
 
-    const sheetValue = task['Executive On Time Review'] || task.executiveOnTimeReview || task['Was Actioned On Time'] || task.wasActionedOnTime || '';
-    if (String(sheetValue).trim() && (!month || month === getMonthKey(getTaskDueDate(task)))) return String(sheetValue).trim();
+    if (reviewRow.decision) return normalizeAutomatedTaskDecision(reviewRow.decision);
 
-    const executiveKeys = EXECUTIVE_MANAGERS.map(m => String(m.email || m.name || '').trim().toLowerCase()).filter(Boolean);
-    const decisions = executiveKeys.map(key => byExecutive[key]?.decision || '').filter(Boolean);
-    if (executiveKeys.length && decisions.length < executiveKeys.length) return '';
-    if (!decisions.length) return '';
-    const normalized = decisions.map(d => String(d).toLowerCase());
-    if (normalized.some(d => d.includes('not'))) return 'Not Done';
-    if (normalized.some(d => d.includes('late'))) return 'Late Done';
-    return 'On Time';
+    const sheetValue = task['Executive On Time Review'] || task.executiveOnTimeReview || task['Was Actioned On Time'] || task.wasActionedOnTime || task['Executive Average Score'] || task.executiveAverageScore || '';
+    if (String(sheetValue).trim() && (!month || month === getMonthKey(getTaskDueDate(task)))) return normalizeAutomatedTaskDecision(sheetValue);
+
+    return '';
   }
 
   function getStoredAutomatedTaskAlertSuppressions() {
@@ -899,9 +927,7 @@
     const currentKey = getExecutiveReviewUserKey();
     if (!currentKey) return false;
     if (isAutomatedTaskExecutiveAlertSuppressed(task, monthOverride)) return true;
-    if (getAutomatedTaskExecutiveReview(task, monthOverride, currentKey)) return true;
-    // If the score/review was already updated in the sheet, do not keep alerting this executive for the same month.
-    return !!getAutomatedTaskExecutiveReview(task, monthOverride);
+    return !!getAutomatedTaskExecutiveReview(task, monthOverride, currentKey);
   }
 
   async function saveAutomatedTaskExecutiveReview(task, decision, monthOverride = '') {
@@ -916,13 +942,16 @@
     reviews[key].byExecutive = reviews[key].byExecutive || {};
     reviews[key].byExecutive[executiveKey] = { decision, reviewedBy, reviewedByEmail, reviewedDate };
     saveStoredAutomatedTaskReviews(reviews);
+    suppressAutomatedTaskExecutiveAlert(task, month);
+    const averageScore = getAutomatedTaskExecutiveAverageScore(task, month);
 
     try {
       await apiPost('updateAutomatedTaskReview', {
         taskId: getAutomatedTaskIdentity(task),
         taskName: task['Task Name'] || task.taskName || task.Title || '',
         month,
-        executiveOnTimeReview: decision,
+        executiveOnTimeReview: averageScore !== null ? `${averageScore}%` : decision,
+        executiveAverageScore: averageScore !== null ? `${averageScore}%` : '',
         reviewedBy,
         reviewedByEmail,
         reviewedDate,
@@ -944,6 +973,8 @@
       const dueTasks = expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], true).filter(task => {
         const due = dateOnly(getTaskDueDate(task));
         if (!due || due > today) return false;
+        if (!hasPerformanceAssignee(task)) return false;
+        if (String(getAssigneeName(task)).trim().toLowerCase() === 'unassigned') return false;
         if (String(task.Status || task.status || '').toLowerCase().includes('paused')) return false;
         return !hasCurrentExecutiveReviewedAutomatedTask(task, task.__autoOccurrenceMonth);
       });
@@ -967,8 +998,7 @@
           continue;
         }
         await saveAutomatedTaskExecutiveReview(task, decision, task.__autoOccurrenceMonth);
-        const hideAgain = confirm(`Score saved for ${name} (${monthText}).\n\nDo not show this same ticket alert again for this month?\n\nClick OK / Yes to stop this alert from repeating.`);
-        if (hideAgain) suppressAutomatedTaskExecutiveAlert(task, task.__autoOccurrenceMonth);
+        alert(`Score saved for ${name} (${monthText}). This alert will not appear again for you for this task/month.`);
       }
     } catch(e) {
       console.warn('Executive automated task due alert failed:', e);
@@ -1392,6 +1422,7 @@ Please action this hiring request in QuickBase.`;
 
   function getCellValue(row, column) {
     if (!row) return '-';
+    if (column === '% Performance') return getTaskPerformancePercent(row);
     const aliases = {
       'Ticket ID': ['Ticket ID', 'Task ID', 'ID'],
       'Title': ['Title', 'Task Name', 'Name'],
@@ -1469,6 +1500,10 @@ Please action this hiring request in QuickBase.`;
   function createWorkflowPayload(payload) {
     payload.createdBy = currentUser?.['Full Name'] || currentUser?.Email || '';
     payload.createdByEmail = currentUser?.Email || '';
+    payload['Created By'] = payload['Created By'] || payload.createdBy;
+    payload['Created By Email'] = payload['Created By Email'] || payload.createdByEmail;
+    payload['Issued By'] = payload['Issued By'] || payload.createdBy;
+    payload['Issued By Email'] = payload['Issued By Email'] || payload.createdByEmail;
     payload.workflowStatus = 'Created';
 
     if (requiresTwoLevelApproval(payload)) {
@@ -1523,8 +1558,8 @@ Please action this hiring request in QuickBase.`;
 
   async function renderMyTickets() {
     const assigned = await getMyAssignedTaskData();
-    const ticketColumns = ['Ticket ID','Title','Priority','Status','Department','Assigned To','Due Date'];
-    const autoColumns = ['Task ID','Task Name','Description','Frequency','Department','Next Run','Status'];
+    const ticketColumns = ['Ticket ID','Title','Priority','Status','Department','Assigned To','Due Date','% Performance'];
+    const autoColumns = ['Task ID','Task Name','Description','Frequency','Department','Next Run','Status','% Performance'];
     const main = document.getElementById('mainContent');
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>My Tickets</h1><p>Tickets and automated recurring tasks assigned to me</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
@@ -1561,17 +1596,19 @@ Please action this hiring request in QuickBase.`;
     }
 
     const rows = await safeGet('hiringRequests');
-    const approvals = (rows || []).filter(r =>
-      String(r.Status || '').toLowerCase().includes('waiting') ||
-      String(r['Approval 1'] || '').toLowerCase() === 'pending' ||
-      String(r['Approval 2'] || '').toLowerCase() === 'pending'
-    );
+    const approvals = (rows || []).filter(r => {
+      const status = String(r.Status || '').toLowerCase();
+      const hrStatus = String(r['HR Task Status'] || '').toLowerCase();
+      if (status.includes('rejected') || status.includes('approved') || status.includes('completed')) return false;
+      if (hrStatus.includes('sent') || hrStatus.includes('created') || hrStatus.includes('completed')) return false;
+      return String(r['Approval 1'] || '').toLowerCase() !== 'approved' || String(r['Approval 2'] || '').toLowerCase() !== 'approved';
+    });
 
     document.getElementById('mainContent').innerHTML = `
       <div class="top-bar">
         <div class="page-title">
           <h1>Approvals Waiting</h1>
-          <p>Executive hiring approvals · two approvals required before HR task is sent</p>
+          <p>Executive hiring approvals · each executive approves once · HR task is created only after both approvals</p>
         </div>
         <button class="refresh-btn" onclick="renderApprovals()">↻ Refresh</button>
       </div>
@@ -1599,10 +1636,10 @@ Please action this hiring request in QuickBase.`;
                   <td>${escapeHtml(r.Position)}</td>
                   <td>${escapeHtml(r.Department)}</td>
                   <td>${escapeHtml(r['Requested By'])}</td>
-                  <td>${escapeHtml(approvalText(r, 'Approval 1'))}</td>
-                  <td>${escapeHtml(approvalText(r, 'Approval 2'))}</td>
-                  <td>${escapeHtml(r.Status)}</td>
-                  <td><button class="btn-primary" onclick="submitHiringApproval('${escapeHtml(r['Ticket Number'])}')">Approve</button> <button class="btn-secondary" onclick="submitHiringRejection('${escapeHtml(r['Ticket Number'])}')">Reject</button></td>
+                  <td>${approvalText(r, 'Approval 1')}</td>
+                  <td>${approvalText(r, 'Approval 2')}</td>
+                  <td>${escapeHtml(r.Status || 'Waiting Approval')}</td>
+                  <td>${hiringApprovalActionHtml(r)}</td>
                 </tr>
               `).join('') : '<tr><td colspan="8" style="text-align:center">No approvals waiting</td></tr>'}
             </tbody>
@@ -1909,8 +1946,8 @@ Please log in to QuickBase to review and update this item.`
 
   function getAssigneeName(t) { return String(t['Assigned To'] || t.assignedTo || t.Assignee || t.Owner || t['Assigned User'] || t['Assigned Name'] || '').trim(); }
   function getAssigneeEmail(t) { return getRowEmail(t, ['Assigned Email', 'assignedEmail', 'AssigneeEmail', 'Assignee Email', 'Assigned To Email', 'assignedToEmail', 'Email To']); }
-  function getTaskIssuerName(t) { return String(t['Created By'] || t.createdBy || t['Requested By'] || t.requestedBy || t.Issuer || t['Issued By'] || t['CreatedBy'] || t['Requester'] || '').trim(); }
-  function getTaskIssuerEmail(t) { return getRowEmail(t, ['Created By Email', 'createdByEmail', 'Requested By Email', 'requestedByEmail', 'Issuer Email', 'Issued By Email', 'Requester Email']); }
+  function getTaskIssuerName(t) { return String(t['Created By'] || t['Created by'] || t.createdBy || t.CreatedBy || t['Submitted By'] || t.submittedBy || t['Requested By'] || t.requestedBy || t.Issuer || t['Issued By'] || t['CreatedBy'] || t['Requester'] || t['Raised By'] || '').trim(); }
+  function getTaskIssuerEmail(t) { return getRowEmail(t, ['Created By Email', 'createdByEmail', 'Created by Email', 'CreatedByEmail', 'Submitted By Email', 'submittedByEmail', 'Requested By Email', 'requestedByEmail', 'Issuer Email', 'Issued By Email', 'Requester Email', 'Raised By Email']); }
   function getCurrentUserName() { return String(currentUser?.['Full Name'] || currentUser?.Name || currentUser?.Email || '').trim(); }
   function isSamePerson(a, b) { return nameMatches(a, b); }
 
@@ -2134,9 +2171,10 @@ Please log in to QuickBase to review and update this item.`
     const isClosed = isAuto ? isAutomatedTaskClosed(item) : isClosedTicket(item);
     const executiveReview = isAuto ? getAutomatedTaskExecutiveReview(item, item.__autoOccurrenceMonth) : '';
     const reviewText = String(executiveReview).trim().toLowerCase();
-    const reviewedOnTime = ['yes', 'on time', 'early', 'done early', 'done on time'].includes(reviewText);
-    const reviewedLateDone = ['late done', 'done late', 'late'].includes(reviewText);
-    const reviewedNotDone = ['no', 'not done', 'not delivered'].includes(reviewText);
+    const reviewScore = isAuto ? automatedDecisionScore(executiveReview) : null;
+    const reviewedOnTime = reviewScore === 100 || ['yes', 'on time', 'early', 'done early', 'done on time'].includes(reviewText);
+    const reviewedLateDone = reviewScore === 50 || ['late done', 'done late', 'late'].includes(reviewText);
+    const reviewedNotDone = reviewScore === 0 || ['no', 'not done', 'not delivered'].includes(reviewText);
     const isOpenLate = !isClosed && dueDate && dueDate < today;
     const isClosedLate = (isClosed && dueDate && ((completedDate && completedDate > dueDate) || (!completedDate && dueDate < today))) || reviewedLateDone || reviewedNotDone;
     const responseDays = daysBetween(created, responded);
@@ -2148,7 +2186,7 @@ Please log in to QuickBase to review and update this item.`
       if (!executiveReview) {
         return { earned: 0, possible: 0, isClosed: false, isOpenLate: true, isClosedLate: false, responseDays, type, waitingExecutiveReview: true };
       }
-      const autoEarned = reviewedOnTime ? 100 : (reviewedLateDone ? 50 : 0);
+      const autoEarned = reviewScore !== null ? reviewScore : (reviewedOnTime ? 100 : (reviewedLateDone ? 50 : 0));
       return {
         earned: autoEarned,
         possible: 100,
@@ -2177,6 +2215,23 @@ Please log in to QuickBase to review and update this item.`
 
     const earned = Math.max(0, (responsePoints + closurePoints + priorityPoints) * weight);
     return { earned, possible, isClosed, isOpenLate, isClosedLate, responseDays, type };
+  }
+
+  function getTaskPerformancePercent(item, type = '') {
+    const inferredType = type || (item.__autoOccurrenceMonth || item.Frequency || item.frequency || item['Task Name'] ? 'Automated' : 'Ticket');
+    if (inferredType === 'Automated') {
+      const averageScore = getAutomatedTaskExecutiveAverageScore(item, item.__autoOccurrenceMonth);
+      if (averageScore !== null) return `${averageScore}%`;
+      const reviewScore = automatedDecisionScore(getAutomatedTaskExecutiveReview(item, item.__autoOccurrenceMonth));
+      return `${reviewScore === null ? 0 : reviewScore}%`;
+    }
+
+    const dueDate = dateOnly(getTaskDueDate(item));
+    const completedDate = dateOnly(getCompletionDate(item));
+    const submitted = isClosedTicket(item) || !!completedDate || String(item.Status || item.status || '').toLowerCase().includes('submitted');
+    if (!submitted) return '0%';
+    if (dueDate && completedDate && completedDate > dueDate) return '50%';
+    return '100%';
   }
 
   function calculatePerformanceScores(tickets, automatedTasks) {
@@ -2626,7 +2681,8 @@ Please log in to QuickBase to review and update this item.`
     else if (window.taskFilter === 'closed-on-time') data = stats.closedOnTime;
     else if (window.taskFilter === 'closed-late') data = stats.closedLate;
 
-    const columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'];
+    const columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date', '% Performance'];
+    const automatedColumns = ['Task ID', 'Task Name', 'Description', 'Frequency', 'Department', 'Assigned To', 'Next Run', 'Status', '% Performance'];
     window.currentTicketRows = data;
     const main = document.getElementById('mainContent');
     const activeFilterText = window.taskFilter ? `Filtered: ${window.taskFilter.replace(/-/g, ' ')}` : 'All tickets';
@@ -2650,7 +2706,8 @@ Please log in to QuickBase to review and update this item.`
         <div class="chart-card"><h3>Tickets by Priority</h3><p>Current ticket count grouped by priority</p><canvas id="ticketsPriorityChart"></canvas></div>
         <div class="chart-card"><h3>Tickets by Department</h3><p>Current ticket count grouped by department</p><canvas id="ticketsDepartmentChart"></canvas></div>
       </div>
-      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
+      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${columns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>
+      <div class="panel"><div class="panel-header"><h2>🔄 Automated Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${automatedColumns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${automatedTasks.length ? automatedTasks.map(row => `<tr>${automatedColumns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${automatedColumns.length}" style="text-align:center">No automated tickets found</td></tr>`}</tbody></table></div></div>`;
 
     if (typeof Chart !== 'undefined') {
       const pCtx = document.getElementById('ticketsPriorityChart')?.getContext('2d');
@@ -2703,13 +2760,109 @@ Please log in to QuickBase to review and update this item.`
   async function renderAutomatedTasks() { const route = SHEET_ROUTES.automatedTasks; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
 
   // Helper function for approval display
+  function getApprovalNumber(level) {
+    return String(level || '').includes('2') ? '2' : '1';
+  }
+
+  function getApprovalByField(level) {
+    return `Approval ${getApprovalNumber(level)} By`;
+  }
+
+  function getApprovalDateField(level) {
+    return `Approval ${getApprovalNumber(level)} Date`;
+  }
+
+  function isApprovalApproved(row, level) {
+    return String(row?.[`Approval ${getApprovalNumber(level)}`] || '').toLowerCase() === 'approved';
+  }
+
+  function bothHiringApprovalsApproved(row) {
+    return isApprovalApproved(row, 'Approval 1') && isApprovalApproved(row, 'Approval 2');
+  }
+
+  function currentExecutiveApprovalLevel(row) {
+    const currentEmail = String(currentUser?.Email || '').trim().toLowerCase();
+    const currentName = normalizeName(currentUser?.['Full Name'] || currentUser?.Name || '');
+    const first = EXECUTIVE_MANAGERS[0] || {};
+    const second = EXECUTIVE_MANAGERS[1] || {};
+    if ((first.email && currentEmail === String(first.email).toLowerCase()) || (first.name && currentName === normalizeName(first.name))) return 'Approval 1';
+    if ((second.email && currentEmail === String(second.email).toLowerCase()) || (second.name && currentName === normalizeName(second.name))) return 'Approval 2';
+    if (!isApprovalApproved(row, 'Approval 1')) return 'Approval 1';
+    return 'Approval 2';
+  }
+
+  function hasCurrentExecutiveApprovedHiring(row) {
+    const level = currentExecutiveApprovalLevel(row);
+    return isApprovalApproved(row, level);
+  }
+
   window.approvalText = function(row, level) {
-    const status = row[level] || '';
-    if (status === 'Approved') return '✅ Approved';
-    if (status === 'Pending') return '⏳ Pending';
-    if (status === 'Rejected') return '❌ Rejected';
-    return status || 'Pending';
+    const n = getApprovalNumber(level);
+    const status = row[`Approval ${n}`] || 'Pending';
+    const by = row[`Approval ${n} By`] || '';
+    const date = row[`Approval ${n} Date`] || '';
+    if (String(status).toLowerCase() === 'approved') return `✅ Approved${by ? ` by ${escapeHtml(by)}` : ''}${date ? ` on ${escapeHtml(date)}` : ''}`;
+    if (String(status).toLowerCase() === 'rejected') return `❌ Rejected${by ? ` by ${escapeHtml(by)}` : ''}${date ? ` on ${escapeHtml(date)}` : ''}`;
+    return '⏳ Pending';
   };
+
+  function hiringApprovalActionHtml(row) {
+    if (hasCurrentExecutiveApprovedHiring(row)) return '<span class="badge badge-low">Already approved by you</span>';
+    if (bothHiringApprovalsApproved(row)) return '<span class="badge badge-low">HR task sent</span>';
+    const ticket = escapeHtml(row['Ticket Number']);
+    return `<button class="btn-primary" onclick="submitHiringApproval('${ticket}')">Approve</button> <button class="btn-secondary" onclick="submitHiringRejection('${ticket}')">Reject</button>`;
+  }
+
+  function getHiringHrTaskSentStore() {
+    try { return JSON.parse(localStorage.getItem('quickbase_hiring_hr_tasks_sent') || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function setHiringHrTaskSent(ticketNumber) {
+    const sent = getHiringHrTaskSentStore();
+    sent[String(ticketNumber)] = true;
+    localStorage.setItem('quickbase_hiring_hr_tasks_sent', JSON.stringify(sent));
+  }
+
+  function wasHiringHrTaskSent(ticketNumber) {
+    const sent = getHiringHrTaskSentStore();
+    return !!sent[String(ticketNumber)];
+  }
+
+  function buildHiringHrTaskPayload(row) {
+    const ticketNumber = row['Ticket Number'] || generateHiringTicketNumber();
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      'Task ID': `HR-${ticketNumber}`,
+      taskId: `HR-${ticketNumber}`,
+      taskName: `HR Action: ${row.Position || 'Hiring Request'} (${ticketNumber})`,
+      title: `HR Action: ${row.Position || 'Hiring Request'} (${ticketNumber})`,
+      description: `Approved hiring request.\n\nTicket Number: ${ticketNumber}\nPosition: ${row.Position || ''}\nDepartment: ${row.Department || ''}\nRequested By: ${row['Requested By'] || ''}\nReason: ${row.Reason || ''}`,
+      frequency: 'Monthly',
+      'Frequency': 'Monthly',
+      assignedTo: HR_MANAGER.name,
+      'Assigned To': HR_MANAGER.name,
+      assignedEmail: HR_MANAGER.email,
+      'Assigned Email': HR_MANAGER.email,
+      department: row.Department || 'HR',
+      Department: row.Department || 'HR',
+      nextRun: today,
+      'Next Run': today,
+      status: 'Active',
+      Status: 'Active',
+      sheetTab: 'Automated Tasks'
+    };
+  }
+
+  async function createHrTaskForApprovedHiring(row, approvedBy) {
+    const ticketNumber = row['Ticket Number'];
+    const hrStatus = String(row['HR Task Status'] || '').toLowerCase();
+    if (hrStatus.includes('sent') || hrStatus.includes('created') || wasHiringHrTaskSent(ticketNumber)) return false;
+    await apiPost('addAutomatedTask', buildHiringHrTaskPayload(row));
+    setHiringHrTaskSent(ticketNumber);
+    await notifyHRForApprovedHiring(row, approvedBy);
+    return true;
+  }
 
   window.submitHiringDecision = async function(ticketNumber, decision) {
     const normalizedDecision = decision === 'Rejected' ? 'Rejected' : 'Approved';
@@ -2718,29 +2871,58 @@ Please log in to QuickBase to review and update this item.`
       const rows = await safeGet('hiringRequests');
       const requestRow = (rows || []).find(r => String(r['Ticket Number']) === String(ticketNumber)) || { 'Ticket Number': ticketNumber };
       const decidedBy = currentUser?.['Full Name'] || currentUser?.Email || 'Executive Manager';
-      const updatePayload = {
+      const decidedByEmail = currentUser?.Email || '';
+      const decidedDate = new Date().toISOString().slice(0, 10);
+      const approvalLevel = currentExecutiveApprovalLevel(requestRow);
+      const approvalNumber = getApprovalNumber(approvalLevel);
+
+      if (normalizedDecision === 'Approved' && hasCurrentExecutiveApprovedHiring(requestRow)) {
+        alert('You have already approved this hiring request.');
+        await renderApprovals();
+        return;
+      }
+
+      const updatedRow = Object.assign({}, requestRow, {
+        [`Approval ${approvalNumber}`]: normalizedDecision,
+        [`Approval ${approvalNumber} By`]: decidedBy,
+        [`Approval ${approvalNumber} Date`]: decidedDate
+      });
+
+      const bothApprovedAfter = normalizedDecision === 'Approved' && bothHiringApprovalsApproved(updatedRow);
+      updatedRow.Status = normalizedDecision === 'Rejected' ? 'Rejected' : (bothApprovedAfter ? 'Approved' : 'Waiting Approval');
+      updatedRow['HR Task Status'] = bothApprovedAfter ? 'Sent' : 'Pending Approval';
+
+      const updatePayload = Object.assign({}, updatedRow, {
         action: 'updateHiringApproval',
         sheetId: SHEET_ID,
-        ticketNumber: ticketNumber,
+        ticketNumber,
         approvedBy: decidedBy,
+        approvedByEmail: decidedByEmail,
         decision: normalizedDecision,
-        approvalLevel: 'both',
-        status: normalizedDecision,
+        approvalLevel,
+        approvalNumber,
+        status: updatedRow.Status,
         sheetTab: 'Hiring Requests',
         notifyRequester: 'Yes',
         requesterEmail: requestRow['Requested By Email'] || '',
         hrManagerEmail: HR_MANAGER.email
-      };
+      });
+
       const res = await apiPost('updateHiringApproval', updatePayload);
-      if (res && res.success !== false) {
-        const payloadForEmail = Object.assign({}, requestRow, updatePayload, { Status: normalizedDecision });
-        await notifyHiringRequester(payloadForEmail, normalizedDecision, decidedBy);
-        if (normalizedDecision === 'Approved') await notifyHRForApprovedHiring(payloadForEmail, decidedBy);
-        alert(`Hiring request ${ticketNumber} ${normalizedDecision.toLowerCase()}.${normalizedDecision === 'Approved' ? ' HR has been notified.' : ' Requester has been notified.'}`);
-        await renderApprovals();
+      if (res && res.success === false) throw new Error(res.message || 'Approval update failed');
+
+      if (normalizedDecision === 'Rejected') {
+        await notifyHiringRequester(updatedRow, 'Rejected', decidedBy);
+        alert(`Hiring request ${ticketNumber} rejected. Requester has been notified.`);
+      } else if (bothApprovedAfter) {
+        const created = await createHrTaskForApprovedHiring(updatedRow, decidedBy);
+        await notifyHiringRequester(updatedRow, 'Approved', decidedBy);
+        alert(`Hiring request ${ticketNumber} approved by both executives.${created ? ' Automated task sent to HR Manager.' : ' HR task was already sent.'}`);
       } else {
-        throw new Error(res?.message || 'Approval update failed');
+        alert(`Hiring request ${ticketNumber} approved by ${decidedBy}. Waiting for the second executive approval.`);
       }
+
+      await renderApprovals();
     } catch(e) {
       alert(`Approval error: ${e.message}`);
     }
