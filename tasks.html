@@ -863,19 +863,21 @@
 
     if (requestedExecutiveKey) return normalizeAutomatedTaskReviewValue(byExecutive[requestedExecutiveKey]?.decision || '');
 
-    if (reviewRow.decision) return normalizeAutomatedTaskReviewValue(reviewRow.decision);
-
-    const sheetValue = task['Executive On Time Review'] || task.executiveOnTimeReview || task['Task Done'] || task['Task done'] || task.taskDone || task['Task Done Record'] || task.taskDoneRecord || task['Was Actioned On Time'] || task.wasActionedOnTime || '';
-    if (String(sheetValue).trim() && (!month || month === getMonthKey(getTaskDueDate(task)))) return normalizeAutomatedTaskReviewValue(sheetValue);
-
     const executiveKeys = EXECUTIVE_MANAGERS.map(m => String(m.email || m.name || '').trim().toLowerCase()).filter(Boolean);
     const decisions = executiveKeys.map(key => normalizeAutomatedTaskReviewValue(byExecutive[key]?.decision || '')).filter(Boolean);
-    if (executiveKeys.length && decisions.length < executiveKeys.length) return '';
-    if (!decisions.length) return '';
-    const normalized = decisions.map(d => String(d).toLowerCase());
-    if (normalized.some(d => d.includes('not'))) return 'Not Done';
-    if (normalized.some(d => d.includes('late'))) return 'Late Done';
-    return 'On Time';
+    if (executiveKeys.length && decisions.length === executiveKeys.length) {
+      const normalized = decisions.map(d => String(d).toLowerCase());
+      if (normalized.some(d => d.includes('not'))) return 'Not Done';
+      if (normalized.some(d => d.includes('late'))) return 'Late Done';
+      return 'On Time';
+    }
+
+    if (reviewRow.decision && (!executiveKeys.length || decisions.length >= executiveKeys.length)) return normalizeAutomatedTaskReviewValue(reviewRow.decision);
+
+    const sheetValue = task['Executive On Time Review'] || task.executiveOnTimeReview || task['Task Done'] || task['Task done'] || task.taskDone || task['Task Done Record'] || task.taskDoneRecord || task['Was Actioned On Time'] || task.wasActionedOnTime || '';
+    if (String(sheetValue).trim() && (!month || month === getMonthKey(getTaskDueDate(task))) && decisions.length >= executiveKeys.length) return normalizeAutomatedTaskReviewValue(sheetValue);
+
+    return '';
   }
 
   function getStoredAutomatedTaskAlertSuppressions() {
@@ -908,10 +910,9 @@
   function hasCurrentExecutiveReviewedAutomatedTask(task, monthOverride = '') {
     const currentKey = getExecutiveReviewUserKey();
     if (!currentKey) return false;
+    if (hasBothExecutiveAutomatedTaskReviews(task, monthOverride)) return true;
     if (isAutomatedTaskExecutiveAlertSuppressed(task, monthOverride)) return true;
-    if (getAutomatedTaskExecutiveReview(task, monthOverride, currentKey)) return true;
-    // If the score/review was already updated in the sheet, do not keep alerting this executive for the same month.
-    return !!getAutomatedTaskExecutiveReview(task, monthOverride);
+    return !!getAutomatedTaskExecutiveReview(task, monthOverride, currentKey);
   }
 
   async function saveAutomatedTaskExecutiveReview(task, decision, monthOverride = '') {
@@ -977,8 +978,7 @@
           continue;
         }
         await saveAutomatedTaskExecutiveReview(task, decision, task.__autoOccurrenceMonth);
-        const hideAgain = confirm(`Score saved for ${name} (${monthText}).\n\nDo not show this same ticket alert again for this month?\n\nClick OK / Yes to stop this alert from repeating.`);
-        if (hideAgain) suppressAutomatedTaskExecutiveAlert(task, task.__autoOccurrenceMonth);
+        suppressAutomatedTaskExecutiveAlert(task, task.__autoOccurrenceMonth);
       }
     } catch(e) {
       console.warn('Executive automated task due alert failed:', e);
@@ -1985,8 +1985,20 @@ Please log in to QuickBase to review and update this item.`
     const byExecutive = reviewRow.byExecutive || {};
     const executiveKeys = EXECUTIVE_MANAGERS.map(m => String(m.email || m.name || '').trim().toLowerCase()).filter(Boolean);
     if (executiveKeys.length && executiveKeys.every(key => normalizeAutomatedTaskReviewValue(byExecutive[key]?.decision || ''))) return true;
-    const aggregateReview = normalizeAutomatedTaskReviewValue(task['Executive On Time Review'] || task.executiveOnTimeReview || task['Task Done'] || task['Task done'] || task.taskDone || task['Task Done Record'] || task.taskDoneRecord || task['Was Actioned On Time'] || task.wasActionedOnTime || '');
-    return !!aggregateReview;
+
+    const possibleExecutiveReviewPairs = [
+      ['Executive 1 Review', 'Executive 2 Review'],
+      ['Executive 1 Score', 'Executive 2 Score'],
+      ['Executive Review 1', 'Executive Review 2'],
+      ['Executive Score 1', 'Executive Score 2'],
+      ['Manager 1 Review', 'Manager 2 Review'],
+      ['Manager 1 Score', 'Manager 2 Score'],
+      ['Review 1', 'Review 2'],
+      ['Score 1', 'Score 2']
+    ];
+    return possibleExecutiveReviewPairs.some(([firstKey, secondKey]) =>
+      normalizeAutomatedTaskReviewValue(task[firstKey] || '') && normalizeAutomatedTaskReviewValue(task[secondKey] || '')
+    );
   }
 
   function getAutomatedTaskDisplayStatus(task) {
