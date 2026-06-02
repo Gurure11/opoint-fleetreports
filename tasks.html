@@ -749,7 +749,7 @@
   const SHEET_ID = '1KWYWSUmwGYcBVIuDzh7yo86eTrfnMZX35DuGnRAVNv8';
 
   const SHEET_ROUTES = {
-    tickets: { action: 'tickets', saveAction: 'addTicket', sheetTab: 'Tasks', displayTab: 'Tickets', columns: ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'] },
+    tickets: { action: 'tickets', saveAction: 'addTicket', sheetTab: 'Tasks', displayTab: 'Tickets', columns: ['Ticket ID', 'Title', 'Task Description', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'] },
     departments: { action: 'departments', saveAction: 'addDepartment', sheetTab: 'Department', displayTab: 'Departments', columns: ['Department ID', 'Department Name', 'Manager', 'Budget', 'Status', 'Created Date'] },
     employees: { action: 'employees', saveAction: 'addEmployee', sheetTab: 'Employees', displayTab: 'Employees', columns: ['Employee ID', 'Employee Name', 'Department', 'Role', 'Status', 'Created Date'] },
     kpis: { action: 'kpis', saveAction: 'addKpi', sheetTab: 'KPIs', displayTab: 'KPIs', columns: ['KPIName', 'Target Value', 'Actual Value', 'Related Department', 'Frequency'] },
@@ -1411,6 +1411,7 @@ Please action this hiring request in QuickBase.`;
     const aliases = {
       'Ticket ID': ['Ticket ID', 'Ticket Number', 'Task ID', 'ID'],
       'Title': ['Title', 'Task Name', 'Name'],
+      'Task Description': ['Task Description', 'Description', 'description', 'Task Details', 'Details'],
       'Task Name': ['Task Name', 'Title', 'Name'],
       'Due Date': ['Due Date', 'DueDate', 'Next Run'],
       'Completion Date': ['Completion Date', 'CompletionDate', 'Closed Date'],
@@ -1540,12 +1541,13 @@ Please action this hiring request in QuickBase.`;
 
   async function renderMyTickets() {
     const assigned = await getMyAssignedTaskData();
-    const ticketColumns = ['Ticket ID','Title','Priority','Status','Department','Assigned To','Due Date'];
+    const ticketColumns = ['Ticket ID','Title','Task Description','Priority','Status','Department','Assigned To','Due Date'];
     const autoColumns = ['Ticket ID','Task ID','Task Name','Description','Frequency','Department','Next Run','Status'];
+    window.currentMyTicketRows = assigned.tickets;
     const main = document.getElementById('mainContent');
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>My Tickets</h1><p>Tickets and automated recurring tasks assigned to me</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
-      <div class="panel"><div class="panel-header"><h2>📋 My Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${ticketColumns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${renderRowsHtml(assigned.tickets, ticketColumns)}</tbody></table></div></div>
+      <div class="panel"><div class="panel-header"><h2>📋 My Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${ticketColumns.map(c => `<th>${c}</th>`).join('')}<th>Comment / Proof / Submit</th></tr></thead><tbody>${assigned.tickets.length ? assigned.tickets.map((row, index) => `<tr>${ticketColumns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}<td>${myTicketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${ticketColumns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>
       <div class="panel"><div class="panel-header"><h2>🔄 Automated Recurring Tasks</h2></div><div class="table-wrapper"><table><thead><tr>${autoColumns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${renderRowsHtml(assigned.automatedTasks, autoColumns)}</tbody></table></div></div>`;
   }
 
@@ -1562,7 +1564,7 @@ Please action this hiring request in QuickBase.`;
       const assignedToSomeoneElse = !(isSamePerson(currentName, assigneeName) || (currentEmail && currentEmail === assigneeEmail));
       return issuedByMe && assignedToSomeoneElse;
     });
-    renderSimpleTable('Tickets Sent Out', mine, ['Ticket ID','Title','Priority','Status','Department','Assigned To','Due Date'], 'Tasks');
+    renderSimpleTable('Tickets Sent Out', mine, ['Ticket ID','Title','Task Description','Priority','Status','Department','Assigned To','Due Date'], 'Tasks');
   }
 
   async function renderApprovals() {
@@ -1943,11 +1945,9 @@ Please log in to QuickBase to review and update this item.`
     if (isExecutive()) return true;
     const currentName = getCurrentUserName();
     const currentEmail = String(currentUser?.Email || '').trim().toLowerCase();
-    const assigneeName = getAssigneeName(task);
     const issuerName = getTaskIssuerName(task);
-    const assigneeEmail = getAssigneeEmail(task);
     const issuerEmail = getTaskIssuerEmail(task);
-    return isSamePerson(currentName, assigneeName) || isSamePerson(currentName, issuerName) || (currentEmail && (currentEmail === assigneeEmail || currentEmail === issuerEmail));
+    return isSamePerson(currentName, issuerName) || (currentEmail && currentEmail === issuerEmail);
   }
 
   function promptExecutiveTicketRating(task) {
@@ -2070,14 +2070,114 @@ Please log in to QuickBase to review and update this item.`
 
   function ticketActionHtml(task, index) {
     if (isClosedTicket(task)) return '<span class="badge badge-open">Closed</span>';
-    if (!canCurrentUserCloseTask(task)) return '<span style="font-size:11px;color:#94a3b8">Assignee/issuer only</span>';
+    if (!canCurrentUserCloseTask(task)) return '<span style="font-size:11px;color:#94a3b8">Originator/Executive only</span>';
     return `<button class="btn-secondary" onclick="closeTicketFromTable(${index})">Close</button>`;
   }
+
+
+  function myTicketActionHtml(task, index) {
+    if (isClosedTicket(task)) return '<span class="badge badge-open">Completed</span>';
+    return `<button class="btn-secondary" onclick="showTaskAssigneeUpdateForm(${index})">Update / Submit</button>`;
+  }
+
+  function taskAssigneeUpdateFormHtml(task) {
+    const id = escapeHtml(getTicketIdentity(task));
+    const title = escapeHtml(getCellValue(task, 'Title'));
+    const desc = escapeHtml(getCellValue(task, 'Task Description'));
+    return `<div class="panel"><div class="panel-header"><h2>📝 Task update / completion</h2></div><div style="padding:20px">
+      <p style="font-size:13px;color:#475569;margin-bottom:14px"><strong>${id}</strong> · ${title}<br><span>${desc}</span></p>
+      <div class="form-row">
+        <div class="form-field"><label>Comment / request more time</label><textarea id="taskAssigneeComment" rows="3" placeholder="Comment, completion note, or request more time..."></textarea></div>
+        <div class="form-field"><label>Proof of completion</label><input id="taskProofFile" type="file"><span style="font-size:11px;color:#64748b">Upload a document if proof is needed.</span></div>
+      </div>
+      <button class="btn-primary" id="submitTaskCompletionBtn" onclick="submitTaskAssigneeUpdate()">Submit</button>
+      <div id="taskAssigneeUpdateMessage" class="message-bar"></div>
+    </div></div>`;
+  }
+
+  window.showTaskAssigneeUpdateForm = function(index) {
+    window.currentAssigneeTaskIndex = index;
+    const task = (window.currentMyTicketRows || [])[index];
+    if (!task) return alert('Task not found. Refresh and try again.');
+    const existing = document.getElementById('taskAssigneeUpdatePanel');
+    if (existing) existing.remove();
+    const wrapper = document.createElement('div');
+    wrapper.id = 'taskAssigneeUpdatePanel';
+    wrapper.innerHTML = taskAssigneeUpdateFormHtml(task);
+    const main = document.getElementById('mainContent');
+    const firstPanel = main.querySelector('.panel');
+    if (firstPanel) firstPanel.insertAdjacentElement('afterend', wrapper);
+    else main.appendChild(wrapper);
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  async function readProofFileForPayload(file) {
+    if (!file) return { proofFileName: '', proofFileData: '', proofFileType: '' };
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result || '');
+      reader.onerror = () => reject(reader.error || new Error('Could not read proof file.'));
+      reader.readAsDataURL(file);
+    });
+    return { proofFileName: file.name, proofFileData: dataUrl, proofFileType: file.type || '' };
+  }
+
+  window.submitTaskAssigneeUpdate = async function() {
+    const task = (window.currentMyTicketRows || [])[window.currentAssigneeTaskIndex];
+    if (!task) return alert('Task not found. Refresh and try again.');
+    const comment = document.getElementById('taskAssigneeComment')?.value || '';
+    const file = document.getElementById('taskProofFile')?.files?.[0] || null;
+    const id = getTicketIdentity(task);
+    setButtonLoading('submitTaskCompletionBtn', true, 'Submitting...');
+    showMessage('Submitting task update...', 'info', 'taskAssigneeUpdateMessage');
+    try {
+      const proof = await readProofFileForPayload(file);
+      const moreTime = isMoreTimeRequest({ comments: comment });
+      const payload = Object.assign({}, task, proof, {
+        ticketId: id,
+        ticketNumber: id,
+        assigneeComment: comment,
+        'Assignee Comment': comment,
+        completionRequestDate: new Date().toISOString(),
+        submittedBy: currentUser?.['Full Name'] || currentUser?.Email || '',
+        submittedByEmail: currentUser?.Email || '',
+        status: moreTime ? 'More Time Requested' : 'Completed - Awaiting Review',
+        Status: moreTime ? 'More Time Requested' : 'Completed - Awaiting Review',
+        sheetTab: 'Tasks'
+      });
+      await apiPost('updateTicketStatus', payload);
+      const issuerEmail = getTaskIssuerEmail(task);
+      const issuerName = getTaskIssuerName(task) || 'Task originator';
+      const recipients = [issuerEmail, ...EXECUTIVE_MANAGERS.map(m => m.email)].filter(Boolean).join(',');
+      const subject = moreTime ? `More time requested: ${id}` : `Task submitted for review: ${id}`;
+      const body = `Hi ${issuerName},
+
+The assignee submitted an update in QuickBase.
+
+Ticket: ${id}
+Title: ${getCellValue(task, 'Title')}
+Assignee: ${getAssigneeName(task) || currentUser?.['Full Name'] || ''}
+Status: ${payload.Status}
+Comment: ${comment || 'No comment provided.'}
+Proof file: ${proof.proofFileName || 'No file uploaded'}
+
+This ticket can only be closed by the originator or executives after scoring.`;
+      await sendGeneralEmailViaBackend(recipients, subject, body);
+      showMessage('Submitted. Task marked as completed and sent for originator/executive review.', 'success', 'taskAssigneeUpdateMessage');
+      alert('Submitted. Task is now completed and awaiting originator/executive review.');
+      await renderMyTickets();
+    } catch(e) {
+      showMessage(e.message || 'Could not submit task update.', 'error', 'taskAssigneeUpdateMessage');
+      alert(`Could not submit task update: ${e.message}`);
+    } finally {
+      setButtonLoading('submitTaskCompletionBtn', false);
+    }
+  };
 
   window.closeTicketFromTable = async function(index) {
     const task = (window.currentTicketRows || [])[index];
     if (!task) return alert('Task not found. Refresh and try again.');
-    if (!canCurrentUserCloseTask(task)) return alert('Only the assignee, the person who issued this task, or an Executive can close it.');
+    if (!canCurrentUserCloseTask(task)) return alert('Only the person who originated this ticket or an Executive can close it.');
     const executiveRatingPayload = promptExecutiveTicketRating(task);
     if (executiveRatingPayload === null) return;
     if (!confirm('Close this task?')) return;
@@ -2723,7 +2823,7 @@ Please log in to QuickBase to review and update this item.`
     else if (window.taskFilter === 'closed-on-time') data = stats.closedOnTime;
     else if (window.taskFilter === 'closed-late') data = stats.closedLate;
 
-    const columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'];
+    const columns = ['Ticket ID', 'Title', 'Task Description', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'];
     const automatedTaskRows = expandAutomatedTaskMonthlyOccurrences(automatedTasks.filter(hasPerformanceAssignee), true);
     const automatedTaskColumns = ['Ticket ID', 'Task ID', 'Task Name', 'Description', 'Frequency', 'Department', 'Next Run', 'Status'];
     window.currentTicketRows = data;
