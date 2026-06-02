@@ -430,6 +430,59 @@
     .message-error { background: #fee2e2; color: #991b1b; border-left: 3px solid #ef4444; }
     .message-info { background: #dbeafe; color: #1e3a8a; border-left: 3px solid #3b82f6; }
 
+
+    .description-preview {
+      display: block;
+      max-width: 460px;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .description-full {
+      display: none;
+      max-width: 720px;
+      color: #334155;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .description-toggle {
+      margin-top: 6px;
+      background: none;
+      border: none;
+      color: #2563eb;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 0;
+    }
+
+    .deadline-timer {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #1e40af;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      border: 1px solid #dbeafe;
+    }
+
+    .deadline-timer.deadline-overdue {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .deadline-timer.deadline-due-soon {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+
     .api-response-box {
       width: 100%;
       min-height: 180px;
@@ -745,7 +798,7 @@
 
 <script>
   // ==================== CONFIGURATION ====================
-  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgIqGpFDChEpxnW3FPcKCeRCUnhQCTCaSenA52EjrYdDiCIS9ZemdUkI2kpQVZNPQB/exec';
+  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzCY1qE06TV7kd45bp36psxlq8Tk2fulQ0WZYB72pEPOcESJMZ6rlZiniqAmJKdlIwU/exec';
   const SHEET_ID = '1KWYWSUmwGYcBVIuDzh7yo86eTrfnMZX35DuGnRAVNv8';
   const TASK_PROOF_DRIVE_FOLDER_ID = '19GoN9yzz0ODP_F-4ffba_olb3cD0b0f4';
 
@@ -944,6 +997,9 @@
       });
     } catch(e) {
       console.warn('Automated task executive review saved locally only:', e.message);
+    }
+    if (currentSection === 'dashboard') {
+      try { await renderDashboard(); } catch(refreshErr) { console.warn('Dashboard refresh after score failed:', refreshErr); }
     }
   }
 
@@ -1309,6 +1365,37 @@ Please action this hiring request in QuickBase.`;
     return sendGeneralEmailViaBackend(HR_MANAGER.email, subject, body);
   }
 
+
+  async function notifyMoreTimeApprovers(payload) {
+    const subject = `More time approval needed: ${payload['Ticket Number'] || payload.ticketNumber || payload['Ticket ID'] || payload.ticketId || 'Task'}`;
+    const body = `Hi Executive Manager,
+
+A task assignee has requested more time in QuickBase.
+
+Ticket: ${payload['Ticket Number'] || payload.ticketNumber || payload['Ticket ID'] || payload.ticketId || 'Not specified'}
+Task: ${payload.Title || payload.title || payload['Task Name'] || payload.taskName || 'Not specified'}
+Assigned to: ${getAssigneeName(payload) || payload.assignedTo || 'Not specified'}
+Comment: ${payload.assigneeComment || payload['Task Response'] || 'No comment provided.'}
+
+Please log in to QuickBase and open Approvals to approve or reject this request.`;
+    return Promise.all(EXECUTIVE_MANAGERS.map(m => sendGeneralEmailViaBackend(m.email, subject, body)));
+  }
+
+  async function notifyMoreTimeRequester(payload, decision, decidedBy) {
+    const requesterEmail = getAssigneeEmail(payload) || payload.assignedEmail || payload.submittedByEmail || '';
+    const subject = `More time request ${String(decision).toLowerCase()}: ${payload['Ticket Number'] || payload.ticketNumber || payload['Ticket ID'] || payload.ticketId || 'Task'}`;
+    const body = `Hi ${getAssigneeName(payload) || payload.assignedTo || 'Assignee'},
+
+Your request for more time has been ${String(decision).toLowerCase()}.
+
+Ticket: ${payload['Ticket Number'] || payload.ticketNumber || payload['Ticket ID'] || payload.ticketId || 'Not specified'}
+Task: ${payload.Title || payload.title || payload['Task Name'] || payload.taskName || 'Not specified'}
+Decision by: ${decidedBy || 'Executive Manager'}
+
+Please log in to QuickBase to continue.`;
+    return sendGeneralEmailViaBackend(requesterEmail, subject, body);
+  }
+
   async function saveWithSyncAndNotify(buttonId, messageId, action, payload, successMessage, options = {}) {
     setButtonLoading(buttonId, true);
     showMessage('Synchronising with Google Sheets...', 'info', messageId);
@@ -1415,8 +1502,8 @@ Please action this hiring request in QuickBase.`;
       'Ticket ID': ['Ticket ID', 'Ticket Number', 'Ticket No', 'Ticket No.', 'TicketNumber', 'TicketID', 'ticketId', 'ticketID', 'ticketNumber', 'Task ID', 'TaskID', 'taskId', 'ID'],
       'Title': ['Title', 'Task Name', 'Name'],
       'Task Description': ['Task Description', 'Description', 'description', 'Task Details', 'Details'],
-      'Task Response': ['Task Response', 'Update Comment', 'Assignee Comment', 'assigneeComment', 'Comments', 'comments', 'Last Response'],
-      'Proof Link': ['Proof Link', 'Update Proof Link', 'Proof Links', 'proofLink', 'proofLinks', 'Attachment Link', 'attachmentLink'],
+      'Task Response': ['Task Response', 'Assignee Comment', 'assigneeComment', 'Comments', 'comments', 'Last Response'],
+      'Proof Link': ['Proof Link', 'Proof Links', 'proofLink', 'proofLinks', 'Attachment Link', 'attachmentLink'],
       'Task Name': ['Task Name', 'Title', 'Name'],
       'Due Date': ['Due Date', 'DueDate', 'Next Run'],
       'Completion Date': ['Completion Date', 'CompletionDate', 'Closed Date'],
@@ -1519,8 +1606,66 @@ Please action this hiring request in QuickBase.`;
     return dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`;
   }
 
+  function renderExpandableTextHtml(value, maxLength = 160) {
+    const raw = String(value === '-' ? '' : value || '').trim();
+    if (!raw) return '-';
+    if (raw.length <= maxLength) return escapeHtml(raw);
+    const id = `desc_${Math.random().toString(36).slice(2, 10)}`;
+    const preview = raw.slice(0, maxLength).trim() + '...';
+    return `<span id="${id}_preview" class="description-preview">${escapeHtml(preview)}</span><span id="${id}_full" class="description-full">${escapeHtml(raw)}</span><button type="button" class="description-toggle" onclick="toggleDescriptionText('${id}', this)">More</button>`;
+  }
+
+  window.toggleDescriptionText = function(id, button) {
+    const preview = document.getElementById(`${id}_preview`);
+    const full = document.getElementById(`${id}_full`);
+    if (!preview || !full || !button) return;
+    const expanded = full.style.display === 'block';
+    preview.style.display = expanded ? 'block' : 'none';
+    full.style.display = expanded ? 'none' : 'block';
+    button.textContent = expanded ? 'More' : 'Show less';
+  };
+
+  function deadlineCountdownHtml(row) {
+    const dueRaw = getTaskDueDate(row);
+    const due = dateOnly(dueRaw);
+    if (!due) return '<span style="font-size:12px;color:#94a3b8">No deadline</span>';
+    const now = new Date();
+    const end = new Date(due.getFullYear(), due.getMonth(), due.getDate(), 23, 59, 59);
+    let diffMs = end - now;
+    const overdue = diffMs < 0;
+    diffMs = Math.abs(diffMs);
+    const days = Math.floor(diffMs / 86400000);
+    const hours = Math.floor((diffMs % 86400000) / 3600000);
+    const minutes = Math.floor((diffMs % 3600000) / 60000);
+    const soon = !overdue && days === 0;
+    const label = overdue ? `${days}d ${hours}h ${minutes}m overdue` : `${days}d ${hours}h ${minutes}m left`;
+    return `<span class="deadline-timer ${overdue ? 'deadline-overdue' : (soon ? 'deadline-due-soon' : '')}" data-deadline="${escapeHtml(end.toISOString())}">⏱ ${escapeHtml(label)}</span>`;
+  }
+
+
+
+  function updateDeadlineTimers() {
+    document.querySelectorAll('.deadline-timer[data-deadline]').forEach(el => {
+      const end = new Date(el.dataset.deadline);
+      if (isNaN(end)) return;
+      let diffMs = end - new Date();
+      const overdue = diffMs < 0;
+      diffMs = Math.abs(diffMs);
+      const days = Math.floor(diffMs / 86400000);
+      const hours = Math.floor((diffMs % 86400000) / 3600000);
+      const minutes = Math.floor((diffMs % 3600000) / 60000);
+      el.classList.toggle('deadline-overdue', overdue);
+      el.classList.toggle('deadline-due-soon', !overdue && days === 0);
+      el.textContent = `⏱ ${overdue ? `${days}d ${hours}h ${minutes}m overdue` : `${days}d ${hours}h ${minutes}m left`}`;
+    });
+  }
+
+  setInterval(updateDeadlineTimers, 60000);
+
   function renderTaskCellHtml(row, column) {
     const value = column === 'Ticket ID' ? (getTicketIdentity(row) || getCellValue(row, column)) : getCellValue(row, column);
+    if (column === 'Task Description' || column === 'Description') return renderExpandableTextHtml(value, 160);
+    if (column === 'Time Remaining') return deadlineCountdownHtml(row);
     if (column === 'Proof Link') {
       const raw = String(value === '-' ? '' : value || '').trim();
       if (!raw) return '-';
@@ -1557,8 +1702,8 @@ Please action this hiring request in QuickBase.`;
 
   async function renderMyTickets() {
     const assigned = await getMyAssignedTaskData();
-    const ticketColumns = ['Ticket ID','Title','Task Description','Priority','Status','Department','Assigned To','Due Date','Task Response','Proof Link'];
-    const autoColumns = ['Ticket ID','Task ID','Task Name','Description','Frequency','Department','Next Run','Status'];
+    const ticketColumns = ['Ticket ID','Title','Task Description','Priority','Status','Department','Assigned To','Due Date','Time Remaining','Task Response','Proof Link'];
+    const autoColumns = ['Ticket ID','Task ID','Task Name','Description','Frequency','Department','Next Run','Time Remaining','Status'];
     window.currentMyTicketRows = assigned.tickets;
     const main = document.getElementById('mainContent');
     main.innerHTML = `
@@ -1595,20 +1740,43 @@ Please action this hiring request in QuickBase.`;
       return;
     }
 
-    const rows = await safeGet('hiringRequests');
+    const [rows, ticketsRaw] = await Promise.all([safeGet('hiringRequests'), safeGet('tickets')]);
     const approvals = (rows || []).filter(r =>
       String(r.Status || '').toLowerCase().includes('waiting') ||
       String(r['Approval 1'] || '').toLowerCase() === 'pending' ||
       String(r['Approval 2'] || '').toLowerCase() === 'pending'
     );
+    const moreTimeRequests = (ticketsRaw || []).filter(t => String(t.Status || t.status || '').toLowerCase().includes('more time requested'));
 
     document.getElementById('mainContent').innerHTML = `
       <div class="top-bar">
         <div class="page-title">
           <h1>Approvals Waiting</h1>
-          <p>Executive hiring approvals · two approvals required before HR task is sent</p>
+          <p>Executive approvals only · hiring approvals and more-time requests</p>
         </div>
         <button class="refresh-btn" onclick="renderApprovals()">↻ Refresh</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h2>More Time Requests Waiting Approval</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Ticket</th><th>Task</th><th>Assigned To</th><th>Due Date</th><th>Comment</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+              ${moreTimeRequests.length ? moreTimeRequests.map(r=>`
+                <tr>
+                  <td>${escapeHtml(getTicketIdentity(r))}</td>
+                  <td>${escapeHtml(getCellValue(r, 'Title'))}</td>
+                  <td>${escapeHtml(getAssigneeName(r))}</td>
+                  <td>${escapeHtml(getTaskDueDate(r))}</td>
+                  <td>${renderExpandableTextHtml(r['Task Response'] || r.assigneeComment || r.Comments || '', 120)}</td>
+                  <td>${escapeHtml(r.Status || r.status || '')}</td>
+                  <td><button class="btn-primary" onclick="submitMoreTimeDecision('${escapeHtml(getTicketIdentity(r))}', 'Approved')">Approve</button> <button class="btn-secondary" onclick="submitMoreTimeDecision('${escapeHtml(getTicketIdentity(r))}', 'Rejected')">Reject</button></td>
+                </tr>
+              `).join('') : '<tr><td colspan="7" style="text-align:center">No more time approvals waiting</td></tr>'}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="panel">
@@ -1639,7 +1807,7 @@ Please action this hiring request in QuickBase.`;
                   <td>${escapeHtml(r.Status)}</td>
                   <td><button class="btn-primary" onclick="submitHiringApproval('${escapeHtml(r['Ticket Number'])}')">Approve</button> <button class="btn-secondary" onclick="submitHiringRejection('${escapeHtml(r['Ticket Number'])}')">Reject</button></td>
                 </tr>
-              `).join('') : '<tr><td colspan="8" style="text-align:center">No approvals waiting</td></tr>'}
+              `).join('') : '<tr><td colspan="8" style="text-align:center">No hiring approvals waiting</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -1690,10 +1858,12 @@ Please action this hiring request in QuickBase.`;
       const kpiArray = Array.isArray(kpis) ? kpis : [];
       const slaArray = Array.isArray(sla) ? sla : [];
 
-      const ticketStats = calculateTicketStats(ticketsArray);
-      const priorityCounts = groupCount(ticketsArray, t => getPriority(t));
-      const deptTicketCount = groupCount(ticketsArray, t => getDepartment(t));
-      const submittedByDept = groupCount(ticketsArray, t => String(t['Requester Department'] || t['Submitted By Dept'] || t.Department || 'Unknown'));
+      const dashboardAutomatedTaskRows = expandAutomatedTaskMonthlyOccurrences((automatedTasks || []).filter(hasPerformanceAssignee), true);
+      const dashboardTicketRows = [...ticketsArray, ...dashboardAutomatedTaskRows];
+      const ticketStats = calculateTicketStats(dashboardTicketRows);
+      const priorityCounts = groupCount(dashboardTicketRows, t => getPriority(t));
+      const deptTicketCount = groupCount(dashboardTicketRows, t => getDepartment(t));
+      const submittedByDept = groupCount(dashboardTicketRows, t => String(t['Requester Department'] || t['Submitted By Dept'] || t.Department || t.department || 'Unknown'));
       const deptScores = {};
       bsc.forEach(b => {
         const dept = b['Related Department'] || b.Department || 'General';
@@ -1704,10 +1874,12 @@ Please action this hiring request in QuickBase.`;
         <div class="top-bar">
           <div class="page-title">
             <h1>Operations Dashboard</h1>
-            <p>On Point Group · 📊 ${ticketsArray.length} tickets loaded</p>
+            <p>On Point Group · 📊 ${dashboardTicketRows.length} tickets loaded</p>
           </div>
           <div>${connectionStatusHtml} <span class="user-chip">👤 ${escapeHtml(currentUser?.['Full Name'] || 'User')} · ${escapeHtml(getUserRole(currentUser) || '')}<span class="rights-chip">${escapeHtml(currentUser?.['User Rights'] || 'standard')}</span></span> <button class="logout-btn" onclick="logout()">Logout</button></div>
         </div>
+
+        ${ticketSummaryWindowHtml(dashboardAutomatedTaskRows, ticketStats)}
 
         <div class="task-status-grid">
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter='open';loadCurrentSection()" style="border-top:4px solid #3b82f6"><h3 style="color:#3b82f6">${ticketStats.open.length}</h3><p>📋 Tickets Open</p></div>
@@ -1718,7 +1890,7 @@ Please action this hiring request in QuickBase.`;
 
         <div class="task-status-grid">
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter='closed-late';loadCurrentSection()" style="border-top:4px solid #f59e0b"><h3 style="color:#f59e0b">${ticketStats.closedLate.length}</h3><p>🟠 Closed But Late</p></div>
-          <div class="status-stat-card" onclick="currentSection='tickets';loadCurrentSection()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${ticketsArray.length}</h3><p>🎫 Total Tickets</p></div>
+          <div class="status-stat-card" onclick="currentSection='tickets';loadCurrentSection()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${dashboardTicketRows.length}</h3><p>🎫 Total Tickets</p></div>
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #0ea5e9"><h3 style="color:#0ea5e9">${Object.keys(priorityCounts).length}</h3><p>🏷️ Tickets by Priority</p></div>
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(deptTicketCount).length}</h3><p>🏢 Tickets by Department</p></div>
         </div>
@@ -1850,7 +2022,6 @@ Please log in to QuickBase to review and update this item.`
     document.getElementById('createTicketBtn')?.addEventListener('click', async () => {
       const ticketNumber = document.getElementById('ticketNumber')?.value || generateTicketNumber();
       const payload = {
-        'Task ID': ticketNumber,
         'Ticket ID': ticketNumber,
         'Ticket Number': ticketNumber,
         ticketId: ticketNumber,
@@ -2032,13 +2203,14 @@ Please log in to QuickBase to review and update this item.`
     return rawStatus || 'Waiting Executive Review';
   }
 
-  function clickableSummaryNamesHtml(type) {
-    return `<button type="button" onclick="showTicketSummaryTransactions('${escapeHtml(type)}')" style="background:none;border:none;padding:0;color:#3b82f6;font:inherit;font-weight:700;cursor:pointer;text-align:left">No names to show</button>`;
+  function clickableSummaryNamesHtml(type, text = 'No names to show') {
+    return `<button type="button" onclick="showTicketSummaryTransactions('${escapeHtml(type)}')" style="background:none;border:none;padding:0;color:#3b82f6;font:inherit;font-weight:700;cursor:pointer;text-align:left">${escapeHtml(text)}</button>`;
   }
 
-  function namesListHtml(rows, getter = getAssigneeName) {
+  function namesListHtml(rows, getter = getAssigneeName, type = '') {
     const names = [...new Set((rows || []).map(getter).filter(Boolean))];
-    return names.length ? names.map(escapeHtml).join(', ') : 'No names to show';
+    const text = names.length ? names.map(escapeHtml).join(', ') : 'No names to show';
+    return type ? clickableSummaryNamesHtml(type, text.replace(/&amp;/g, '&')) : text;
   }
 
   function ticketSummaryWindowHtml(automatedTasks, stats) {
@@ -2051,14 +2223,19 @@ Please log in to QuickBase to review and update this item.`
           <div class="ticket-summary-names">Assigned to: ${clickableSummaryNamesHtml('automated')}</div>
         </div>
         <div class="ticket-summary-item">
+          <div class="ticket-summary-number">${stats.openOnTime.length}</div>
+          <div class="ticket-summary-label">Open Tickets On Time</div>
+          <div class="ticket-summary-names">${namesListHtml(stats.openOnTime, getAssigneeName, 'openOnTime')}</div>
+        </div>
+        <div class="ticket-summary-item">
           <div class="ticket-summary-number">${stats.openLate.length}</div>
           <div class="ticket-summary-label">Open Tickets But Late</div>
-          <div class="ticket-summary-names">${namesListHtml(stats.openLate)}</div>
+          <div class="ticket-summary-names">${namesListHtml(stats.openLate, getAssigneeName, 'openLate')}</div>
         </div>
         <div class="ticket-summary-item">
           <div class="ticket-summary-number">${stats.closedLate.length}</div>
           <div class="ticket-summary-label">Closed But Late</div>
-          <div class="ticket-summary-names">${namesListHtml(stats.closedLate)}</div>
+          <div class="ticket-summary-names">${namesListHtml(stats.closedLate, getAssigneeName, 'closedLate')}</div>
         </div>
       </div>
     </div>`;
@@ -2076,7 +2253,8 @@ Please log in to QuickBase to review and update this item.`
       title = 'Automated Task Transactions';
       rows = automatedTasks;
       columns = ['Ticket ID', 'Task ID', 'Task Name', 'Description', 'Frequency', 'Department', 'Next Run', 'Status'];
-    } else if (type === 'openLate') rows = stats.openLate;
+    } else if (type === 'openOnTime') rows = stats.openOnTime;
+    else if (type === 'openLate') rows = stats.openLate;
     else if (type === 'closedLate') rows = stats.closedLate;
     renderSimpleTable(title, rows, columns, type === 'automated' ? 'Automated Tasks' : 'Tasks');
   };
@@ -2110,7 +2288,7 @@ Please log in to QuickBase to review and update this item.`
       <p style="font-size:13px;color:#475569;margin-bottom:14px"><strong>${id}</strong> · ${title}<br><span>${desc}</span></p>
       <div class="form-row">
         <div class="form-field"><label>Comment / request more time</label><textarea id="taskAssigneeComment" rows="3" placeholder="Comment, completion note, or request more time..."></textarea></div>
-        <div class="form-field"><label>Proof of completion</label><input id="taskProofFile" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"><span style="font-size:11px;color:#64748b">Upload documents or photos as proof. Files are saved to Google Drive and links are stored on the task row.</span></div>
+        <div class="form-field"><label>Proof of completion</label><input id="taskProofFile" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"><span style="font-size:11px;color:#64748b">Upload documents or photos as proof. Files are saved to Google Drive and the links are written to Sheet ID 1KWYWSUmwGYcBVIuDzh7yo86eTrfnMZX35DuGnRAVNv8, tab Task Updates, column Proof link.</span></div>
       </div>
       <button class="btn-primary" id="submitTaskCompletionBtn" onclick="submitTaskAssigneeUpdate()">Submit</button>
       <div id="taskAssigneeUpdateMessage" class="message-bar"></div>
@@ -2163,7 +2341,6 @@ Please log in to QuickBase to review and update this item.`
       const proofFiles = await readProofFilesForPayload(files);
       const moreTime = isMoreTimeRequest({ comments: comment });
       const payload = Object.assign({}, task, {
-        'Task ID': id,
         'Ticket ID': id,
         'Ticket Number': id,
         ticketId: id,
@@ -2174,17 +2351,30 @@ Please log in to QuickBase to review and update this item.`
         taskResponse: comment,
         proofFiles,
         taskProofDriveFolderId: TASK_PROOF_DRIVE_FOLDER_ID,
+        taskUpdateSheetId: SHEET_ID,
+        taskUpdateSheetTab: 'Task Updates',
+        taskUpdateProofLinkColumn: 'Proof link',
+        proofLinkColumn: 'Proof link',
+        'Proof link': '',
+        proofLink: '',
         completionRequestDate: new Date().toISOString(),
         submittedBy: currentUser?.['Full Name'] || currentUser?.Email || '',
         submittedByEmail: currentUser?.Email || '',
         status: moreTime ? 'More Time Requested' : 'Completed - Awaiting Review',
         Status: moreTime ? 'More Time Requested' : 'Completed - Awaiting Review',
-        sheetTab: 'Tasks'
+        sheetTab: 'Task Updates',
+        taskStatusSheetTab: 'Tasks'
       });
       const submitResult = await apiPost('submitTaskUpdate', payload);
       if (!submitResult || submitResult.success === false) throw new Error((submitResult && submitResult.message) || 'Task update failed.');
-      showMessage('Submitted. Task marked as completed and sent to the task originator.', 'success', 'taskAssigneeUpdateMessage');
-      alert('Submitted. Task is now completed and awaiting originator/executive review.');
+      if (moreTime) {
+        await notifyMoreTimeApprovers(payload);
+        showMessage('More time request submitted to Executives only.', 'success', 'taskAssigneeUpdateMessage');
+        alert('More time request submitted to Executives only. You will be notified when it is approved or rejected.');
+      } else {
+        showMessage('Submitted. Task marked as completed and sent to the task originator.', 'success', 'taskAssigneeUpdateMessage');
+        alert('Submitted. Task is now completed and awaiting originator/executive review.');
+      }
       await renderMyTickets();
     } catch(e) {
       showMessage(e.message || 'Could not submit task update.', 'error', 'taskAssigneeUpdateMessage');
@@ -2231,16 +2421,17 @@ Please log in to QuickBase to review and update this item.`
   function calculateTicketStats(rows) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const getStatsDueDate = t => getTaskDueDate(t) || getDueDate(t);
     const isLateOpen = t => {
       if (isClosedTicket(t)) return false;
-      const due = new Date(getDueDate(t));
+      const due = new Date(getStatsDueDate(t));
       if (isNaN(due)) return false;
       due.setHours(0, 0, 0, 0);
       return due < today;
     };
     const isClosedLate = t => {
       if (!isClosedTicket(t)) return false;
-      const due = new Date(getDueDate(t));
+      const due = new Date(getStatsDueDate(t));
       if (isNaN(due)) return false;
       due.setHours(0, 0, 0, 0);
       const completedRaw = getCompletionDate(t);
@@ -2253,12 +2444,15 @@ Please log in to QuickBase to review and update this item.`
       }
       return due < today;
     };
+    const open = rows.filter(t => !isClosedTicket(t));
     const closed = rows.filter(isClosedTicket);
+    const openLate = rows.filter(isLateOpen);
     const closedLate = rows.filter(isClosedLate);
     return {
-      open: rows.filter(t => !isClosedTicket(t)),
+      open,
+      openOnTime: open.filter(t => !isLateOpen(t)),
       closed,
-      openLate: rows.filter(isLateOpen),
+      openLate,
       closedLate,
       closedOnTime: closed.filter(t => !isClosedLate(t))
     };
@@ -2833,11 +3027,13 @@ Please log in to QuickBase to review and update this item.`
     const [allTicketsRaw, automatedTasksRaw] = await Promise.all([safeGet('tickets'), safeGet('automatedTasks')]);
     const allTickets = Array.isArray(allTicketsRaw) ? allTicketsRaw : [];
     const automatedTasks = Array.isArray(automatedTasksRaw) ? automatedTasksRaw : [];
-    const stats = calculateTicketStats(allTickets);
-    const priorityCounts = groupCount(allTickets, t => getPriority(t));
-    const departmentCounts = groupCount(allTickets, t => getDepartment(t));
+    const automatedTaskRows = expandAutomatedTaskMonthlyOccurrences(automatedTasks.filter(hasPerformanceAssignee), true);
+    const allTicketRows = [...allTickets, ...automatedTaskRows];
+    const stats = calculateTicketStats(allTicketRows);
+    const priorityCounts = groupCount(allTicketRows, t => getPriority(t));
+    const departmentCounts = groupCount(allTicketRows, t => getDepartment(t));
 
-    let data = allTickets;
+    let data = allTicketRows;
     if (window.taskFilter === 'open') data = stats.open;
     else if (window.taskFilter === 'closed') data = stats.closed;
     else if (window.taskFilter === 'overdue') data = stats.openLate;
@@ -2845,7 +3041,6 @@ Please log in to QuickBase to review and update this item.`
     else if (window.taskFilter === 'closed-late') data = stats.closedLate;
 
     const columns = ['Ticket ID', 'Title', 'Task Description', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date', 'Task Response', 'Proof Link'];
-    const automatedTaskRows = expandAutomatedTaskMonthlyOccurrences(automatedTasks.filter(hasPerformanceAssignee), true);
     const automatedTaskColumns = ['Ticket ID', 'Task ID', 'Task Name', 'Description', 'Frequency', 'Department', 'Next Run', 'Status'];
     window.currentTicketRows = data;
     const main = document.getElementById('mainContent');
@@ -2853,7 +3048,7 @@ Please log in to QuickBase to review and update this item.`
 
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>Tickets</h1><p>Sheet tab: Tasks · ${escapeHtml(activeFilterText)}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
-      ${ticketSummaryWindowHtml(automatedTasks.filter(hasPerformanceAssignee), stats)}
+      ${ticketSummaryWindowHtml(automatedTaskRows, stats)}
       <div class="task-status-grid">
         <div class="status-stat-card" onclick="window.taskFilter='open';renderTickets()" style="border-top:4px solid #3b82f6"><h3 style="color:#3b82f6">${stats.open.length}</h3><p>📋 Tickets Open</p></div>
         <div class="status-stat-card" onclick="window.taskFilter='closed';renderTickets()" style="border-top:4px solid #22c55e"><h3 style="color:#22c55e">${stats.closed.length}</h3><p>✅ Tickets Closed</p></div>
@@ -2862,7 +3057,7 @@ Please log in to QuickBase to review and update this item.`
       </div>
       <div class="task-status-grid">
         <div class="status-stat-card" onclick="window.taskFilter='closed-late';renderTickets()" style="border-top:4px solid #f59e0b"><h3 style="color:#f59e0b">${stats.closedLate.length}</h3><p>🟠 Closed But Late</p></div>
-        <div class="status-stat-card" onclick="window.taskFilter=null;renderTickets()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${allTickets.length}</h3><p>🎫 Total Tickets</p></div>
+        <div class="status-stat-card" onclick="window.taskFilter=null;renderTickets()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${allTicketRows.length}</h3><p>🎫 Total Tickets</p></div>
         <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #0ea5e9"><h3 style="color:#0ea5e9">${Object.keys(priorityCounts).length}</h3><p>🏷️ Tickets by Priority</p></div>
         <div class="status-stat-card" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(departmentCounts).length}</h3><p>🏢 Tickets by Department</p></div>
       </div>
@@ -2973,6 +3168,35 @@ Please log in to QuickBase to review and update this item.`
 
   window.submitHiringRejection = function(ticketNumber) {
     return window.submitHiringDecision(ticketNumber, 'Rejected');
+  };
+
+  window.submitMoreTimeDecision = async function(ticketNumber, decision) {
+    const normalizedDecision = decision === 'Rejected' ? 'Rejected' : 'Approved';
+    if (!confirm(`${normalizedDecision} more time request ${ticketNumber}?`)) return;
+    try {
+      const rows = await safeGet('tickets');
+      const task = (rows || []).find(r => String(getTicketIdentity(r)) === String(ticketNumber));
+      if (!task) throw new Error('Task not found. Refresh Approvals and try again.');
+      const decidedBy = currentUser?.['Full Name'] || currentUser?.Email || 'Executive Manager';
+      const payload = Object.assign({}, task, {
+        ticketId: ticketNumber,
+        ticketNumber: ticketNumber,
+        approvalStatus: normalizedDecision,
+        moreTimeApprovalStatus: normalizedDecision,
+        moreTimeApprovedBy: decidedBy,
+        moreTimeApprovedDate: new Date().toISOString(),
+        status: normalizedDecision === 'Approved' ? 'Open' : 'Rejected More Time',
+        Status: normalizedDecision === 'Approved' ? 'Open' : 'Rejected More Time',
+        sheetTab: 'Tasks'
+      });
+      const res = await apiPost('updateTicketStatus', payload);
+      if (!res || res.success === false) throw new Error(res?.message || 'Approval update failed');
+      await notifyMoreTimeRequester(payload, normalizedDecision, decidedBy);
+      alert(`More time request ${normalizedDecision.toLowerCase()}. The assignee has been notified.`);
+      await renderApprovals();
+    } catch(e) {
+      alert(`More time approval error: ${e.message}`);
+    }
   };
 
 
