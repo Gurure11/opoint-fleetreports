@@ -625,6 +625,13 @@
       border: 1px solid #e2e8f0;
       border-radius: 18px;
       padding: 14px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .ticket-summary-item:hover {
+      border-color: #3b82f6;
+      transform: translateY(-2px);
     }
 
     .ticket-summary-number {
@@ -762,7 +769,7 @@
       <button class="btn-primary" id="loginBtn">Sign in</button>
     </div>
     <div id="loginMessage" class="message-bar"></div>
-    <div class="login-note">Users are fetched from Google Sheet tab <strong>Users</strong>. Required columns: User ID, Full Name, Email, Department, Role, Status, Join Date, Password, User Rights.</div>
+    <div class="login-note">Users are fetched from Google Sheet tab <strong>Users</strong>. Required columns: User ID, Full Name, Email, Department, Role, Status, Join Date, Password, User Rights, Whatsapp No.</div>
   </div>
 </div>
 <div class="app" id="appShell" style="display:none">
@@ -811,7 +818,7 @@
     bsc: { action: 'bscMetrics', saveAction: 'addBscMetrics', sheetTab: 'BSC', displayTab: 'BSC Metrics', columns: ['BSC Name', 'BSC Description', 'Target Score', 'Actual Score', 'Related Department', 'Frequency'] },
     divisions: { action: 'divisions', saveAction: 'addDivision', sheetTab: 'divisions', displayTab: 'Divisions', columns: ['Division ID', 'Division Name', 'Head', 'Region', 'Status'] },
     automatedTasks: { action: 'automatedTasks', saveAction: 'addAutomatedTask', sheetTab: 'Automated Tasks', displayTab: 'Automated Tasks', columns: ['Ticket ID', 'Task ID', 'Task Name', 'Description', 'Frequency', 'Assigned To', 'Assigned Email', 'Department', 'Next Run', 'Status'] },
-    users: { action: 'users', saveAction: 'addUser', sheetTab: 'Users', displayTab: 'Users', columns: ['User ID', 'Full Name', 'Email', 'Department', 'Roles', 'Status', 'Join Date', 'Password', 'User Rights'] },
+    users: { action: 'users', saveAction: 'addUser', sheetTab: 'Users', displayTab: 'Users', columns: ['User ID', 'Full Name', 'Email', 'Department', 'Roles', 'Status', 'Join Date', 'Password', 'User Rights', 'Whatsapp No.'] },
     hiringRequests: { action: 'hiringRequests', saveAction: 'addHiringRequest', sheetTab: 'Hiring Requests', displayTab: 'Hiring Requests', columns: ['Ticket Number', 'Request Date', 'Requested By', 'Requested By Email', 'Department', 'Position', 'Reason', 'Priority', 'Status', 'Approval 1', 'Approval 1 By', 'Approval 1 Date', 'Approval 2', 'Approval 2 By', 'Approval 2 Date', 'HR Task Status'] }
   };
 
@@ -1429,21 +1436,17 @@ Please log in to QuickBase to continue.`;
         }
       }
       
-      const assigneePhone = null;
-      const wantsWhatsApp = options.skipWhatsApp ? false : confirm(`Task "${payload.title || payload.taskName}" created successfully!\n\nDo you want to share this task with the assignee via WhatsApp?\n\nClick OK to share on WhatsApp, Cancel to skip.`);
-      if (wantsWhatsApp) {
-        let phoneNumber = prompt("Enter assignee's WhatsApp phone number (with country code, e.g., +27...):\nIf you don't have the number, you can share the task link manually.", "");
-        if (phoneNumber && phoneNumber.trim() !== '') {
-          const taskDetails = `*New Task Assigned:* ${payload.title || payload.taskName}\n*Due Date:* ${payload.dueDate || payload.nextRun || 'Not set'}\n*Description:* ${payload.description || 'No description'}\n*Created by:* ${currentUser?.['Full Name'] || 'QuickBase'}`;
-          const whatsappUrl = `https://wa.me/${phoneNumber.replace(/\D/g, '')}?text=${encodeURIComponent(taskDetails)}`;
-          window.open(whatsappUrl, '_blank');
-          showMessage('WhatsApp chat opened. Send the message to the assignee.', 'success', messageId);
-        } else if (phoneNumber !== null) {
-          showMessage('No phone number provided. WhatsApp sharing skipped.', 'info', messageId);
+      let whatsappOpened = false;
+      if (!options.skipWhatsApp) {
+        const whatsappPhone = payload.whatsappNo || payload['whatsapp No.'] || payload['WhatsApp No.'] || payload['WhatsApp No'] || payload.whatsappNumber || '';
+        if (whatsappPhone && confirm(`Email notification has been processed.\n\nDo you want to copy this task message to WhatsApp for ${payload.assignedTo || 'the assignee'}?`)) {
+          whatsappOpened = openAssigneeWhatsApp(payload, messageId);
+        } else if (!whatsappPhone) {
+          showMessage('WhatsApp number missing for selected assignee. WhatsApp skipped.', 'info', messageId);
         }
       }
-      
-      alert(`${successMessage}${emailSent ? ' Email notification sent.' : ''}`);
+
+      alert(`${successMessage}${emailSent ? ' Email notification sent.' : ''}${whatsappOpened ? ' WhatsApp link opened.' : ''}`);
       if (typeof options.afterSuccess === 'function') options.afterSuccess(res);
       return res;
     } catch(e) {
@@ -1471,11 +1474,61 @@ Please log in to QuickBase to continue.`;
     return (match && (match.Email || match['Email Address'] || match.WorkEmail || match['Work Email'])) || '';
   }
 
-  function wireAssigneeEmail(selectId, emailId) {
+  function findWhatsAppForUser(name) {
+    const wanted = normalizeName(name);
+    if (!wanted) return '';
+
+    // Prefer the Users tab value. The Users tab has the official last-column header:
+    // User ID, Full Name, Email, Department, Role, Status, Join Date, Join Date, Password, User Rights, Whatsapp No.
+    const matches = cachedPeopleRows.filter(row => normalizeName(row['Full Name'] || row['Employee Name'] || row.Name || row.User) === wanted);
+    const whatsappKeys = ['Whatsapp No.', 'whatsapp No.', 'WhatsApp No.', 'WhatsApp No', 'Whatsapp No', 'Whatsapp Number', 'WhatsApp Number', 'Whatsapp', 'WhatsApp'];
+    for (const row of matches) {
+      for (const key of whatsappKeys) {
+        const value = row && row[key];
+        if (value !== undefined && value !== null && String(value).trim() !== '') return String(value).trim();
+      }
+    }
+    return '';
+  }
+
+  function normalizeWhatsAppNumber(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    const hasPlus = text.startsWith('+');
+    const digits = text.replace(/\D/g, '');
+    return hasPlus ? `+${digits}` : digits;
+  }
+
+  function buildWhatsAppTaskMessage(payload) {
+    const ticketId = payload['Ticket ID'] || payload['Ticket Number'] || payload.ticketId || payload.ticketNumber || payload['Task ID'] || payload.taskId || '';
+    return `*New Task Assigned*\n*Ticket Number:* ${ticketId || 'Not set'}\n*Task:* ${payload.title || payload.taskName || payload['Task Name'] || 'Task'}\n*Due / Next Run:* ${payload.dueDate || payload.nextRun || 'Not set'}\n*Department:* ${payload.department || payload.Department || 'Not set'}\n*Description:* ${payload.description || payload.Description || 'No description'}\n*Created by:* ${currentUser?.['Full Name'] || currentUser?.Email || 'QuickBase'}`;
+  }
+
+  function openAssigneeWhatsApp(payload, messageId) {
+    const phoneRaw = payload.whatsappNo || payload['whatsapp No.'] || payload['Whatsapp No.'] || payload['WhatsApp No.'] || payload['WhatsApp No'] || payload.whatsappNumber || '';
+    const phone = normalizeWhatsAppNumber(phoneRaw);
+    if (!phone) {
+      showMessage('WhatsApp number missing for selected assignee. WhatsApp skipped.', 'info', messageId);
+      return false;
+    }
+    const phoneForUrl = phone.replace(/\D/g, '');
+    const message = encodeURIComponent(buildWhatsAppTaskMessage(payload));
+
+    // Opens WhatsApp on the current device when available. Browser security still requires the user/device to confirm sending.
+    const whatsappUrl = `https://wa.me/${phoneForUrl}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+    showMessage(`WhatsApp opened for ${phone}. The message is pre-filled for the assignee.`, 'success', messageId);
+    return true;
+  }
+  function wireAssigneeEmail(selectId, emailId, whatsappId = '') {
     const select = document.getElementById(selectId);
     const email = document.getElementById(emailId);
+    const whatsapp = whatsappId ? document.getElementById(whatsappId) : null;
     if (!select || !email) return;
-    const sync = () => { email.value = findEmailForUser(select.value); };
+    const sync = () => {
+      email.value = findEmailForUser(select.value);
+      if (whatsapp) whatsapp.value = findWhatsAppForUser(select.value);
+    };
     select.addEventListener('change', sync);
     sync();
   }
@@ -1943,6 +1996,7 @@ Please log in to QuickBase to continue.`;
           <div class="form-field"><label>Department</label><select id="ticketDept">${departmentOptionsHtml()}</select></div>
           <div class="form-field"><label>Assigned To</label><select id="ticketAssignee">${userOptionsHtml()}</select></div>
           <div class="form-field"><label>Assignee Email</label><input id="ticketAssigneeEmail" readonly placeholder="Auto-filled email"></div>
+          <div class="form-field"><label>whatsapp No.</label><input id="ticketWhatsappNo" readonly placeholder="Auto-filled WhatsApp number"></div>
           <div class="form-field"><label>Due Date</label><input type="date" id="ticketDueDate"></div>
         </div>
         <div class="form-row">
@@ -1966,6 +2020,7 @@ Please log in to QuickBase to continue.`;
           <div class="form-field"><label>Day of Month</label><select id="autoDayOfMonth">${Array.from({length:31}, (_, i) => `<option value="${i + 1}" ${i + 1 === 5 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
           <div class="form-field"><label>Assigned To</label><select id="autoAssignee">${userOptionsHtml()}</select></div>
           <div class="form-field"><label>Assignee Email</label><input id="autoAssigneeEmail" readonly placeholder="Auto-filled email"></div>
+          <div class="form-field"><label>whatsapp No.</label><input id="autoWhatsappNo" readonly placeholder="Auto-filled WhatsApp number"></div>
         </div>
         <div class="form-row">
           <div class="form-field"><label>Department</label><select id="autoDept">${departmentOptionsHtml()}</select></div>
@@ -2016,8 +2071,8 @@ Please log in to QuickBase to review and update this item.`
   }
 
   function wireDashboardForms() {
-    wireAssigneeEmail('ticketAssignee', 'ticketAssigneeEmail');
-    wireAssigneeEmail('autoAssignee', 'autoAssigneeEmail');
+    wireAssigneeEmail('ticketAssignee', 'ticketAssigneeEmail', 'ticketWhatsappNo');
+    wireAssigneeEmail('autoAssignee', 'autoAssigneeEmail', 'autoWhatsappNo');
 
     document.getElementById('createTicketBtn')?.addEventListener('click', async () => {
       const ticketNumber = document.getElementById('ticketNumber')?.value || generateTicketNumber();
@@ -2033,6 +2088,10 @@ Please log in to QuickBase to review and update this item.`
         department: document.getElementById('ticketDept').value,
         assignedTo: document.getElementById('ticketAssignee').value,
         assignedEmail: document.getElementById('ticketAssigneeEmail').value,
+        whatsappNo: document.getElementById('ticketWhatsappNo').value,
+        'whatsapp No.': document.getElementById('ticketWhatsappNo').value,
+        'WhatsApp No.': document.getElementById('ticketWhatsappNo').value,
+        'Whatsapp No.': document.getElementById('ticketWhatsappNo').value,
         dueDate: document.getElementById('ticketDueDate').value,
         description: document.getElementById('ticketDesc').value,
         comments: document.getElementById('ticketComments').value,
@@ -2063,6 +2122,10 @@ Please log in to QuickBase to review and update this item.`
         'Day of Month': document.getElementById('autoDayOfMonth').value,
         assignedTo: document.getElementById('autoAssignee').value,
         assignedEmail: document.getElementById('autoAssigneeEmail').value,
+        whatsappNo: document.getElementById('autoWhatsappNo').value,
+        'whatsapp No.': document.getElementById('autoWhatsappNo').value,
+        'WhatsApp No.': document.getElementById('autoWhatsappNo').value,
+        'Whatsapp No.': document.getElementById('autoWhatsappNo').value,
         department: document.getElementById('autoDept').value,
         nextRun: document.getElementById('autoNextRun').value,
         status: document.getElementById('autoStatus').value,
@@ -2204,7 +2267,7 @@ Please log in to QuickBase to review and update this item.`
   }
 
   function clickableSummaryNamesHtml(type, text = 'No names to show') {
-    return `<button type="button" onclick="showTicketSummaryTransactions('${escapeHtml(type)}')" style="background:none;border:none;padding:0;color:#3b82f6;font:inherit;font-weight:700;cursor:pointer;text-align:left">${escapeHtml(text)}</button>`;
+    return `<button type="button" onclick="event.stopPropagation();showTicketSummaryTransactions('${escapeHtml(type)}')" style="background:none;border:none;padding:0;color:#3b82f6;font:inherit;font-weight:700;cursor:pointer;text-align:left">${escapeHtml(text)}</button>`;
   }
 
   function namesListHtml(rows, getter = getAssigneeName, type = '') {
@@ -2217,22 +2280,22 @@ Please log in to QuickBase to review and update this item.`
     return `<div class="ticket-summary-window">
       <h3>Tickets Summary Window</h3>
       <div class="ticket-summary-grid">
-        <div class="ticket-summary-item">
+        <div class="ticket-summary-item" onclick="showTicketSummaryTransactions('automated')" title="Open automated task summary">
           <div class="ticket-summary-number">${automatedTasks.length}</div>
           <div class="ticket-summary-label">Total Automated Tasks</div>
           <div class="ticket-summary-names">Assigned to: ${clickableSummaryNamesHtml('automated')}</div>
         </div>
-        <div class="ticket-summary-item">
+        <div class="ticket-summary-item" onclick="showTicketSummaryTransactions('openOnTime')" title="Open these tickets">
           <div class="ticket-summary-number">${stats.openOnTime.length}</div>
           <div class="ticket-summary-label">Open Tickets On Time</div>
           <div class="ticket-summary-names">${namesListHtml(stats.openOnTime, getAssigneeName, 'openOnTime')}</div>
         </div>
-        <div class="ticket-summary-item">
+        <div class="ticket-summary-item" onclick="showTicketSummaryTransactions('openLate')" title="Open these tickets">
           <div class="ticket-summary-number">${stats.openLate.length}</div>
           <div class="ticket-summary-label">Open Tickets But Late</div>
           <div class="ticket-summary-names">${namesListHtml(stats.openLate, getAssigneeName, 'openLate')}</div>
         </div>
-        <div class="ticket-summary-item">
+        <div class="ticket-summary-item" onclick="showTicketSummaryTransactions('closedLate')" title="Open these tickets">
           <div class="ticket-summary-number">${stats.closedLate.length}</div>
           <div class="ticket-summary-label">Closed But Late</div>
           <div class="ticket-summary-names">${namesListHtml(stats.closedLate, getAssigneeName, 'closedLate')}</div>
