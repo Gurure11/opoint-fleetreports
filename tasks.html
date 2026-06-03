@@ -1933,8 +1933,6 @@ Please log in to QuickBase to continue.`;
           <div>${connectionStatusHtml} <span class="user-chip">👤 ${escapeHtml(currentUser?.['Full Name'] || 'User')} · ${escapeHtml(getUserRole(currentUser) || '')}<span class="rights-chip">${escapeHtml(currentUser?.['User Rights'] || 'standard')}</span></span> <button class="logout-btn" onclick="logout()">Logout</button></div>
         </div>
 
-        ${ticketSummaryWindowHtml(dashboardAutomatedTaskRows, ticketStats)}
-
         <div class="task-status-grid">
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter='open';loadCurrentSection()" style="border-top:4px solid #3b82f6"><h3 style="color:#3b82f6">${ticketStats.open.length}</h3><p>📋 Tickets Open</p></div>
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter='closed';loadCurrentSection()" style="border-top:4px solid #22c55e"><h3 style="color:#22c55e">${ticketStats.closed.length}</h3><p>✅ Tickets Closed</p></div>
@@ -2277,14 +2275,22 @@ Please log in to QuickBase to review and update this item.`
     return type ? clickableSummaryNamesHtml(type, text.replace(/&amp;/g, '&')) : text;
   }
 
-  function ticketSummaryWindowHtml(automatedTasks, stats) {
+  function ticketPrioritySummaryText(rows) {
+    const counts = groupCount(rows || [], t => getPriority(t));
+    const order = ['Critical', 'High', 'Medium', 'Low'];
+    const keys = [...order.filter(k => counts[k]), ...Object.keys(counts).filter(k => !order.includes(k))];
+    return keys.length ? keys.map(k => `${escapeHtml(k)}: ${counts[k]}`).join(' · ') : 'No priority tickets to show';
+  }
+
+  function ticketSummaryWindowHtml(ticketRows, stats) {
+    const priorityCounts = groupCount(ticketRows || [], t => getPriority(t));
     return `<div class="ticket-summary-window">
       <h3>Tickets Summary Window</h3>
       <div class="ticket-summary-grid">
-        <div class="ticket-summary-item" onclick="showTicketSummaryTransactions('automated')" title="Open automated task summary">
-          <div class="ticket-summary-number">${automatedTasks.length}</div>
-          <div class="ticket-summary-label">Total Automated Tasks</div>
-          <div class="ticket-summary-names">Assigned to: ${clickableSummaryNamesHtml('automated')}</div>
+        <div class="ticket-summary-item" onclick="showTicketSummaryTransactions('priority')" title="Open tickets by priority">
+          <div class="ticket-summary-number">${Object.keys(priorityCounts).length}</div>
+          <div class="ticket-summary-label">Tickets by Priority</div>
+          <div class="ticket-summary-names">${ticketPrioritySummaryText(ticketRows)}</div>
         </div>
         <div class="ticket-summary-item" onclick="showTicketSummaryTransactions('openOnTime')" title="Open these tickets">
           <div class="ticket-summary-number">${stats.openOnTime.length}</div>
@@ -2305,22 +2311,41 @@ Please log in to QuickBase to review and update this item.`
     </div>`;
   }
 
+  function summaryTransactionsPanelHtml(title, rows, columns) {
+    return `<div id="ticketSummaryTransactionsPanel" class="panel"><div class="panel-header"><h2>${escapeHtml(title)}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(row => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
+  }
+
   window.showTicketSummaryTransactions = async function(type) {
     const [ticketsRaw, automatedTasksRaw] = await Promise.all([safeGet('tickets'), safeGet('automatedTasks')]);
     const tickets = Array.isArray(ticketsRaw) ? ticketsRaw : [];
     const automatedTasks = expandAutomatedTaskMonthlyOccurrences((Array.isArray(automatedTasksRaw) ? automatedTasksRaw : []).filter(hasPerformanceAssignee), true);
-    const stats = calculateTicketStats(tickets);
+    const allRows = [...tickets, ...automatedTasks];
+    const stats = calculateTicketStats(allRows);
     let title = 'Summary Transactions';
     let rows = [];
     let columns = ['Ticket ID', 'Title', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'];
-    if (type === 'automated') {
-      title = 'Automated Task Transactions';
-      rows = automatedTasks;
-      columns = ['Ticket ID', 'Task ID', 'Task Name', 'Description', 'Frequency', 'Department', 'Next Run', 'Status'];
-    } else if (type === 'openOnTime') rows = stats.openOnTime;
-    else if (type === 'openLate') rows = stats.openLate;
-    else if (type === 'closedLate') rows = stats.closedLate;
-    renderSimpleTable(title, rows, columns, type === 'automated' ? 'Automated Tasks' : 'Tasks');
+    if (type === 'priority') {
+      title = 'Tickets by Priority';
+      rows = [...allRows].sort((a, b) => {
+        const order = { critical: 0, high: 1, medium: 2, low: 3 };
+        const left = order[String(getPriority(a)).toLowerCase()] ?? 9;
+        const right = order[String(getPriority(b)).toLowerCase()] ?? 9;
+        return left - right || String(getPriority(a)).localeCompare(String(getPriority(b))) || String(getTicketIdentity(a)).localeCompare(String(getTicketIdentity(b)));
+      });
+    } else if (type === 'openOnTime') { title = 'Open Tickets On Time'; rows = stats.openOnTime; }
+    else if (type === 'openLate') { title = 'Open Tickets But Late'; rows = stats.openLate; }
+    else if (type === 'closedLate') { title = 'Closed But Late'; rows = stats.closedLate; }
+
+    const main = document.getElementById('mainContent');
+    const existing = document.getElementById('ticketSummaryTransactionsPanel');
+    if (existing) existing.remove();
+    const topBar = main ? main.querySelector('.top-bar') : null;
+    if (main && topBar) {
+      topBar.insertAdjacentHTML('afterend', summaryTransactionsPanelHtml(title, rows, columns));
+      document.getElementById('ticketSummaryTransactionsPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      renderSimpleTable(title, rows, columns, 'Tasks');
+    }
   };
 
   function getTicketIdentity(task) {
@@ -3109,10 +3134,12 @@ Please log in to QuickBase to review and update this item.`
     window.currentTicketRows = data;
     const main = document.getElementById('mainContent');
     const activeFilterText = window.taskFilter ? `Filtered: ${window.taskFilter.replace(/-/g, ' ')}` : 'All tickets';
+    const ticketTablePanel = `<div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
 
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>Tickets</h1><p>Sheet tab: Tasks · ${escapeHtml(activeFilterText)}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
-      ${ticketSummaryWindowHtml(automatedTaskRows, stats)}
+      ${window.taskFilter ? ticketTablePanel : ''}
+      ${ticketSummaryWindowHtml(allTicketRows, stats)}
       <div class="task-status-grid">
         <div class="status-stat-card" onclick="window.taskFilter='open';renderTickets()" style="border-top:4px solid #3b82f6"><h3 style="color:#3b82f6">${stats.open.length}</h3><p>📋 Tickets Open</p></div>
         <div class="status-stat-card" onclick="window.taskFilter='closed';renderTickets()" style="border-top:4px solid #22c55e"><h3 style="color:#22c55e">${stats.closed.length}</h3><p>✅ Tickets Closed</p></div>
@@ -3129,7 +3156,7 @@ Please log in to QuickBase to review and update this item.`
         <div class="chart-card"><h3>Tickets by Priority</h3><p>Current ticket count grouped by priority</p><canvas id="ticketsPriorityChart"></canvas></div>
         <div class="chart-card"><h3>Tickets by Department</h3><p>Current ticket count grouped by department</p><canvas id="ticketsDepartmentChart"></canvas></div>
       </div>
-      <div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>
+      ${!window.taskFilter ? ticketTablePanel : ''}
       <div class="panel"><div class="panel-header"><h2>🔄 Automated Tasks</h2></div><div class="table-wrapper"><table><thead><tr>${automatedTaskColumns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${automatedTaskRows.length ? automatedTaskRows.map(row => `<tr>${automatedTaskColumns.map(c => `<td>${escapeHtml(getCellValue(row, c))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${automatedTaskColumns.length}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
 
     if (typeof Chart !== 'undefined') {
