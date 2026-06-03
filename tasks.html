@@ -1051,7 +1051,7 @@
 
   const FALLBACK_USERS = [...new Set([...Object.keys(SYSTEM_USER_EMAILS), 'Bongeka'])];
   let SYSTEM_USERS = [...FALLBACK_USERS];
-  const DEPARTMENT_OPTIONS = ['Admin', 'Business Development', 'Finance & IT', 'Fleet', 'HR', 'Operations', 'Procurements', 'Sales', 'SHEQ', 'Tendering', 'Warehouse'];
+  const DEPARTMENT_OPTIONS = ['Admin', 'Business Assurance', 'Finance & IT', 'Fleet', 'HR', 'Operations', 'Procurements', 'Sales', 'SHEQ', 'Tendering', 'Warehouse'];
 
   function departmentOptionsHtml(selected = '') {
     return `<option value="">Select department</option>` + DEPARTMENT_OPTIONS.map(name => `<option value="${escapeHtml(name)}" ${name === selected ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
