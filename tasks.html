@@ -784,7 +784,7 @@
       <button class="btn-primary" id="loginBtn">Sign in</button>
     </div>
     <div id="loginMessage" class="message-bar"></div>
-    <div class="login-note">Users are fetched from Google Sheet tab <strong>Users</strong>. Required columns: User ID, Full Name, Email, Department, Role, Status, Join Date, Password, User Rights, Whatsapp No.</div>
+    <div class="login-note">Users are fetched from Google Sheet tab <strong>Users</strong>. Required columns: User ID, Full Name, Email, Department, Role, Status, Join Date, Password, User Rights, Whatsapp No., Cost Center</div>
   </div>
 </div>
 <div class="app" id="appShell" style="display:none">
@@ -821,20 +821,22 @@
 
 <script>
   // ==================== CONFIGURATION ====================
-  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybH12Veor7tJK54_Afwr25opqOAzOQg-ZCUHoHLL-2N1cfQq_PC7_twqhIf9EAv8ljJw/exec';
+  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbygdxsGP6Gm_dRVLVhdNIEsPkx7junQTdcHx3z9RkXJR8GAOrVJUr6xagrMqxuupF2Muw/exec';
   const SHEET_ID = '1KWYWSUmwGYcBVIuDzh7yo86eTrfnMZX35DuGnRAVNv8';
   const TASK_PROOF_DRIVE_FOLDER_ID = '19GoN9yzz0ODP_F-4ffba_olb3cD0b0f4';
 
   const SHEET_ROUTES = {
-    tickets: { action: 'tickets', saveAction: 'addTicket', sheetTab: 'Tasks', displayTab: 'Tickets', columns: ['Ticket ID', 'Title', 'Task Description', 'Priority', 'Status', 'Department', 'Assigned To', 'Due Date'] },
+    tickets: { action: 'tickets', saveAction: 'addTicket', sheetTab: 'Tasks', displayTab: 'Tickets', columns: ['Ticket ID', 'Title', 'Task Description', 'Priority', 'Status', 'Department', 'Cost Center', 'Assigned To', 'Due Date'] },
+    sentTickets: { action: 'sentTickets', saveAction: 'addSentTicket', sheetTab: 'Sent_Tickets', displayTab: 'Sent Tickets', columns: ['Ticket ID', 'Title', 'Task Description', 'Priority', 'Status', 'Department', 'Cost Center', 'Assigned To', 'Due Date', 'Created By'] },
     departments: { action: 'departments', saveAction: 'addDepartment', sheetTab: 'Department', displayTab: 'Departments', columns: ['Department ID', 'Department Name', 'Manager', 'Budget', 'Status', 'Created Date'] },
     employees: { action: 'employees', saveAction: 'addEmployee', sheetTab: 'Employees', displayTab: 'Employees', columns: ['Employee ID', 'Employee Name', 'Department', 'Role', 'Status', 'Created Date'] },
     kpis: { action: 'kpis', saveAction: 'addKpi', sheetTab: 'KPIs', displayTab: 'KPIs', columns: ['KPIName', 'Target Value', 'Actual Value', 'Related Department', 'Frequency'] },
     sla: { action: 'sla', saveAction: 'addSla', sheetTab: 'SLA', displayTab: 'SLA', columns: ['SLA Name', 'Description', 'Priority', 'First Response', 'Resolution Target', 'Status'] },
     bsc: { action: 'bscMetrics', saveAction: 'addBscMetrics', sheetTab: 'BSC', displayTab: 'BSC Metrics', columns: ['BSC Name', 'BSC Description', 'Target Score', 'Actual Score', 'Related Department', 'Frequency'] },
     divisions: { action: 'divisions', saveAction: 'addDivision', sheetTab: 'divisions', displayTab: 'Divisions', columns: ['Division ID', 'Division Name', 'Head', 'Region', 'Status'] },
-    automatedTasks: { action: 'automatedTasks', saveAction: 'addAutomatedTask', sheetTab: 'Automated Tasks', displayTab: 'Automated Tasks', columns: ['Ticket ID', 'Task ID', 'Task Name', 'Description', 'Frequency', 'Assigned To', 'Assigned Email', 'Department', 'Next Run', 'Status'] },
-    users: { action: 'users', saveAction: 'addUser', sheetTab: 'Users', displayTab: 'Users', columns: ['User ID', 'Full Name', 'Email', 'Department', 'Roles', 'Status', 'Join Date', 'Password', 'User Rights', 'Whatsapp No.'] },
+    automatedTasks: { action: 'automatedTasks', saveAction: 'addAutomatedTask', sheetTab: 'Automated Tasks', displayTab: 'Automated Tasks', columns: ['Ticket ID', 'Task ID', 'Task Name', 'Description', 'Frequency', 'Assigned To', 'Assigned Email', 'whatsapp No.', 'Cost Center', 'Department', 'Next Run', 'Status'] },
+    taskUpdates: { action: 'taskUpdates', saveAction: 'submitTaskUpdate', sheetTab: 'Task Updates', displayTab: 'Task Updates', columns: ['Ticket ID', 'Task ID', 'Task Name', 'Task Response', 'Proof link', 'Executive Score Comment'] },
+    users: { action: 'users', saveAction: 'addUser', sheetTab: 'Users', displayTab: 'Users', columns: ['User ID', 'Full Name', 'Email', 'Department', 'Roles', 'Status', 'Join Date', 'Password', 'User Rights', 'Whatsapp No.', 'Cost Center'] },
     hiringRequests: { action: 'hiringRequests', saveAction: 'addHiringRequest', sheetTab: 'Hiring Requests', displayTab: 'Hiring Requests', columns: ['Ticket Number', 'Request Date', 'Requested By', 'Requested By Email', 'Department', 'Position', 'Reason', 'Priority', 'Status', 'Approval 1', 'Approval 1 By', 'Approval 1 Date', 'Approval 2', 'Approval 2 By', 'Approval 2 Date', 'HR Task Status'] }
   };
 
@@ -934,6 +936,46 @@
     return text;
   }
 
+
+
+  function automatedTaskDecisionPercent(value) {
+    const normalized = normalizeAutomatedTaskReviewValue(value);
+    if (normalized === 'On Time') return 100;
+    if (normalized === 'Late Done') return 50;
+    if (normalized === 'Not Done') return 0;
+    const numeric = parseFloat(String(value || '').replace('%', ''));
+    return Number.isFinite(numeric) ? Math.max(0, Math.min(100, numeric)) : null;
+  }
+
+  function getAutomatedTaskExecutiveReviewDetails(task, monthOverride = '') {
+    const month = monthOverride || task.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(task));
+    const reviews = getStoredAutomatedTaskReviews();
+    const reviewRow = reviews[getAutomatedTaskReviewKey(task, month)] || {};
+    const byExecutive = reviewRow.byExecutive || {};
+    return EXECUTIVE_MANAGERS.map(manager => {
+      const key = String(manager.email || manager.name || '').trim().toLowerCase();
+      const review = byExecutive[key] || {};
+      const decision = normalizeAutomatedTaskReviewValue(review.decision || '');
+      const percent = automatedTaskDecisionPercent(decision);
+      return { key, name: manager.name, email: manager.email, decision, percent, comment: review.executiveComment || '', reviewedBy: review.reviewedBy || '', reviewedDate: review.reviewedDate || '' };
+    });
+  }
+
+  function getAutomatedTaskAverageScorePercent(task, monthOverride = '') {
+    const details = getAutomatedTaskExecutiveReviewDetails(task, monthOverride).filter(item => item.percent !== null);
+    const requiredCount = EXECUTIVE_MANAGERS.length || 1;
+    if (details.length < requiredCount) return null;
+    return Math.round(details.reduce((sum, item) => sum + item.percent, 0) / details.length);
+  }
+
+  function automatedTaskScoreBreakdownHtml(task) {
+    const details = getAutomatedTaskExecutiveReviewDetails(task, task.__autoOccurrenceMonth);
+    const avg = getAutomatedTaskAverageScorePercent(task, task.__autoOccurrenceMonth);
+    const detailText = details.map(item => `${escapeHtml(item.name)}: ${item.percent === null ? 'Waiting' : item.percent + '%'}`).join('<br>');
+    const avgText = avg === null ? 'Waiting both executives' : `Average: ${avg}%`;
+    return `<span style="font-size:12px;line-height:1.5;display:inline-block">${detailText}<br><strong>${escapeHtml(avgText)}</strong></span>`;
+  }
+
   function getAutomatedTaskExecutiveReview(task, monthOverride = '', executiveKey = '') {
     const month = monthOverride || task.__autoOccurrenceMonth || '';
     const reviews = getStoredAutomatedTaskReviews();
@@ -995,7 +1037,7 @@
     return !!getAutomatedTaskExecutiveReview(task, monthOverride, currentKey);
   }
 
-  async function saveAutomatedTaskExecutiveReview(task, decision, monthOverride = '') {
+  async function saveAutomatedTaskExecutiveReview(task, decision, monthOverride = '', executiveComment = '') {
     const reviews = getStoredAutomatedTaskReviews();
     const key = getAutomatedTaskReviewKey(task, monthOverride);
     const reviewedBy = currentUser?.['Full Name'] || currentUser?.Email || 'Executive Manager';
@@ -1005,8 +1047,10 @@
     const month = monthOverride || task.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(task));
     reviews[key] = reviews[key] || {};
     reviews[key].byExecutive = reviews[key].byExecutive || {};
-    reviews[key].byExecutive[executiveKey] = { decision, reviewedBy, reviewedByEmail, reviewedDate };
+    reviews[key].byExecutive[executiveKey] = { decision, reviewedBy, reviewedByEmail, reviewedDate, executiveComment };
     saveStoredAutomatedTaskReviews(reviews);
+    const averageScorePercent = getAutomatedTaskAverageScorePercent(task, month);
+    const fullyScored = averageScorePercent !== null;
 
     try {
       await apiPost('updateAutomatedTaskReview', {
@@ -1014,6 +1058,15 @@
         taskName: task['Task Name'] || task.taskName || task.Title || '',
         month,
         executiveOnTimeReview: decision,
+        executiveScorePercent: automatedTaskDecisionPercent(decision),
+        executiveAverageScorePercent: averageScorePercent === null ? '' : averageScorePercent,
+        finalScorePercent: averageScorePercent === null ? '' : averageScorePercent,
+        status: fullyScored ? 'Closed' : 'Completed - Awaiting Review',
+        Status: fullyScored ? 'Closed' : 'Completed - Awaiting Review',
+        executiveScoreComment: executiveComment,
+        'Executive Score Comment': executiveComment,
+        taskUpdateExecutiveComment: executiveComment,
+        taskUpdateSheetTab: 'Task Updates',
         reviewedBy,
         reviewedByEmail,
         reviewedDate,
@@ -1068,6 +1121,11 @@
   const FALLBACK_USERS = [...new Set([...Object.keys(SYSTEM_USER_EMAILS), 'Bongeka'])];
   let SYSTEM_USERS = [...FALLBACK_USERS];
   const DEPARTMENT_OPTIONS = ['Admin','Business Assurance','Facilities', 'Business Development', 'Finance & IT', 'Fleet', 'HR', 'Operations', 'Procurements', 'Sales', 'SHEQ', 'Tendering', 'Warehouse'];
+  const COST_CENTER_OPTIONS = ['Onpoint Ontime', 'Onpoint Group', 'Nkanyezi', 'Distinct', 'Aqua Telecom'];
+
+  function costCenterOptionsHtml(selected = '') {
+    return `<option value="">Select cost center</option>` + COST_CENTER_OPTIONS.map(name => `<option value="${escapeHtml(name)}" ${name === selected ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
+  }
 
   function departmentOptionsHtml(selected = '') {
     return `<option value="">Select department</option>` + DEPARTMENT_OPTIONS.map(name => `<option value="${escapeHtml(name)}" ${name === selected ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
@@ -1491,12 +1549,28 @@ Please log in to QuickBase to continue.`;
     return (match && (match.Email || match['Email Address'] || match.WorkEmail || match['Work Email'])) || '';
   }
 
+  function findUserRowByName(name) {
+    const wanted = normalizeName(name);
+    if (!wanted) return null;
+    return cachedPeopleRows.find(row => normalizeName(row['Full Name'] || row['Employee Name'] || row.Name || row.User) === wanted) || null;
+  }
+
+  function findDepartmentForUser(name) {
+    const row = findUserRowByName(name);
+    return (row && (row.Department || row.department || row['Assigned Department'])) || '';
+  }
+
+  function findCostCenterForUser(name) {
+    const row = findUserRowByName(name);
+    return (row && (row['Cost Center'] || row.CostCenter || row['Cost Centre'] || row.CostCentre || row.costCenter || row.costCentre)) || '';
+  }
+
   function findWhatsAppForUser(name) {
     const wanted = normalizeName(name);
     if (!wanted) return '';
 
     // Prefer the Users tab value. The Users tab has the official last-column header:
-    // User ID, Full Name, Email, Department, Role, Status, Join Date, Join Date, Password, User Rights, Whatsapp No.
+    // User ID, Full Name, Email, Department, Role, Status, Join Date, Join Date, Password, User Rights, Whatsapp No., Cost Center
     const matches = cachedPeopleRows.filter(row => normalizeName(row['Full Name'] || row['Employee Name'] || row.Name || row.User) === wanted);
     const whatsappKeys = ['Whatsapp No.', 'whatsapp No.', 'WhatsApp No.', 'WhatsApp No', 'Whatsapp No', 'Whatsapp Number', 'WhatsApp Number', 'Whatsapp', 'WhatsApp'];
     for (const row of matches) {
@@ -1537,14 +1611,25 @@ Please log in to QuickBase to continue.`;
     showMessage(`WhatsApp opened for ${phone}. The message is pre-filled for the assignee.`, 'success', messageId);
     return true;
   }
-  function wireAssigneeEmail(selectId, emailId, whatsappId = '') {
+  function setSelectValueIfPresent(select, value) {
+    if (!select || !value) return;
+    const wanted = String(value).trim().toLowerCase();
+    const option = Array.from(select.options || []).find(opt => String(opt.value || opt.textContent || '').trim().toLowerCase() === wanted);
+    if (option) select.value = option.value;
+  }
+
+  function wireAssigneeEmail(selectId, emailId, whatsappId = '', departmentId = '', costCenterId = '') {
     const select = document.getElementById(selectId);
     const email = document.getElementById(emailId);
     const whatsapp = whatsappId ? document.getElementById(whatsappId) : null;
+    const department = departmentId ? document.getElementById(departmentId) : null;
+    const costCenter = costCenterId ? document.getElementById(costCenterId) : null;
     if (!select || !email) return;
     const sync = () => {
       email.value = findEmailForUser(select.value);
       if (whatsapp) whatsapp.value = findWhatsAppForUser(select.value);
+      if (department) setSelectValueIfPresent(department, findDepartmentForUser(select.value));
+      if (costCenter) setSelectValueIfPresent(costCenter, findCostCenterForUser(select.value));
     };
     select.addEventListener('change', sync);
     sync();
@@ -1555,7 +1640,7 @@ Please log in to QuickBase to continue.`;
       const [employeesResult, usersResult] = await Promise.allSettled([apiGet('employees'), apiGet('users')]);
       const employees = employeesResult.status === 'fulfilled' && Array.isArray(employeesResult.value) ? employeesResult.value : [];
       const users = usersResult.status === 'fulfilled' && Array.isArray(usersResult.value) ? usersResult.value : [];
-      cachedPeopleRows = [...employees, ...users];
+      cachedPeopleRows = [...users, ...employees];
       const sheetNames = cachedPeopleRows.map(row => canonicalPersonName(row['Full Name'] || row['Employee Name'] || row.Name || row.User || '')).filter(Boolean);
       SYSTEM_USERS = [...new Set([...sheetNames, ...FALLBACK_USERS.map(canonicalPersonName)])];
     } catch(e) {
@@ -1594,6 +1679,7 @@ Please log in to QuickBase to continue.`;
       'Region': ['Region', 'Area'],
       'Department ID': ['Department ID', 'ID'],
       'Department Name': ['Department Name', 'Department', 'Name'],
+      'Cost Center': ['Cost Center', 'CostCenter', 'Cost Centre', 'CostCentre', 'costCenter', 'costCentre'],
       'Budget': ['Budget'],
       'Status': ['Status'],
       'Task ID': ['Task ID', 'Ticket ID', 'Ticket Number', 'ID']
@@ -1823,11 +1909,31 @@ Please log in to QuickBase to continue.`;
       <div class="panel"><div class="panel-header"><h2>🔄 Automated Recurring Tasks</h2></div><div class="table-wrapper"><table><thead><tr>${autoColumns.map(c => `<th>${c}</th>`).join('')}<th>Comment / Proof / Submit</th></tr></thead><tbody>${assigned.automatedTasks.length ? assigned.automatedTasks.map((row, index) => `<tr>${autoColumns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}<td>${myAutomatedTaskActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${autoColumns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
   }
 
+  async function saveIssuedTaskToSentTickets(payload) {
+    try {
+      const sentPayload = Object.assign({}, payload, {
+        sheetTab: 'Sent_Tickets',
+        sheetName: 'Sent_Tickets',
+        tabName: 'Sent_Tickets',
+        sourceSheetTab: 'Tasks',
+        sentDate: new Date().toISOString(),
+        'Sent Date': new Date().toISOString(),
+        createdBy: payload.createdBy || payload['Created By'] || currentUser?.['Full Name'] || currentUser?.Email || '',
+        'Created By': payload['Created By'] || payload.createdBy || currentUser?.['Full Name'] || currentUser?.Email || '',
+        createdByEmail: payload.createdByEmail || payload['Created By Email'] || currentUser?.Email || '',
+        'Created By Email': payload['Created By Email'] || payload.createdByEmail || currentUser?.Email || ''
+      });
+      await apiPost('addSentTicket', sentPayload);
+    } catch(e) {
+      console.warn('Sent Tickets save skipped:', e.message);
+    }
+  }
+
   async function renderSentTickets() {
-    const tickets = await safeGet('tickets');
+    const [sentTicketsRaw, ticketsRaw] = await Promise.all([safeGet('sentTickets'), safeGet('tickets')]);
     const currentName = getCurrentUserName();
     const currentEmail = String(currentUser?.Email || '').trim().toLowerCase();
-    const mine = (tickets || []).filter(t => {
+    const isIssuedByMe = t => {
       const issuerName = getTaskIssuerName(t);
       const issuerEmail = getTaskIssuerEmail(t);
       const assigneeName = getAssigneeName(t);
@@ -1835,8 +1941,15 @@ Please log in to QuickBase to continue.`;
       const issuedByMe = isSamePerson(currentName, issuerName) || (currentEmail && currentEmail === issuerEmail);
       const assignedToSomeoneElse = !(isSamePerson(currentName, assigneeName) || (currentEmail && currentEmail === assigneeEmail));
       return issuedByMe && assignedToSomeoneElse;
+    };
+    const sentRows = Array.isArray(sentTicketsRaw) ? sentTicketsRaw.filter(isIssuedByMe) : [];
+    const taskRows = Array.isArray(ticketsRaw) ? ticketsRaw.filter(isIssuedByMe) : [];
+    const combined = [];
+    [...sentRows, ...taskRows].forEach(row => {
+      const key = getTicketIdentity(row) || `${getCellValue(row, 'Title')}__${getTaskDueDate(row)}__${getAssigneeName(row)}`;
+      if (!combined.some(existing => (getTicketIdentity(existing) || `${getCellValue(existing, 'Title')}__${getTaskDueDate(existing)}__${getAssigneeName(existing)}`) === key)) combined.push(row);
     });
-    renderSimpleTable('Tickets Sent Out', mine, ['Ticket ID','Title','Task Description','Priority','Status','Department','Assigned To','Due Date','Task Response','Proof Link'], 'Tasks');
+    renderSimpleTable('Tickets Sent Out', combined, ['Ticket ID','Title','Task Description','Priority','Status','Department','Cost Center','Assigned To','Due Date','Task Response','Proof Link'], 'Sent Tickets');
   }
 
   async function renderApprovals() {
@@ -1852,11 +1965,12 @@ Please log in to QuickBase to continue.`;
     }
 
     const [rows, ticketsRaw] = await Promise.all([safeGet('hiringRequests'), safeGet('tickets')]);
-    const approvals = (rows || []).filter(r =>
-      String(r.Status || '').toLowerCase().includes('waiting') ||
-      String(r['Approval 1'] || '').toLowerCase() === 'pending' ||
-      String(r['Approval 2'] || '').toLowerCase() === 'pending'
-    );
+    const approvals = (rows || []).filter(r => {
+      const status = String(r.Status || '').toLowerCase();
+      const hrStatus = String(r['HR Task Status'] || '').toLowerCase();
+      if (['approved', 'rejected', 'sent to hr', 'hr notified', 'completed'].some(done => status.includes(done) || hrStatus.includes(done))) return false;
+      return status.includes('waiting') || String(r['Approval 1'] || '').toLowerCase() === 'pending' || String(r['Approval 2'] || '').toLowerCase() === 'pending';
+    });
     const moreTimeRequests = (ticketsRaw || []).filter(t => String(t.Status || t.status || '').toLowerCase().includes('more time requested'));
 
     document.getElementById('mainContent').innerHTML = `
@@ -1926,6 +2040,49 @@ Please log in to QuickBase to continue.`;
   }
 
 
+
+  function getProofLinksFromRow(row) {
+    const raw = [
+      row?.['Proof link'], row?.['Proof Link'], row?.['Proof Links'],
+      row?.proofLink, row?.proofLinks, row?.['Attachment Link'], row?.attachmentLink
+    ].find(value => value !== undefined && value !== null && String(value).trim() !== '');
+    if (!raw) return [];
+    return String(raw).split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
+  }
+
+  function proofLinksHtmlFromRows(rows) {
+    const links = [];
+    (rows || []).forEach(row => getProofLinksFromRow(row).forEach(link => {
+      if (!links.includes(link)) links.push(link);
+    }));
+    if (!links.length) return '<span style="font-size:12px;color:#94a3b8">No upload found</span>';
+    return links.map((link, index) => `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">Uploaded content ${index + 1}</a>`).join('<br>');
+  }
+
+  function isTaskUpdateForScoringTask(update, task) {
+    const taskId = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
+    const updateId = getTicketIdentity(update) || update?.['Task ID'] || update?.taskId || update?.ID || '';
+    if (!taskId || !updateId || String(taskId).trim() !== String(updateId).trim()) return false;
+    const taskMonth = task.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(task));
+    const updateMonth = update?.sourceOccurrenceMonth || update?.['Source Occurrence Month'] || update?.OccurrenceMonth || update?.Month || getMonthKey(update?.completionRequestDate || update?.['Completion Request Date'] || update?.['Submitted Date'] || update?.submittedDate || update?.['Created Date']);
+    return !taskMonth || !updateMonth || String(taskMonth) === String(updateMonth);
+  }
+
+  async function getTaskUpdatesForScoring() {
+    const rows = await safeGet('taskUpdates');
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  function scoringProofLinksHtml(task) {
+    const updateRows = (window.currentScoringTaskUpdateRows || []).filter(update => isTaskUpdateForScoringTask(update, task));
+    const rows = updateRows.length ? updateRows : [task];
+    return proofLinksHtmlFromRows(rows);
+  }
+
+  function scoringExecutiveCommentHtml(index) {
+    return `<textarea id="scoringComment_${index}" rows="2" placeholder="Executive comment..." style="min-width:180px"></textarea>`;
+  }
+
   async function renderScoringBasket() {
     if (!isExecutive()) {
       document.getElementById('mainContent').innerHTML = `
@@ -1937,8 +2094,9 @@ Please log in to QuickBase to continue.`;
         </div>`;
       return;
     }
-    const dueTasks = await getDueExecutiveScoringTasks();
+    const [dueTasks, taskUpdates] = await Promise.all([getDueExecutiveScoringTasks(), getTaskUpdatesForScoring()]);
     window.currentScoringBasketRows = dueTasks;
+    window.currentScoringTaskUpdateRows = taskUpdates;
     const tasksByDepartment = {};
     dueTasks.forEach((task, index) => {
       const department = getDepartment(task) || 'Unknown';
@@ -1946,7 +2104,7 @@ Please log in to QuickBase to continue.`;
       tasksByDepartment[department].push({ task, index });
     });
     const departmentTablesHtml = Object.keys(tasksByDepartment).sort().map(department => `
-      <div class="panel"><div class="panel-header"><h2>🧺 ${escapeHtml(department)} Automated Task Scoring</h2></div><div class="table-wrapper"><table><thead><tr><th>Task</th><th>Assigned To</th><th>Department</th><th>Due Date</th><th>Month</th><th>Status</th><th>Score</th></tr></thead><tbody>
+      <div class="panel"><div class="panel-header"><h2>🧺 ${escapeHtml(department)} Automated Task Scoring</h2></div><div class="table-wrapper"><table><thead><tr><th>Task</th><th>Assigned To</th><th>Department</th><th>Due Date</th><th>Month</th><th>Status</th><th>Uploaded Content</th><th>Executive Scores</th><th>Average %</th><th>Executive Comment</th><th>Score</th></tr></thead><tbody>
         ${tasksByDepartment[department].map(item => `
           <tr>
             <td><strong>${escapeHtml(item.task['Task Name'] || item.task.taskName || item.task.Title || 'Automated task')}</strong><br><span style="font-size:12px;color:#64748b">${renderExpandableTextHtml(item.task.Description || item.task.description || '', 100)}</span></td>
@@ -1955,6 +2113,10 @@ Please log in to QuickBase to continue.`;
             <td>${escapeHtml(getTaskDueDate(item.task) || '')}</td>
             <td>${escapeHtml(monthLabelFromKey(item.task.__autoOccurrenceMonth))}</td>
             <td>${escapeHtml(getAutomatedTaskDisplayStatus(item.task))}</td>
+            <td>${scoringProofLinksHtml(item.task)}</td>
+            <td>${automatedTaskScoreBreakdownHtml(item.task)}</td>
+            <td>${getAutomatedTaskAverageScorePercent(item.task, item.task.__autoOccurrenceMonth) === null ? '<span style="font-size:12px;color:#64748b;font-weight:700">Waiting</span>' : `<span class="score-pill ${scoreClass(getAutomatedTaskAverageScorePercent(item.task, item.task.__autoOccurrenceMonth))}">${getAutomatedTaskAverageScorePercent(item.task, item.task.__autoOccurrenceMonth)}%</span>`}</td>
+            <td>${scoringExecutiveCommentHtml(item.index)}</td>
             <td><button class="btn-primary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'On Time')">100%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Late Done')">50%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Not Done')">0%</button></td>
           </tr>`).join('')}
       </tbody></table></div></div>`).join('');
@@ -1971,9 +2133,10 @@ Please log in to QuickBase to continue.`;
     const label = decision === 'On Time' ? '100%' : (decision === 'Late Done' ? '50%' : '0%');
     const taskName = task['Task Name'] || task.taskName || task.Title || 'Automated task';
     const assignee = getAssigneeName(task) || 'Assignee';
-    if (!confirm(`Confirm score before updating.\n\nTask: ${taskName}\nAssigned to: ${assignee}\nScore: ${label} (${decision})\n\nIs this correct?`)) return;
+    const executiveComment = document.getElementById(`scoringComment_${index}`)?.value || '';
+    if (!confirm(`Confirm score before updating.\n\nTask: ${taskName}\nAssigned to: ${assignee}\nScore: ${label} (${decision})\nComment: ${executiveComment || 'No comment'}\n\nIs this correct?`)) return;
     try {
-      await saveAutomatedTaskExecutiveReview(task, decision, task.__autoOccurrenceMonth);
+      await saveAutomatedTaskExecutiveReview(task, decision, task.__autoOccurrenceMonth, executiveComment);
       suppressAutomatedTaskExecutiveAlert(task, task.__autoOccurrenceMonth);
       await renderScoringBasket();
     } catch(e) {
@@ -2110,6 +2273,7 @@ Please log in to QuickBase to continue.`;
           <div class="form-field"><label>Assigned To</label><select id="ticketAssignee">${userOptionsHtml()}</select></div>
           <div class="form-field"><label>Assignee Email</label><input id="ticketAssigneeEmail" readonly placeholder="Auto-filled email"></div>
           <div class="form-field"><label>whatsapp No.</label><input id="ticketWhatsappNo" readonly placeholder="Auto-filled WhatsApp number"></div>
+          <div class="form-field"><label>Cost Center</label><select id="ticketCostCenter">${costCenterOptionsHtml()}</select></div>
           <div class="form-field"><label>Due Date</label><input type="date" id="ticketDueDate"></div>
         </div>
         <div class="form-row">
@@ -2134,6 +2298,7 @@ Please log in to QuickBase to continue.`;
           <div class="form-field"><label>Assigned To</label><select id="autoAssignee">${userOptionsHtml()}</select></div>
           <div class="form-field"><label>Assignee Email</label><input id="autoAssigneeEmail" readonly placeholder="Auto-filled email"></div>
           <div class="form-field"><label>whatsapp No.</label><input id="autoWhatsappNo" readonly placeholder="Auto-filled WhatsApp number"></div>
+          <div class="form-field"><label>Cost Center</label><select id="autoCostCenter">${costCenterOptionsHtml()}</select></div>
         </div>
         <div class="form-row">
           <div class="form-field"><label>Department</label><select id="autoDept">${departmentOptionsHtml()}</select></div>
@@ -2184,8 +2349,8 @@ Please log in to QuickBase to review and update this item.`
   }
 
   function wireDashboardForms() {
-    wireAssigneeEmail('ticketAssignee', 'ticketAssigneeEmail', 'ticketWhatsappNo');
-    wireAssigneeEmail('autoAssignee', 'autoAssigneeEmail', 'autoWhatsappNo');
+    wireAssigneeEmail('ticketAssignee', 'ticketAssigneeEmail', 'ticketWhatsappNo', 'ticketDept', 'ticketCostCenter');
+    wireAssigneeEmail('autoAssignee', 'autoAssigneeEmail', 'autoWhatsappNo', 'autoDept', 'autoCostCenter');
 
     document.getElementById('createTicketBtn')?.addEventListener('click', async () => {
       const ticketNumber = document.getElementById('ticketNumber')?.value || generateTicketNumber();
@@ -2205,10 +2370,17 @@ Please log in to QuickBase to review and update this item.`
         'whatsapp No.': document.getElementById('ticketWhatsappNo').value,
         'WhatsApp No.': document.getElementById('ticketWhatsappNo').value,
         'Whatsapp No.': document.getElementById('ticketWhatsappNo').value,
+        costCenter: document.getElementById('ticketCostCenter').value,
+        CostCenter: document.getElementById('ticketCostCenter').value,
+        'Cost Center': document.getElementById('ticketCostCenter').value,
         dueDate: document.getElementById('ticketDueDate').value,
         description: document.getElementById('ticketDesc').value,
         comments: document.getElementById('ticketComments').value,
         attachmentLink: document.getElementById('ticketAttachment').value,
+        createdBy: currentUser?.['Full Name'] || currentUser?.Email || '',
+        'Created By': currentUser?.['Full Name'] || currentUser?.Email || '',
+        createdByEmail: currentUser?.Email || '',
+        'Created By Email': currentUser?.Email || '',
         sheetTab: 'Tasks'
       };
       applyApprovalRules(payload);
@@ -2216,7 +2388,12 @@ Please log in to QuickBase to review and update this item.`
       Object.assign(payload, buildTaskEmailPayload('ticket', payload));
       if (!payload.title) return showMessage('Title required', 'error', 'ticketFormMessage');
       if (SEND_EMAIL_NOTIFICATIONS && !payload.emailTo) return showMessage('Assignee email is required for Gmail notification. Select an assignee with an email address.', 'error', 'ticketFormMessage');
-      await saveWithSyncAndNotify('createTicketBtn', 'ticketFormMessage', 'addTicket', payload, 'Ticket saved and synchronised.', { afterSuccess: () => setTimeout(() => renderDashboard(), 1000) });
+      await saveWithSyncAndNotify('createTicketBtn', 'ticketFormMessage', 'addTicket', payload, 'Ticket saved and synchronised.', {
+        afterSuccess: async () => {
+          await saveIssuedTaskToSentTickets(payload);
+          setTimeout(() => renderDashboard(), 1000);
+        }
+      });
     });
 
     document.getElementById('createAutoTaskBtn')?.addEventListener('click', async () => {
@@ -2239,6 +2416,9 @@ Please log in to QuickBase to review and update this item.`
         'whatsapp No.': document.getElementById('autoWhatsappNo').value,
         'WhatsApp No.': document.getElementById('autoWhatsappNo').value,
         'Whatsapp No.': document.getElementById('autoWhatsappNo').value,
+        costCenter: document.getElementById('autoCostCenter').value,
+        CostCenter: document.getElementById('autoCostCenter').value,
+        'Cost Center': document.getElementById('autoCostCenter').value,
         department: document.getElementById('autoDept').value,
         nextRun: document.getElementById('autoNextRun').value,
         status: document.getElementById('autoStatus').value,
@@ -2385,9 +2565,9 @@ Please log in to QuickBase to review and update this item.`
   }
 
   function namesListHtml(rows, getter = getAssigneeName, type = '') {
-    const names = [...new Set((rows || []).map(getter).filter(Boolean))];
-    const text = names.length ? names.map(escapeHtml).join(', ') : 'No names to show';
-    return type ? clickableSummaryNamesHtml(type, text.replace(/&amp;/g, '&')) : text;
+    const count = (rows || []).length;
+    const text = count ? 'Click to view details' : 'No tickets to show';
+    return type ? clickableSummaryNamesHtml(type, text) : escapeHtml(text);
   }
 
   function ticketPrioritySummaryText(rows) {
@@ -2763,16 +2943,16 @@ Please log in to QuickBase to review and update this item.`
       if (!dueDate || (dueMonthStart && dueMonthStart >= currentMonthStart)) {
         return { earned: 0, possible: 0, isClosed: false, isOpenLate: false, isClosedLate: false, responseDays, type, notYetScored: true };
       }
-      if (!executiveReview || !hasBothExecutiveAutomatedTaskReviews(item, item.__autoOccurrenceMonth)) {
+      const averageScorePercent = getAutomatedTaskAverageScorePercent(item, item.__autoOccurrenceMonth);
+      if (averageScorePercent === null) {
         return { earned: 0, possible: 0, isClosed: false, isOpenLate: true, isClosedLate: false, responseDays, type, waitingExecutiveReview: true };
       }
-      const autoEarned = reviewedOnTime ? 100 : (reviewedLateDone ? 50 : 0);
       return {
-        earned: autoEarned,
+        earned: averageScorePercent,
         possible: 100,
         isClosed: true,
         isOpenLate: false,
-        isClosedLate: reviewedLateDone || reviewedNotDone,
+        isClosedLate: averageScorePercent < 100,
         responseDays,
         type
       };
@@ -3011,14 +3191,89 @@ Please log in to QuickBase to review and update this item.`
 
   function performanceScoreSystemHtml(tickets, automatedTasks) {
     const canViewAllScores = hasScoreSummaryAccess();
-    let scores = calculatePerformanceScores(tickets, expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], false));
+    const expandedAuto = expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], false);
+    let scores = calculatePerformanceScores(tickets, expandedAuto);
     if (!canViewAllScores) scores = scores.filter(isScoreRowForCurrentUser);
+    let scoredTaskRows = expandedAuto.filter(hasPerformanceAssignee).filter(task => hasOtherTasksAccess() || isTaskAssignedToCurrentUser(task));
+    const scoreDetailsHtml = scoredTaskRows.length ? `<div class="table-wrapper"><table><thead><tr><th>Task</th><th>Assigned To</th><th>Department</th><th>Period</th><th>Frequency</th><th>Executive Scores</th><th>Average %</th><th>Status</th></tr></thead><tbody>${scoredTaskRows.map(task => {
+      const avg = getAutomatedTaskAverageScorePercent(task, task.__autoOccurrenceMonth);
+      return `<tr><td><strong>${escapeHtml(task['Task Name'] || task.taskName || task.Title || 'Automated task')}</strong></td><td>${escapeHtml(getAssigneeName(task) || '')}</td><td>${escapeHtml(getDepartment(task) || '')}</td><td>${escapeHtml(monthLabelFromKey(task.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(task))))}</td><td>${escapeHtml(task.Frequency || task.frequency || '')}</td><td>${automatedTaskScoreBreakdownHtml(task)}</td><td>${avg === null ? '<span style="font-size:12px;color:#64748b;font-weight:700">Waiting</span>' : `<span class="score-pill ${scoreClass(avg)}">${avg}%</span>`}</td><td>${escapeHtml(getAutomatedTaskDisplayStatus(task))}</td></tr>`;
+    }).join('')}</tbody></table></div>` : '<div style="padding:16px 24px;color:#64748b;font-size:13px">No automated task scoring details found.</div>';
     return `<div class="performance-score-card">
-      <div class="panel-header"><h2>🏆 Performance Scoring System</h2>${!canViewAllScores ? '<button class="btn-secondary" onclick="unlockScoreSummaryAccess()">View Everyone</button>' : ''}</div>
-      <p class="score-note">${canViewAllScores ? 'Score includes normal tickets and automated recurring tasks assigned to each person.' : 'Showing your score only. Enter password to view summary score for everyone.'} Response, priority handling, time taken to close, open-but-late and closed-but-late penalties are included in the final percentage.</p>
+      <div class="panel-header"><h2>🏆 Performance Scoring System</h2>${!canViewAllScores ? '<button class="btn-secondary" onclick="unlockScoreSummaryAccess()">View Everyone</button>' : '<button class="btn-secondary" onclick="showPerformanceReportBuilder()">Reports / PDF</button>'}</div>
+      <p class="score-note">${canViewAllScores ? 'Score includes normal tickets and automated recurring tasks assigned to each person.' : 'Showing your score only. Enter password to view summary score for everyone.'} Executive scoring updates this table directly. Each automated task shows both executive percentages and the final score is the average percentage for that period.</p>
       <div class="table-wrapper"><table><thead><tr><th>Person</th><th>Total Assigned</th><th>Tickets</th><th>Automated</th><th>Open</th><th>Closed</th><th>Open Late</th><th>Closed Late</th><th>Avg Response Days</th><th>Final Score</th></tr></thead><tbody>${scores.length ? scores.map(row => `<tr><td><strong>${escapeHtml(row.name)}</strong></td><td>${row.total}</td><td>${row.tickets}</td><td>${row.automated}</td><td>${row.open}</td><td>${row.closed}</td><td>${row.openLate}</td><td>${row.closedLate}</td><td>${row.avgResponse}</td><td><span class="score-pill ${scoreClass(row.finalScore)}">${row.finalScore}%</span></td></tr>`).join('') : '<tr><td colspan="10" style="text-align:center">No assigned tickets or automated tasks found</td></tr>'}</tbody></table></div>
+      <div class="panel-header"><h2>📋 Executive Scoring Details</h2></div>
+      ${scoreDetailsHtml}
     </div>${monthlyPerformanceSummaryHtml(tickets, automatedTasks)}`;
   }
+
+
+  window.showPerformanceReportBuilder = function() {
+    if (!hasScoreSummaryAccess()) return unlockScoreSummaryAccess();
+    const existing = document.getElementById('performanceReportPanel');
+    if (existing) { existing.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    const html = `<div id="performanceReportPanel" class="performance-score-card"><div class="panel-header"><h2>📄 Performance Reports</h2></div><div style="padding:20px"><div class="form-row"><div class="form-field"><label>Report Type</label><select id="performanceReportType"><option value="everyone">Everyone</option><option value="individual">Individual</option><option value="department">Department</option><option value="managers">All Managers</option></select></div><div class="form-field"><label>Filter Value</label><input id="performanceReportFilter" placeholder="Name or department. Leave blank for everyone/managers."></div></div><button class="btn-primary" onclick="downloadPerformanceReportPdf()">Download PDF</button><div id="performanceReportMessage" class="message-bar"></div></div></div>`;
+    const main = document.getElementById('mainContent');
+    const firstScore = main.querySelector('.performance-score-card');
+    if (firstScore) firstScore.insertAdjacentHTML('afterend', html); else main.insertAdjacentHTML('beforeend', html);
+    document.getElementById('performanceReportPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+
+  function buildPerformanceReportTrendSvg(rows, months) {
+    if (!rows.length || !months.length) return '<p>No monthly trend data found for the selected report.</p>';
+    const width = 900, height = 320, left = 55, right = 20, top = 25, bottom = 55;
+    const plotW = width - left - right;
+    const plotH = height - top - bottom;
+    const xFor = i => left + (months.length === 1 ? plotW / 2 : (i * plotW / (months.length - 1)));
+    const yFor = value => top + plotH - (Math.max(0, Math.min(100, value)) * plotH / 100);
+    const grid = [0,25,50,75,100].map(v => `<line x1="${left}" y1="${yFor(v)}" x2="${width-right}" y2="${yFor(v)}" stroke="#e2e8f0"/><text x="10" y="${yFor(v)+4}" font-size="11" fill="#475569">${v}%</text>`).join('');
+    const monthLabels = months.map((m, i) => `<text x="${xFor(i)}" y="${height-18}" text-anchor="middle" font-size="10" fill="#475569">${escapeHtml(monthLabelFromKey(m))}</text>`).join('');
+    const colors = ['#2563eb','#16a34a','#f59e0b','#dc2626','#7c3aed','#0f766e','#db2777','#334155'];
+    const lines = rows.slice(0, 8).map((row, rowIndex) => {
+      const points = months.map((monthKey, i) => {
+        const month = row.months[monthKey];
+        if (!month || !month.possible) return null;
+        return [xFor(i), yFor(Math.round((month.earned / month.possible) * 100))];
+      }).filter(Boolean);
+      if (!points.length) return '';
+      const color = colors[rowIndex % colors.length];
+      const circles = points.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${color}"/>`).join('');
+      return `<polyline points="${points.map(p => p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>${circles}<text x="${width-right-5}" y="${points[points.length-1][1]-5}" text-anchor="end" font-size="10" fill="${color}">${escapeHtml(row.name)}</text>`;
+    }).join('');
+    return `<svg width="100%" viewBox="0 0 ${width} ${height}" role="img" aria-label="Monthly performance trend"><rect width="${width}" height="${height}" fill="white"/>${grid}<line x1="${left}" y1="${top}" x2="${left}" y2="${height-bottom}" stroke="#94a3b8"/><line x1="${left}" y1="${height-bottom}" x2="${width-right}" y2="${height-bottom}" stroke="#94a3b8"/>${monthLabels}${lines}</svg>`;
+  }
+
+  window.downloadPerformanceReportPdf = async function() {
+    if (!hasScoreSummaryAccess()) return unlockScoreSummaryAccess();
+    try {
+      const type = document.getElementById('performanceReportType')?.value || 'everyone';
+      const filter = String(document.getElementById('performanceReportFilter')?.value || '').trim().toLowerCase();
+      const [ticketsRaw, automatedTasksRaw] = await Promise.all([safeGet('tickets'), safeGet('automatedTasks')]);
+      const tickets = Array.isArray(ticketsRaw) ? ticketsRaw : [];
+      const automatedTasks = Array.isArray(automatedTasksRaw) ? automatedTasksRaw : [];
+      const summary = calculateMonthlyPerformanceScores(tickets, automatedTasks);
+      let rows = summary.rows;
+      if (type === 'individual' && filter) rows = rows.filter(row => String(row.name || '').toLowerCase().includes(filter));
+      if (type === 'department' && filter) rows = rows.filter(row => String(row.department || '').toLowerCase().includes(filter));
+      if (type === 'managers') rows = rows.filter(row => String(row.name || '').toLowerCase().includes('manager') || String(row.department || '').toLowerCase().includes('manager'));
+      const months = summary.months;
+      const reportTitle = `Performance Report - ${type}${filter ? ' - ' + filter : ''}`;
+      const trendSvg = buildPerformanceReportTrendSvg(rows, months);
+      const tableRows = rows.map(row => `<tr><td>${escapeHtml(row.name)}</td><td>${escapeHtml(row.department || '')}</td>${months.map(monthKey => {
+        const month = row.months[monthKey];
+        if (!month || !month.possible) return '<td>Waiting</td>';
+        return `<td>${Math.round((month.earned / month.possible) * 100)}%</td>`;
+      }).join('')}<td>${row.overallScore}%</td></tr>`).join('') || `<tr><td colspan="${months.length + 3}">No report rows found</td></tr>`;
+      const win = window.open('', '_blank');
+      if (!win) return alert('Pop-up blocked. Please allow pop-ups to download the PDF report.');
+      win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(reportTitle)}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}h1{margin-bottom:4px}p{color:#475569}table{width:100%;border-collapse:collapse;margin-top:18px;font-size:12px}th,td{border:1px solid #cbd5e1;padding:8px;text-align:left}th{background:#f1f5f9}.score{font-weight:700}.print-note{font-size:11px;margin-top:12px}</style></head><body><h1>${escapeHtml(reportTitle)}</h1><p>Average percentage by period. Use Print / Save as PDF to download.</p><h2>Monthly % Trend</h2>${trendSvg}<table><thead><tr><th>Person</th><th>Department</th>${months.map(m => `<th>${escapeHtml(monthLabelFromKey(m))}</th>`).join('')}<th>Average %</th></tr></thead><tbody>${tableRows}</tbody></table><p class="print-note">Generated from OnpointBase Performance Scoring System.</p><script>window.onload=function(){setTimeout(function(){window.print();},300)};<\/script></body></html>`);
+      win.document.close();
+    } catch(e) {
+      alert(`Could not create report: ${e.message}`);
+    }
+  };
 
   async function renderUsers() { const route = SHEET_ROUTES.users; const data = await safeGet(route.action); renderDataEntryTable(route.displayTab, data, route.columns, route.saveAction, route.sheetTab); }
 
@@ -3372,7 +3627,12 @@ Please log in to QuickBase to review and update this item.`
         approvedBy: decidedBy,
         decision: normalizedDecision,
         approvalLevel: 'both',
-        status: normalizedDecision,
+        status: normalizedDecision === 'Approved' ? 'Sent to HR' : 'Rejected',
+        Status: normalizedDecision === 'Approved' ? 'Sent to HR' : 'Rejected',
+        hrTaskStatus: normalizedDecision === 'Approved' ? 'HR Notified' : 'Rejected',
+        'HR Task Status': normalizedDecision === 'Approved' ? 'HR Notified' : 'Rejected',
+        'Approval 1': normalizedDecision,
+        'Approval 2': normalizedDecision,
         sheetTab: 'Hiring Requests',
         notifyRequester: 'Yes',
         requesterEmail: requestRow['Requested By Email'] || '',
