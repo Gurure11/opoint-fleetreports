@@ -891,6 +891,9 @@
 
   const AUTO_TASK_EXECUTIVE_REVIEW_KEY = 'quickbase_auto_task_executive_reviews';
   const AUTO_TASK_EXECUTIVE_ALERT_SUPPRESS_KEY = 'quickbase_auto_task_executive_alert_suppressions';
+  const SCORE_SUMMARY_PASSWORD = 'Onpoint2026';
+  const SCORE_SUMMARY_ACCESS_KEY = 'quickbase_score_summary_access';
+  const OTHER_TASKS_ACCESS_KEY = 'quickbase_other_tasks_access';
 
   function getMonthKey(value) {
     const date = dateOnly(value);
@@ -1669,6 +1672,46 @@ Please log in to QuickBase to continue.`;
     return isSamePerson(currentName, assigneeName) || (currentEmail && currentEmail === assigneeEmail);
   }
 
+  function hasScoreSummaryAccess() {
+    return sessionStorage.getItem(SCORE_SUMMARY_ACCESS_KEY) === 'true';
+  }
+
+  function unlockScoreSummaryAccess() {
+    const password = prompt('Enter password to view summary score for everyone:');
+    if (password === null) return false;
+    if (password === SCORE_SUMMARY_PASSWORD) {
+      sessionStorage.setItem(SCORE_SUMMARY_ACCESS_KEY, 'true');
+      if (currentSection === 'dashboard') renderDashboard();
+      return true;
+    }
+    alert('Incorrect password. You can only view your own score.');
+    return false;
+  }
+
+  function hasOtherTasksAccess() {
+    return isExecutive() || sessionStorage.getItem(OTHER_TASKS_ACCESS_KEY) === 'true';
+  }
+
+  function unlockOtherTasksAccess() {
+    const password = prompt('Enter password to view other people\'s scores and tasks:');
+    if (password === null) return false;
+    if (password === SCORE_SUMMARY_PASSWORD) {
+      sessionStorage.setItem(OTHER_TASKS_ACCESS_KEY, 'true');
+      loadCurrentSection();
+      return true;
+    }
+    alert('Incorrect password. You can only view your own score and tasks.');
+    return false;
+  }
+
+  function filterRowsToCurrentUser(rows) {
+    return (rows || []).filter(row => hasPerformanceAssignee(row) && isTaskAssignedToCurrentUser(row));
+  }
+
+  function isScoreRowForCurrentUser(row) {
+    return isSamePerson(getCurrentUserName(), row?.name || '') || (String(currentUser?.Email || '').trim().toLowerCase() && String(row?.name || '').trim().toLowerCase() === String(currentUser?.Email || '').trim().toLowerCase());
+  }
+
   function renderRowsHtml(dataArray, columns) {
     return dataArray.length ? dataArray.map(row => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${columns.length}" style="text-align:center">No data found</td></tr>`;
   }
@@ -1896,27 +1939,39 @@ Please log in to QuickBase to continue.`;
     }
     const dueTasks = await getDueExecutiveScoringTasks();
     window.currentScoringBasketRows = dueTasks;
+    const tasksByDepartment = {};
+    dueTasks.forEach((task, index) => {
+      const department = getDepartment(task) || 'Unknown';
+      if (!tasksByDepartment[department]) tasksByDepartment[department] = [];
+      tasksByDepartment[department].push({ task, index });
+    });
+    const departmentTablesHtml = Object.keys(tasksByDepartment).sort().map(department => `
+      <div class="panel"><div class="panel-header"><h2>🧺 ${escapeHtml(department)} Automated Task Scoring</h2></div><div class="table-wrapper"><table><thead><tr><th>Task</th><th>Assigned To</th><th>Department</th><th>Due Date</th><th>Month</th><th>Status</th><th>Score</th></tr></thead><tbody>
+        ${tasksByDepartment[department].map(item => `
+          <tr>
+            <td><strong>${escapeHtml(item.task['Task Name'] || item.task.taskName || item.task.Title || 'Automated task')}</strong><br><span style="font-size:12px;color:#64748b">${renderExpandableTextHtml(item.task.Description || item.task.description || '', 100)}</span></td>
+            <td>${escapeHtml(getAssigneeName(item.task) || 'Assignee')}</td>
+            <td>${escapeHtml(getDepartment(item.task))}</td>
+            <td>${escapeHtml(getTaskDueDate(item.task) || '')}</td>
+            <td>${escapeHtml(monthLabelFromKey(item.task.__autoOccurrenceMonth))}</td>
+            <td>${escapeHtml(getAutomatedTaskDisplayStatus(item.task))}</td>
+            <td><button class="btn-primary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'On Time')">100%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Late Done')">50%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Not Done')">0%</button></td>
+          </tr>`).join('')}
+      </tbody></table></div></div>`).join('');
     const main = document.getElementById('mainContent');
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>Scoring Basket</h1><p>Completed or past-due automated tasks waiting for executive scoring</p></div><button class="refresh-btn" onclick="renderScoringBasket()">↻ Refresh</button></div>
-      <div class="panel"><div class="panel-header"><h2>🧺 Automated Task Scoring</h2></div><div class="table-wrapper"><table><thead><tr><th>Task</th><th>Assigned To</th><th>Department</th><th>Due Date</th><th>Month</th><th>Status</th><th>Score</th></tr></thead><tbody>
-        ${dueTasks.length ? dueTasks.map((task, index) => `
-          <tr>
-            <td><strong>${escapeHtml(task['Task Name'] || task.taskName || task.Title || 'Automated task')}</strong><br><span style="font-size:12px;color:#64748b">${renderExpandableTextHtml(task.Description || task.description || '', 100)}</span></td>
-            <td>${escapeHtml(getAssigneeName(task) || 'Assignee')}</td>
-            <td>${escapeHtml(getDepartment(task))}</td>
-            <td>${escapeHtml(getTaskDueDate(task) || '')}</td>
-            <td>${escapeHtml(monthLabelFromKey(task.__autoOccurrenceMonth))}</td>
-            <td>${escapeHtml(getAutomatedTaskDisplayStatus(task))}</td>
-            <td><button class="btn-primary" onclick="scoreAutomatedTaskFromBasket(${index}, 'On Time')">100%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${index}, 'Late Done')">50%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${index}, 'Not Done')">0%</button></td>
-          </tr>`).join('') : '<tr><td colspan="7" style="text-align:center">No scoring items waiting</td></tr>'}
-      </tbody></table></div></div>`;
+      ${dueTasks.length ? departmentTablesHtml : '<div class="panel"><div class="panel-header"><h2>🧺 Automated Task Scoring</h2></div><div style="padding:24px;text-align:center">No scoring items waiting</div></div>'}`;
     await updateScoringBasketBadge();
   }
 
   window.scoreAutomatedTaskFromBasket = async function(index, decision) {
     const task = (window.currentScoringBasketRows || [])[index];
     if (!task) return alert('Task not found. Refresh and try again.');
+    const label = decision === 'On Time' ? '100%' : (decision === 'Late Done' ? '50%' : '0%');
+    const taskName = task['Task Name'] || task.taskName || task.Title || 'Automated task';
+    const assignee = getAssigneeName(task) || 'Assignee';
+    if (!confirm(`Confirm score before updating.\n\nTask: ${taskName}\nAssigned to: ${assignee}\nScore: ${label} (${decision})\n\nIs this correct?`)) return;
     try {
       await saveAutomatedTaskExecutiveReview(task, decision, task.__autoOccurrenceMonth);
       suppressAutomatedTaskExecutiveAlert(task, task.__autoOccurrenceMonth);
@@ -1972,10 +2027,11 @@ Please log in to QuickBase to continue.`;
 
       const dashboardAutomatedTaskRows = expandAutomatedTaskMonthlyOccurrences((automatedTasks || []).filter(hasPerformanceAssignee), true);
       const dashboardTicketRows = [...ticketsArray, ...dashboardAutomatedTaskRows];
-      const ticketStats = calculateTicketStats(dashboardTicketRows);
-      const priorityCounts = groupCount(dashboardTicketRows, t => getPriority(t));
-      const deptTicketCount = groupCount(dashboardTicketRows, t => getDepartment(t));
-      const submittedByDept = groupCount(dashboardTicketRows, t => String(t['Requester Department'] || t['Submitted By Dept'] || t.Department || t.department || 'Unknown'));
+      const visibleDashboardTicketRows = hasOtherTasksAccess() ? dashboardTicketRows : filterRowsToCurrentUser(dashboardTicketRows);
+      const ticketStats = calculateTicketStats(visibleDashboardTicketRows);
+      const priorityCounts = groupCount(visibleDashboardTicketRows, t => getPriority(t));
+      const deptTicketCount = groupCount(visibleDashboardTicketRows, t => getDepartment(t));
+      const submittedByDept = groupCount(visibleDashboardTicketRows, t => String(t['Requester Department'] || t['Submitted By Dept'] || t.Department || t.department || 'Unknown'));
       const deptScores = {};
       bsc.forEach(b => {
         const dept = b['Related Department'] || b.Department || 'General';
@@ -1986,7 +2042,7 @@ Please log in to QuickBase to continue.`;
         <div class="top-bar">
           <div class="page-title">
             <h1>Operations Dashboard</h1>
-            <p>On Point Group · 📊 ${dashboardTicketRows.length} tickets loaded</p>
+            <p>On Point Group · 📊 ${visibleDashboardTicketRows.length} tickets loaded</p>
           </div>
           <div>${connectionStatusHtml} <span class="user-chip">👤 ${escapeHtml(currentUser?.['Full Name'] || 'User')} · ${escapeHtml(getUserRole(currentUser) || '')}<span class="rights-chip">${escapeHtml(currentUser?.['User Rights'] || 'standard')}</span></span> <button class="logout-btn" onclick="logout()">Logout</button></div>
         </div>
@@ -2000,7 +2056,7 @@ Please log in to QuickBase to continue.`;
 
         <div class="task-status-grid">
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter='closed-late';loadCurrentSection()" style="border-top:4px solid #f59e0b"><h3 style="color:#f59e0b">${ticketStats.closedLate.length}</h3><p>🟠 Closed But Late</p></div>
-          <div class="status-stat-card" onclick="currentSection='tickets';loadCurrentSection()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${dashboardTicketRows.length}</h3><p>🎫 Total Tickets</p></div>
+          <div class="status-stat-card" onclick="currentSection='tickets';loadCurrentSection()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${visibleDashboardTicketRows.length}</h3><p>🎫 Total Tickets</p></div>
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #0ea5e9"><h3 style="color:#0ea5e9">${Object.keys(priorityCounts).length}</h3><p>🏷️ Tickets by Priority</p></div>
           <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(deptTicketCount).length}</h3><p>🏢 Tickets by Department</p></div>
         </div>
@@ -2269,6 +2325,7 @@ Please log in to QuickBase to review and update this item.`
       return null;
     }
     const comments = prompt('Optional rating comment for the task assignee:', '') || '';
+    if (!confirm(`Confirm executive rating before updating.\n\nAssignee: ${assignee}\nScore: ${score}/5\n\nIs this correct?`)) return null;
     return {
       executiveAssigneeRating: String(score),
       'Executive Assignee Rating': String(score),
@@ -2377,7 +2434,7 @@ Please log in to QuickBase to review and update this item.`
     const [ticketsRaw, automatedTasksRaw] = await Promise.all([safeGet('tickets'), safeGet('automatedTasks')]);
     const tickets = Array.isArray(ticketsRaw) ? ticketsRaw : [];
     const automatedTasks = expandAutomatedTaskMonthlyOccurrences((Array.isArray(automatedTasksRaw) ? automatedTasksRaw : []).filter(hasPerformanceAssignee), true);
-    const allRows = [...tickets, ...automatedTasks];
+    const allRows = hasOtherTasksAccess() ? [...tickets, ...automatedTasks] : filterRowsToCurrentUser([...tickets, ...automatedTasks]);
     const stats = calculateTicketStats(allRows);
     let title = 'Summary Transactions';
     let rows = [];
@@ -2870,7 +2927,8 @@ Please log in to QuickBase to review and update this item.`
       if (!monthKey) return;
       const key = getPerformanceAssigneeKey(item);
       const name = getPerformanceAssigneeName(item);
-      if (!people[key]) people[key] = { name, months: {}, earned: 0, possible: 0 };
+      if (!people[key]) people[key] = { name, department: getDepartment(item) || 'Unknown', months: {}, earned: 0, possible: 0 };
+      if (!people[key].department || people[key].department === 'Unknown') people[key].department = getDepartment(item) || people[key].department || 'Unknown';
       if (!people[key].months[monthKey]) people[key].months[monthKey] = { tickets: 0, automated: 0, total: 0, earned: 0, possible: 0, waiting: 0 };
       const month = people[key].months[monthKey];
       month.total += 1;
@@ -2899,14 +2957,18 @@ Please log in to QuickBase to review and update this item.`
   function monthlyPerformanceSummaryHtml(tickets, automatedTasks) {
     const summary = calculateMonthlyPerformanceScores(tickets, automatedTasks);
     const months = summary.months;
-    const rows = summary.rows;
+    let rows = summary.rows;
+    const canViewAllScores = hasScoreSummaryAccess();
+    if (!canViewAllScores) rows = rows.filter(isScoreRowForCurrentUser);
     if (!months.length || !rows.length) {
       return `<div class="performance-score-card"><div class="panel-header"><h2>📅 Monthly Performance Summary</h2></div><p class="score-note">Monthly scores will show after tickets are scored and automated tasks have passed due date with executive review.</p></div>`;
     }
+    const departmentNames = [...new Set(rows.map(row => row.department || 'Unknown'))].sort();
+    const departmentChartHtml = departmentNames.map((department, index) => `<div class="chart-card" style="margin:0 24px 18px 24px"><h3>Monthly Performance Trend - ${escapeHtml(department)}</h3><p>Continuous monthly score trend for ${escapeHtml(department)}</p><canvas class="monthlyPerformanceDeptChart" id="monthlyPerformanceChart_${index}" data-department="${escapeHtml(department)}"></canvas></div>`).join('');
     return `<div class="performance-score-card">
-      <div class="panel-header"><h2>📅 Monthly Performance Summary</h2></div>
-      <p class="score-note">Monthly score by person. Monthly automated tasks repeat continuously from their first due month until paused. Executive scoring for recurring tasks: done early/on time = 100%, done late = 50%, not done = 0%. Future due months show as waiting.</p>
-      <div class="chart-card" style="margin:0 24px 18px 24px"><h3>Monthly Performance Trend</h3><p>Continuous monthly score trend per person</p><canvas id="monthlyPerformanceChart"></canvas></div>
+      <div class="panel-header"><h2>📅 Monthly Performance Summary</h2>${!canViewAllScores ? '<button class="btn-secondary" onclick="unlockScoreSummaryAccess()">View Everyone</button>' : ''}</div>
+      <p class="score-note">${canViewAllScores ? 'Monthly score by person.' : 'Showing your monthly score only. Enter password to view everyone.'} Monthly automated tasks repeat continuously from their first due month until paused. Executive scoring for recurring tasks: done early/on time = 100%, done late = 50%, not done = 0%. Future due months show as waiting.</p>
+      ${departmentChartHtml}
       <div class="table-wrapper"><table><thead><tr><th>Person</th>${months.map(m => `<th>${escapeHtml(monthLabelFromKey(m))}</th>`).join('')}<th>Overall</th></tr></thead><tbody>${rows.map(row => `<tr><td><strong>${escapeHtml(row.name)}</strong></td>${months.map(monthKey => {
         const month = row.months[monthKey];
         if (!month) return '<td>-</td>';
@@ -2919,32 +2981,41 @@ Please log in to QuickBase to review and update this item.`
 
   function renderMonthlyPerformanceChart(tickets, automatedTasks) {
     if (typeof Chart === 'undefined') return;
-    const canvas = document.getElementById('monthlyPerformanceChart');
-    if (!canvas) return;
+    const canvases = document.querySelectorAll('.monthlyPerformanceDeptChart');
+    if (!canvases.length) return;
     const summary = calculateMonthlyPerformanceScores(tickets, automatedTasks);
     const labels = summary.months.map(monthLabelFromKey);
-    const datasets = summary.rows.map(row => ({
-      label: row.name,
-      data: summary.months.map(monthKey => {
-        const month = row.months[monthKey];
-        return month && month.possible ? Math.round((month.earned / month.possible) * 100) : null;
-      }),
-      tension: 0.25,
-      spanGaps: true
-    }));
-    destroyChart('monthlyPerformance');
-    charts.monthlyPerformance = new Chart(canvas.getContext('2d'), {
-      type: 'line',
-      data: { labels, datasets },
-      options: { responsive: true, scales: { y: { min: 0, max: 100, ticks: { callback: value => `${value}%` } } } }
+    const chartRows = hasScoreSummaryAccess() ? summary.rows : summary.rows.filter(isScoreRowForCurrentUser);
+    Object.keys(charts).filter(name => name.startsWith('monthlyPerformanceDept_')).forEach(destroyChart);
+    canvases.forEach((canvas, index) => {
+      const department = canvas.dataset.department || 'Unknown';
+      const departmentRows = chartRows.filter(row => (row.department || 'Unknown') === department);
+      const datasets = departmentRows.map(row => ({
+        label: row.name,
+        data: summary.months.map(monthKey => {
+          const month = row.months[monthKey];
+          return month && month.possible ? Math.round((month.earned / month.possible) * 100) : null;
+        }),
+        tension: 0.25,
+        spanGaps: true
+      }));
+      const chartName = `monthlyPerformanceDept_${index}`;
+      destroyChart(chartName);
+      charts[chartName] = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets },
+        options: { responsive: true, scales: { y: { min: 0, max: 100, ticks: { callback: value => `${value}%` } } } }
+      });
     });
   }
 
   function performanceScoreSystemHtml(tickets, automatedTasks) {
-    const scores = calculatePerformanceScores(tickets, expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], false));
+    const canViewAllScores = hasScoreSummaryAccess();
+    let scores = calculatePerformanceScores(tickets, expandAutomatedTaskMonthlyOccurrences(automatedTasks || [], false));
+    if (!canViewAllScores) scores = scores.filter(isScoreRowForCurrentUser);
     return `<div class="performance-score-card">
-      <div class="panel-header"><h2>🏆 Performance Scoring System</h2></div>
-      <p class="score-note">Score includes normal tickets and automated recurring tasks assigned to each person. Response, priority handling, time taken to close, open-but-late and closed-but-late penalties are included in the final percentage.</p>
+      <div class="panel-header"><h2>🏆 Performance Scoring System</h2>${!canViewAllScores ? '<button class="btn-secondary" onclick="unlockScoreSummaryAccess()">View Everyone</button>' : ''}</div>
+      <p class="score-note">${canViewAllScores ? 'Score includes normal tickets and automated recurring tasks assigned to each person.' : 'Showing your score only. Enter password to view summary score for everyone.'} Response, priority handling, time taken to close, open-but-late and closed-but-late penalties are included in the final percentage.</p>
       <div class="table-wrapper"><table><thead><tr><th>Person</th><th>Total Assigned</th><th>Tickets</th><th>Automated</th><th>Open</th><th>Closed</th><th>Open Late</th><th>Closed Late</th><th>Avg Response Days</th><th>Final Score</th></tr></thead><tbody>${scores.length ? scores.map(row => `<tr><td><strong>${escapeHtml(row.name)}</strong></td><td>${row.total}</td><td>${row.tickets}</td><td>${row.automated}</td><td>${row.open}</td><td>${row.closed}</td><td>${row.openLate}</td><td>${row.closedLate}</td><td>${row.avgResponse}</td><td><span class="score-pill ${scoreClass(row.finalScore)}">${row.finalScore}%</span></td></tr>`).join('') : '<tr><td colspan="10" style="text-align:center">No assigned tickets or automated tasks found</td></tr>'}</tbody></table></div>
     </div>${monthlyPerformanceSummaryHtml(tickets, automatedTasks)}`;
   }
@@ -3185,11 +3256,13 @@ Please log in to QuickBase to review and update this item.`
     const automatedTasks = Array.isArray(automatedTasksRaw) ? automatedTasksRaw : [];
     const automatedTaskRows = expandAutomatedTaskMonthlyOccurrences(automatedTasks.filter(hasPerformanceAssignee), true);
     const allTicketRows = [...allTickets, ...automatedTaskRows];
-    const stats = calculateTicketStats(allTicketRows);
-    const priorityCounts = groupCount(allTicketRows, t => getPriority(t));
-    const departmentCounts = groupCount(allTicketRows, t => getDepartment(t));
+    const canViewAllTasks = hasOtherTasksAccess();
+    const visibleTicketRows = canViewAllTasks ? allTicketRows : filterRowsToCurrentUser(allTicketRows);
+    const stats = calculateTicketStats(visibleTicketRows);
+    const priorityCounts = groupCount(visibleTicketRows, t => getPriority(t));
+    const departmentCounts = groupCount(visibleTicketRows, t => getDepartment(t));
 
-    let data = allTicketRows;
+    let data = visibleTicketRows;
     if (window.taskFilter === 'open') data = stats.open;
     else if (window.taskFilter === 'closed') data = stats.closed;
     else if (window.taskFilter === 'overdue') data = stats.openLate;
@@ -3206,7 +3279,7 @@ Please log in to QuickBase to review and update this item.`
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>Tickets</h1><p>Sheet tab: Tasks · ${escapeHtml(activeFilterText)}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
       ${window.taskFilter ? ticketTablePanel : ''}
-      ${ticketSummaryWindowHtml(allTicketRows, stats)}
+      ${ticketSummaryWindowHtml(visibleTicketRows, stats)}
       <div class="task-status-grid">
         <div class="status-stat-card" onclick="window.taskFilter='open';renderTickets()" style="border-top:4px solid #3b82f6"><h3 style="color:#3b82f6">${stats.open.length}</h3><p>📋 Tickets Open</p></div>
         <div class="status-stat-card" onclick="window.taskFilter='closed';renderTickets()" style="border-top:4px solid #22c55e"><h3 style="color:#22c55e">${stats.closed.length}</h3><p>✅ Tickets Closed</p></div>
@@ -3215,7 +3288,7 @@ Please log in to QuickBase to review and update this item.`
       </div>
       <div class="task-status-grid">
         <div class="status-stat-card" onclick="window.taskFilter='closed-late';renderTickets()" style="border-top:4px solid #f59e0b"><h3 style="color:#f59e0b">${stats.closedLate.length}</h3><p>🟠 Closed But Late</p></div>
-        <div class="status-stat-card" onclick="window.taskFilter=null;renderTickets()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${allTicketRows.length}</h3><p>🎫 Total Tickets</p></div>
+        <div class="status-stat-card" onclick="window.taskFilter=null;renderTickets()" style="border-top:4px solid #8b5cf6"><h3 style="color:#8b5cf6">${visibleTicketRows.length}</h3><p>🎫 Total Tickets</p></div>
         <div class="status-stat-card" onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()" style="border-top:4px solid #0ea5e9"><h3 style="color:#0ea5e9">${Object.keys(priorityCounts).length}</h3><p>🏷️ Tickets by Priority</p></div>
         <div class="status-stat-card" style="border-top:4px solid #6366f1"><h3 style="color:#6366f1">${Object.keys(departmentCounts).length}</h3><p>🏢 Tickets by Department</p></div>
       </div>
