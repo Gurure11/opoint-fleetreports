@@ -912,6 +912,9 @@
                             <option value="D20Sub">D20 Sub</option>
                             
                         </select>
+                        <button type="button" class="add-btn" style="margin-top:8px;" onclick="addNewOption('vehicleReg')">
+                            <i class="fas fa-plus"></i> Add Reg Number
+                        </button>
                     </div>
                     <div class="field">
                         <label><i class="fas fa-hashtag"></i>ER No.</label>
@@ -1104,6 +1107,21 @@
                         <i class="fas fa-envelope"></i> EMAIL
                     </button>
                 </div>
+                <input type="hidden" id="selectedTransactionRow" value="">
+                <div class="cost-section" style="margin-top:1rem;">
+                    <div class="section-title"><i class="fas fa-pen-to-square"></i> EDIT / DELETE SELECTED TRANSACTION</div>
+                    <div class="inline-cost">
+                        <div class="field">
+                            <label>Google Sheet row number</label>
+                            <input type="number" id="transactionRowNumber" min="2" step="1" placeholder="Enter row number to edit/delete">
+                        </div>
+                        <button type="button" class="add-btn" id="loadTransactionBtn"><i class="fas fa-search"></i> Load For Edit</button>
+                        <button type="button" class="add-btn" id="deleteTransactionBtn" style="background:#dc3545;"><i class="fas fa-trash"></i> Delete Selected</button>
+                    </div>
+                    <div style="margin-top:0.8rem; color:#4a6f8a; font-weight:600; font-size:0.9rem;">
+                        After loading a row, change the fields above and press SUBMIT to update that selected row.
+                    </div>
+                </div>
                 <div id="submitResponse" class="response-message"></div>
             </form>
         </div>
@@ -1167,8 +1185,104 @@
             const receiptDriveFolderId = '19GoN9yzz0ODP_F-4ffba_olb3cD0b0f4';
             let receiptFileData = null;
             let uploadedReceiptLink = '';
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbxKsIOSzqgKUAQjIKmbBD-t8LS5B6YfuZE13LlfABeMRZcgHYySVx8-AqewSeDXyFQ4/exec';
+            const fuelSheetId = '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ';
+            const fuelSheetTab = 'Fuel Log';
+            const persistentSelectIds = ['driverName', 'vehicleReg'];
             
             let tollEntries = [];
+
+            function normalizeOptionValue(value) {
+                return (value || '').trim();
+            }
+
+            function getSavedOptionsKey(selectId) {
+                return 'onpoint_saved_options_' + selectId;
+            }
+
+            function optionExists(select, value) {
+                const normalized = normalizeOptionValue(value).toLowerCase();
+                return Array.from(select.options).some(option => normalizeOptionValue(option.value).toLowerCase() === normalized);
+            }
+
+            function addOptionIfMissing(selectId, value, save = false) {
+                const select = document.getElementById(selectId);
+                const cleanValue = normalizeOptionValue(value);
+                if (!select || !cleanValue) return;
+
+                if (!optionExists(select, cleanValue)) {
+                    const option = document.createElement('option');
+                    option.value = cleanValue;
+                    option.text = cleanValue;
+                    select.appendChild(option);
+                }
+
+                if (save && persistentSelectIds.includes(selectId)) {
+                    const key = getSavedOptionsKey(selectId);
+                    const saved = JSON.parse(localStorage.getItem(key) || '[]');
+                    if (!saved.some(item => item.toLowerCase() === cleanValue.toLowerCase())) {
+                        saved.push(cleanValue);
+                        localStorage.setItem(key, JSON.stringify(saved));
+                    }
+                }
+            }
+
+            function loadSavedOptions() {
+                persistentSelectIds.forEach(selectId => {
+                    const saved = JSON.parse(localStorage.getItem(getSavedOptionsKey(selectId)) || '[]');
+                    saved.forEach(value => addOptionIfMissing(selectId, value, false));
+                });
+            }
+
+            window.addNewOption = function(selectId) {
+                const select = document.getElementById(selectId);
+                const newValue = prompt(selectId === 'vehicleReg' ? 'Enter new registration number:' : 'Enter new name if not listed:');
+                const cleanValue = normalizeOptionValue(newValue);
+                if (!select || !cleanValue) return;
+                addOptionIfMissing(selectId, cleanValue, true);
+                select.value = cleanValue;
+                if (selectId === 'vehicleReg') fetchLastOdoFromSheet(cleanValue);
+            };
+
+            async function fetchSheetJson(params) {
+                const url = scriptURL + '?' + new URLSearchParams(params).toString();
+                const response = await fetch(url, { method: 'GET' });
+                if (!response.ok) throw new Error('Google Sheet request failed');
+                return response.json();
+            }
+
+            async function fetchLastOdoFromSheet(vehicle) {
+                const cleanVehicle = normalizeOptionValue(vehicle || document.getElementById('vehicleReg')?.value);
+                if (!cleanVehicle || !odoStart) return;
+
+                showMessage('<i class="fas fa-spinner fa-pulse"></i> Checking last Final Odo reading...', 'info');
+                try {
+                    const data = await fetchSheetJson({
+                        action: 'getLastOdo',
+                        sheetId: fuelSheetId,
+                        tab: fuelSheetTab,
+                        vehicle: cleanVehicle,
+                        finalOdoColumn: 'Final Odo reading'
+                    });
+
+                    const lastOdo = data.lastOdo || data.odoFinish || data.finalOdo || data.value;
+                    if (lastOdo !== undefined && lastOdo !== null && lastOdo !== '') {
+                        odoStart.value = lastOdo;
+                        localStorage.setItem(getOdoMemoryKey(), lastOdo);
+                        updateTotals();
+                        showMessage('✅ Odo start auto-filled from last Final Odo reading.', 'success');
+                    } else {
+                        loadRememberedOdoStart();
+                        showMessage('No previous Final Odo reading found for this reg number.', 'info');
+                    }
+                } catch (error) {
+                    console.error('Last Odo lookup error:', error);
+                    loadRememberedOdoStart();
+                    showMessage('Could not read last Odo from Google Sheet. Local saved value used where available.', 'error');
+                }
+            }
+
+            loadSavedOptions();
 
             function getOdoMemoryKey() {
                 const vehicle = document.getElementById('vehicleReg')?.value || '';
@@ -1267,7 +1381,8 @@
             const vehicleRegInput = document.getElementById('vehicleReg');
             if (vehicleRegInput) {
                 vehicleRegInput.addEventListener('change', function() {
-                    if (!odoStart.value) loadRememberedOdoStart();
+                    if (this.value) fetchLastOdoFromSheet(this.value);
+                    else loadRememberedOdoStart();
                 });
             }
             loadRememberedOdoStart();
@@ -1461,7 +1576,12 @@
                     lubricationStr += (lubricationStr ? ' | ' : '') + lubeNotes;
                 }
                 
+                const selectedRow = document.getElementById('selectedTransactionRow').value || document.getElementById('transactionRowNumber').value || '';
                 const payload = {
+                    action: selectedRow ? 'updateTransaction' : 'addTransaction',
+                    rowNumber: selectedRow,
+                    sheetId: fuelSheetId,
+                    tab: fuelSheetTab,
                     timestamp: new Date().toISOString(),
                     date: date,
                     driver: driver,
@@ -1489,10 +1609,7 @@
                     photoLink: uploadedReceiptLink
                 };
                 
-                // Use your actual Apps Script URL here
-                const scriptURL = 'https://script.google.com/macros/s/AKfycbyw_t8UqEa7dGWD3yQLuNzhXqRaDJcZWiD73pFpS3lAwugajoaj3IBeMW0UkQHjaMfN/exec';
-                
-                showMessage('<i class="fas fa-spinner fa-pulse"></i> Submitting' + (receiptFileData ? ' and uploading receipt...' : '...'), 'info');
+                showMessage('<i class="fas fa-spinner fa-pulse"></i> ' + (payload.action === 'updateTransaction' ? 'Updating selected transaction' : 'Submitting') + (receiptFileData ? ' and uploading receipt...' : '...'), 'info');
                 
                 try {
                     const response = await fetch(scriptURL, {
@@ -1502,10 +1619,13 @@
                         body: JSON.stringify(payload)
                     });
                     
-                    showMessage('✅ Successfully logged to Google Sheets' + (receiptFileData ? ' with receipt upload!' : '!'), 'success');
+                    rememberOdoFinish();
+                    showMessage(payload.action === 'updateTransaction' ? '✅ Selected transaction updated in Google Sheets!' : '✅ Successfully logged to Google Sheets' + (receiptFileData ? ' with receipt upload!' : '!'), 'success');
                     
                     // Reset form but keep date
                     document.getElementById('fuelForm').reset();
+                    document.getElementById('selectedTransactionRow').value = '';
+                    document.getElementById('transactionRowNumber').value = '';
                     document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
                     if (odoStart) odoStart.value = localStorage.getItem(getOdoMemoryKey()) || '';
                     
@@ -1529,6 +1649,84 @@
                 } catch (error) {
                     console.error('Submission error:', error);
                     showMessage('❌ Submission failed. Please check connection.', 'error');
+                }
+            });
+
+
+            function fillIfExists(id, value) {
+                const el = document.getElementById(id);
+                if (!el || value === undefined || value === null) return;
+                if (el.tagName === 'SELECT') addOptionIfMissing(id, value, true);
+                el.value = value;
+            }
+
+            function clearTollRows() {
+                tollContainer.innerHTML = '';
+                tollEntries = [];
+            }
+
+            function loadTransactionIntoForm(row) {
+                fillIfExists('driverName', row.driver);
+                fillIfExists('logDate', row.date);
+                fillIfExists('vehicleReg', row.vehicle || row.regNumber);
+                fillIfExists('erNumber', row.erNumber);
+                fillIfExists('merchant', row.merchant);
+                fillIfExists('odoStart', row.odoStart);
+                fillIfExists('odoFinish', row.odoFinish || row.finalOdo);
+                fillIfExists('fuelType', row.fuelType);
+                fillIfExists('pricePerLiter', row.pricePerLiter);
+                fillIfExists('fuelLiters', row.fuelLiters);
+                fillIfExists('lubeCost', row.lubeCost);
+                fillIfExists('costCenter', row.costCenter);
+                fillIfExists('department', row.department);
+                fillIfExists('lubeNotes', row.notes);
+                clearTollRows();
+                if (Array.isArray(row.tollEntries)) {
+                    row.tollEntries.forEach(toll => addTollRow({ name: toll.name || '', cost: toll.cost || 0 }));
+                }
+                updateTotals();
+            }
+
+            document.getElementById('loadTransactionBtn').addEventListener('click', async function() {
+                const rowNumber = document.getElementById('transactionRowNumber').value;
+                if (!rowNumber) {
+                    showMessage('Enter the Google Sheet row number first.', 'error');
+                    return;
+                }
+                showMessage('<i class="fas fa-spinner fa-pulse"></i> Loading selected transaction...', 'info');
+                try {
+                    const data = await fetchSheetJson({ action: 'getTransaction', sheetId: fuelSheetId, tab: fuelSheetTab, rowNumber: rowNumber });
+                    const row = data.row || data.transaction || data;
+                    loadTransactionIntoForm(row);
+                    document.getElementById('selectedTransactionRow').value = rowNumber;
+                    showMessage('✅ Transaction loaded. Edit fields and press SUBMIT to update.', 'success');
+                } catch (error) {
+                    console.error('Load transaction error:', error);
+                    showMessage('Could not load selected transaction from Google Sheet.', 'error');
+                }
+            });
+
+            document.getElementById('deleteTransactionBtn').addEventListener('click', async function() {
+                const rowNumber = document.getElementById('selectedTransactionRow').value || document.getElementById('transactionRowNumber').value;
+                if (!rowNumber) {
+                    showMessage('Enter or load a Google Sheet row number first.', 'error');
+                    return;
+                }
+                if (!confirm('Delete this selected transaction from Google Sheets?')) return;
+                showMessage('<i class="fas fa-spinner fa-pulse"></i> Deleting selected transaction...', 'info');
+                try {
+                    await fetch(scriptURL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'deleteTransaction', sheetId: fuelSheetId, tab: fuelSheetTab, rowNumber: rowNumber })
+                    });
+                    document.getElementById('selectedTransactionRow').value = '';
+                    document.getElementById('transactionRowNumber').value = '';
+                    showMessage('✅ Selected transaction delete request sent to Google Sheets.', 'success');
+                } catch (error) {
+                    console.error('Delete transaction error:', error);
+                    showMessage('Could not delete selected transaction from Google Sheet.', 'error');
                 }
             });
 
@@ -1617,18 +1815,7 @@
     </script>
 
 <script>
-function addNewOption(selectId) {
-    const select = document.getElementById(selectId);
-    const newValue = prompt("Enter new name if not listed:");
-    
-    if (newValue && newValue.trim() !== "") {
-        const option = document.createElement("option");
-        option.value = newValue.trim();
-        option.text = newValue.trim();
-        select.appendChild(option);
-        select.value = newValue.trim();
-    }
-}
+// addNewOption is defined in the main script so new Driver and Reg Number entries persist in this browser.
 </script>
 
 </body>
