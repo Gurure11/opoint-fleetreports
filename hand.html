@@ -357,6 +357,36 @@
             transform:translateY(-1px);
         }
 
+
+        .edit-option-btn{
+            margin-top:8px;
+            background:#f8fafc;
+            color:#667eea;
+            border:2px solid #667eea;
+            padding:10px 14px;
+            border-radius:10px;
+            font-size:13px;
+            font-weight:600;
+            cursor:pointer;
+            transition:0.3s;
+            width:100%;
+        }
+
+        .edit-option-btn:hover{
+            background:#f0f4ff;
+            transform:translateY(-1px);
+        }
+
+        .saved-option-image{
+            display:none;
+            margin-top:8px;
+            font-size:12px;
+            color:#555;
+            background:#f8fafc;
+            border-radius:8px;
+            padding:8px;
+        }
+
 </style>
 </head>
 <body>
@@ -444,6 +474,11 @@
                         <button type="button" class="add-option-btn" onclick="addNewOption('employeeName', 'Enter new employee name and surname:')">
                             ➕ Add New Name
                         </button>
+                        <button type="button" class="edit-option-btn" onclick="editSelectedOption('employeeName', 'Edit employee name and surname:')">
+                            ✏️ Edit Selected Name
+                        </button>
+                        <input type="file" id="employeeNameOptionImage" accept="image/*" style="display:none;">
+                        <div id="employeeNameOptionImageInfo" class="saved-option-image"></div>
                     </div>
                     <div class="form-group">
                         <label>Employee Number *</label>
@@ -567,6 +602,11 @@
                         <button type="button" class="add-option-btn" onclick="addNewOption('vehicleReg', 'Enter new vehicle registration:')">
                             ➕ Add Vehicle Registration
                         </button>
+                        <button type="button" class="edit-option-btn" onclick="editSelectedOption('vehicleReg', 'Edit vehicle registration:')">
+                            ✏️ Edit Selected Vehicle Registration
+                        </button>
+                        <input type="file" id="vehicleRegOptionImage" accept="image/*" style="display:none;">
+                        <div id="vehicleRegOptionImageInfo" class="saved-option-image"></div>
                     </div>
                     <div class="form-group">
                         <label>Vehicle Model</label>
@@ -752,7 +792,7 @@
     <script>
         // Configuration
         const CONFIG = {
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbxfbfFdl1mD5DSL-UBZIwmWj0lKmdlMGSk_0aTGM52GPfUBZDuSqrW4XYzNg45yi8IXrw/exec',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbzSsjG_Mb6RiDlRMrdQEkO9YOg5ap6uijvVjUmOBPwTiKabNIAThPtELbZkelfUwYSRIg/exec',
             SHEET_ID: '1vBDeyPBy3LLYg0EM2OFgceI3deVFhXL2Nr-IpdveZoU',
             DRIVE_FOLDER_ID: '13BuqOSAdUlfZJIm36A_R3mbF4HwHCfZY',
             SHEET_NAME: 'Vehicle Handovers',
@@ -768,6 +808,9 @@
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             document.getElementById('handoverTime').value = `${hours}:${minutes}`;
+            loadSavedOptions();
+            document.getElementById('employeeName').addEventListener('change', () => showSavedOptionImage('employeeName'));
+            document.getElementById('vehicleReg').addEventListener('change', () => showSavedOptionImage('vehicleReg'));
         });
 
         // Photo upload preview
@@ -914,33 +957,189 @@
         }
 
 
-        function addNewOption(selectId, message) {
+        const OPTION_STORAGE_KEYS = {
+            employeeName: 'vehicleHandover_employeeName_options',
+            vehicleReg: 'vehicleHandover_vehicleReg_options'
+        };
+
+        const OPTION_TYPES = {
+            employeeName: 'employeeName',
+            vehicleReg: 'vehicleReg'
+        };
+
+        function getStoredOptions(selectId) {
+            try {
+                return JSON.parse(localStorage.getItem(OPTION_STORAGE_KEYS[selectId]) || '[]');
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function saveStoredOptions(selectId, options) {
+            localStorage.setItem(OPTION_STORAGE_KEYS[selectId], JSON.stringify(options));
+        }
+
+        function normaliseOptionValue(selectId, value) {
+            return selectId === 'vehicleReg' ? value.trim().toUpperCase() : value.trim();
+        }
+
+        function addOptionToSelect(selectId, value, imageUrl) {
+            const select = document.getElementById(selectId);
+            const cleanValue = normaliseOptionValue(selectId, value);
+            if (!cleanValue) return;
+
+            const existing = Array.from(select.options).find(
+                option => option.value.toUpperCase() === cleanValue.toUpperCase()
+            );
+
+            if (existing) {
+                if (imageUrl) existing.dataset.imageUrl = imageUrl;
+                return;
+            }
+
+            const option = document.createElement('option');
+            option.value = cleanValue;
+            option.text = cleanValue;
+            if (imageUrl) option.dataset.imageUrl = imageUrl;
+            select.appendChild(option);
+        }
+
+        async function saveOptionPermanently(selectId, value, oldValue, imageFile) {
+            const cleanValue = normaliseOptionValue(selectId, value);
+            let imageData = null;
+
+            if (imageFile) {
+                imageData = await fileToBase64(imageFile);
+            }
+
+            const storedOptions = getStoredOptions(selectId).filter(
+                item => item.value.toUpperCase() !== cleanValue.toUpperCase() &&
+                        (!oldValue || item.value.toUpperCase() !== oldValue.toUpperCase())
+            );
+
+            const existingImageUrl = document.querySelector(`#${selectId} option[value="${CSS.escape(cleanValue)}"]`)?.dataset.imageUrl || '';
+            storedOptions.push({ value: cleanValue, imageUrl: existingImageUrl });
+            saveStoredOptions(selectId, storedOptions);
+
+            try {
+                await fetch(CONFIG.GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'saveOption',
+                        sheetId: CONFIG.SHEET_ID,
+                        driveFolderId: CONFIG.DRIVE_FOLDER_ID,
+                        optionType: OPTION_TYPES[selectId],
+                        value: cleanValue,
+                        oldValue: oldValue || '',
+                        image: imageData
+                    })
+                });
+            } catch (error) {
+                console.warn('Saved locally, but server save failed:', error);
+            }
+        }
+
+        async function loadSavedOptions() {
+            ['employeeName', 'vehicleReg'].forEach(selectId => {
+                getStoredOptions(selectId).forEach(item => addOptionToSelect(selectId, item.value, item.imageUrl));
+            });
+
+            try {
+                const response = await fetch(`${CONFIG.GAS_URL}?action=getOptions&sheetId=${encodeURIComponent(CONFIG.SHEET_ID)}`);
+                const data = await response.json();
+                if (!data || !data.success) return;
+
+                ['employeeName', 'vehicleReg'].forEach(selectId => {
+                    const serverOptions = data.options?.[selectId] || [];
+                    const localOptions = getStoredOptions(selectId);
+                    const merged = [...localOptions];
+
+                    serverOptions.forEach(item => {
+                        addOptionToSelect(selectId, item.value, item.imageUrl);
+                        if (!merged.some(local => local.value.toUpperCase() === item.value.toUpperCase())) {
+                            merged.push(item);
+                        }
+                    });
+
+                    saveStoredOptions(selectId, merged);
+                });
+            } catch (error) {
+                console.warn('Could not load saved options from server. Local saved options still loaded.', error);
+            }
+        }
+
+        async function addNewOption(selectId, message) {
             const select = document.getElementById(selectId);
             const newValue = prompt(message);
 
             if (newValue && newValue.trim() !== '') {
-                const cleanValue = selectId === 'vehicleReg'
-                    ? newValue.trim().toUpperCase()
-                    : newValue.trim();
-
-                const exists = Array.from(select.options).some(
-                    option => option.value.toUpperCase() === cleanValue.toUpperCase()
-                );
-
-                if (!exists) {
-                    const option = document.createElement('option');
-                    option.value = cleanValue;
-                    option.text = cleanValue;
-                    select.appendChild(option);
-                }
-
+                const cleanValue = normaliseOptionValue(selectId, newValue);
+                addOptionToSelect(selectId, cleanValue, '');
                 select.value = cleanValue;
+                await saveOptionPermanently(selectId, cleanValue, '', null);
+                alert('Saved permanently to the list.');
             }
         }
 
+        async function editSelectedOption(selectId, message) {
+            const select = document.getElementById(selectId);
+            const selectedOption = select.options[select.selectedIndex];
+            const oldValue = select.value;
+
+            if (!oldValue) {
+                alert('Please select an entry to edit first.');
+                return;
+            }
+
+            const newValue = prompt(message, oldValue);
+            if (!newValue || !newValue.trim()) return;
+
+            const cleanValue = normaliseOptionValue(selectId, newValue);
+            const imageInput = document.getElementById(`${selectId}OptionImage`);
+            const wantsImage = confirm('Do you want to upload/replace an image for this entry?');
+
+            let imageFile = null;
+            if (wantsImage) {
+                imageFile = await chooseOptionImage(imageInput);
+            }
+
+            selectedOption.value = cleanValue;
+            selectedOption.text = cleanValue;
+            select.value = cleanValue;
+
+            await saveOptionPermanently(selectId, cleanValue, oldValue, imageFile);
+            showSavedOptionImage(selectId);
+            alert('Entry updated and saved.');
+        }
+
+        function chooseOptionImage(input) {
+            return new Promise(resolve => {
+                input.value = '';
+                input.onchange = () => resolve(input.files[0] || null);
+                input.click();
+            });
+        }
+
+        function showSavedOptionImage(selectId) {
+            const select = document.getElementById(selectId);
+            const selectedOption = select.options[select.selectedIndex];
+            const info = document.getElementById(`${selectId}OptionImageInfo`);
+
+            if (selectedOption?.dataset.imageUrl) {
+                info.innerHTML = `Saved image: <a href="${selectedOption.dataset.imageUrl}" target="_blank">Open image</a>`;
+                info.style.display = 'block';
+            } else {
+                info.innerHTML = '';
+                info.style.display = 'none';
+            }
+        }
 
         // Make function globally available
         window.submitForm = submitForm;
+        window.addNewOption = addNewOption;
+        window.editSelectedOption = editSelectedOption;
     </script>
 </body>
 </html>
