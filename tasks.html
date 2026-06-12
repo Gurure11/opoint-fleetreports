@@ -2843,6 +2843,288 @@ Please log in to QuickBase to continue.`;
     return proofLinksHtmlFromRows(rows);
   }
 
+
+  function taskCommentText(row) {
+    return String(row?.['Task Response'] || row?.taskResponse || row?.['Assignee Comment'] || row?.assigneeComment || row?.Comments || row?.comments || row?.['Last Response'] || '').trim();
+  }
+
+
+  const MANUAL_BASKET_OVERRIDE_KEY = 'quickbase_manual_basket_overrides_v1';
+
+  function getManualBasketOverrides() {
+    try { return JSON.parse(localStorage.getItem(MANUAL_BASKET_OVERRIDE_KEY) || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function saveManualBasketOverrides(overrides) {
+    localStorage.setItem(MANUAL_BASKET_OVERRIDE_KEY, JSON.stringify(overrides || {}));
+  }
+
+  function manualBasketKey(row) {
+    return getTicketIdentity(row) || getAutomatedTaskIdentity(row) || row?.['Task ID'] || row?.taskId || '';
+  }
+
+  function normalizeManualBasketName(value) {
+    const text = String(value || '').trim().toLowerCase();
+    if (text.includes('further')) return 'Further Review Basket';
+    if (text.includes('review')) return 'Review Basket';
+    if (text.includes('scor')) return 'Scoring Basket';
+    if (text.includes('open')) return 'Open';
+    return String(value || '').trim() || 'Review Basket';
+  }
+
+  function getManualBasketOverride(row) {
+    const key = manualBasketKey(row);
+    if (!key) return null;
+    const override = getManualBasketOverrides()[key];
+    if (!override) return null;
+    if (typeof override === 'string') return { basket: normalizeManualBasketName(override) };
+    return Object.assign({}, override, { basket: normalizeManualBasketName(override.basket || override.status || 'Review Basket') });
+  }
+
+  function applyManualBasketOverride(row) {
+    const override = getManualBasketOverride(row);
+    if (!override || !row) return row;
+    const basket = normalizeManualBasketName(override.basket);
+    row.manualBasketOverride = basket;
+    row['Manual Basket Override'] = basket;
+    row.status = basket;
+    row.Status = basket;
+    if (basket.toLowerCase().includes('review')) {
+      row.reviewBasket = 'Yes';
+      row['Review Basket'] = 'Yes';
+      row.reviewStatus = basket === 'Further Review Basket' ? 'Further Review Required' : 'Awaiting Executive 1 Review';
+      row['Review Status'] = row.reviewStatus;
+    }
+    return row;
+  }
+
+  function applyManualBasketOverrides(rows) {
+    (rows || []).forEach(applyManualBasketOverride);
+    return rows || [];
+  }
+
+  function basketMovePayload(row, basket) {
+    const id = manualBasketKey(row);
+    const normalizedBasket = normalizeManualBasketName(basket);
+    return Object.assign({}, row, {
+      ticketId: id,
+      ticketNumber: id,
+      taskId: id,
+      'Ticket ID': row?.['Ticket ID'] || id,
+      'Ticket Number': row?.['Ticket Number'] || id,
+      'Task ID': row?.['Task ID'] || id,
+      status: normalizedBasket,
+      Status: normalizedBasket,
+      reviewBasket: normalizedBasket.toLowerCase().includes('review') ? 'Yes' : '',
+      'Review Basket': normalizedBasket.toLowerCase().includes('review') ? 'Yes' : '',
+      reviewStatus: normalizedBasket === 'Further Review Basket' ? 'Further Review Required' : (normalizedBasket === 'Review Basket' ? 'Awaiting Executive 1 Review' : ''),
+      'Review Status': normalizedBasket === 'Further Review Basket' ? 'Further Review Required' : (normalizedBasket === 'Review Basket' ? 'Awaiting Executive 1 Review' : ''),
+      manualBasketOverride: normalizedBasket,
+      'Manual Basket Override': normalizedBasket,
+      manualBasketOverrideBy: currentUser?.['Full Name'] || currentUser?.Email || '',
+      'Manual Basket Override By': currentUser?.['Full Name'] || currentUser?.Email || '',
+      manualBasketOverrideDate: new Date().toISOString(),
+      'Manual Basket Override Date': new Date().toISOString(),
+      sheetTab: 'Tasks'
+    });
+  }
+
+  async function persistBasketMove(row, basket) {
+    const id = manualBasketKey(row);
+    if (!id) return false;
+    const normalizedBasket = normalizeManualBasketName(basket);
+    const overrides = getManualBasketOverrides();
+    overrides[id] = {
+      basket: normalizedBasket,
+      by: currentUser?.['Full Name'] || currentUser?.Email || '',
+      date: new Date().toISOString()
+    };
+    saveManualBasketOverrides(overrides);
+    const payload = basketMovePayload(row, normalizedBasket);
+    Object.assign(row, payload);
+    try { await apiPost('updateTicketStatus', payload); }
+    catch(e) { console.warn('Manual basket move saved locally only:', id, e.message); }
+    return true;
+  }
+
+  function isCriticalBasketRow(row) {
+    return !isClosedTicket(row) && !execDashIsReviewRow(row) && String(getPriority(row)).toLowerCase() === 'critical';
+  }
+
+  function isOpenButLateBasketRow(row) {
+    if (!row || isClosedTicket(row) || execDashIsReviewRow(row)) return false;
+    const due = dateOnly(getTaskDueDate(row) || getDueDate(row));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return !!due && due < today;
+  }
+
+  window.toggleTicketBulkSelectionByPredicate = function(predicateName) {
+    const rows = window.currentTicketRows || [];
+    const checkboxes = Array.from(document.querySelectorAll('.ticket-bulk-select'));
+    const predicate = predicateName === 'critical' ? isCriticalBasketRow : (predicateName === 'openLate' ? isOpenButLateBasketRow : () => true);
+    checkboxes.forEach(cb => {
+      const index = Number(cb.dataset.index);
+      const row = rows[index];
+      cb.checked = !!row && predicate(row);
+    });
+  };
+
+  window.moveSelectedTicketsToBasket = async function(targetBasket) {
+    if (!isExecutive()) return alert('Only executives can move items between baskets.');
+    const basket = normalizeManualBasketName(targetBasket || document.getElementById('bulkBasketTarget')?.value || 'Review Basket');
+    const rows = window.currentTicketRows || [];
+    const selected = Array.from(document.querySelectorAll('.ticket-bulk-select:checked')).map(cb => rows[Number(cb.dataset.index)]).filter(Boolean);
+    if (!selected.length) return alert('No tickets selected.');
+    if (!confirm(`Move ${selected.length} selected item(s) to ${basket}? This manual move is permanent and will override automatic basket display.`)) return;
+    for (const row of selected) await persistBasketMove(row, basket);
+    alert(`${selected.length} item(s) moved to ${basket}.`);
+    if (currentSection === 'tickets') await renderTickets();
+    else if (currentSection === 'scoringBasket') await renderScoringBasket();
+    else await loadCurrentSection();
+  };
+
+  window.moveVisibleTicketsToBasketByFilter = async function(filterName, targetBasket) {
+    if (!isExecutive()) return alert('Only executives can move items between baskets.');
+    const rows = window.currentTicketRows || [];
+    const predicate = filterName === 'critical' ? isCriticalBasketRow : (filterName === 'openLate' ? isOpenButLateBasketRow : () => false);
+    const selected = rows.filter(predicate);
+    if (!selected.length) return alert('No matching tickets found in the current view.');
+    const basket = normalizeManualBasketName(targetBasket || document.getElementById('bulkBasketTarget')?.value || 'Review Basket');
+    if (!confirm(`Move all ${selected.length} matching item(s) in the current view to ${basket}? This manual move is permanent.`)) return;
+    for (const row of selected) await persistBasketMove(row, basket);
+    alert(`${selected.length} item(s) moved to ${basket}.`);
+    if (currentSection === 'tickets') await renderTickets();
+    else if (currentSection === 'scoringBasket') await renderScoringBasket();
+    else await loadCurrentSection();
+  };
+
+  function bulkBasketControlsHtml() {
+    if (!isExecutive()) return '';
+    return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px 0;padding:12px 16px;background:#f8fafc;border:1px solid #dbe3ec;border-radius:14px">
+      <strong style="color:#334155">Bulk move:</strong>
+      <button class="btn-secondary" type="button" onclick="toggleTicketBulkSelectionByPredicate('critical')">Select all Critical in view</button>
+      <button class="btn-secondary" type="button" onclick="toggleTicketBulkSelectionByPredicate('openLate')">Select all Open But Late in view</button>
+      <select id="bulkBasketTarget" style="min-height:36px"><option value="Review Basket">Review Basket</option><option value="Further Review Basket">Further Review Basket</option><option value="Scoring Basket">Scoring Basket</option><option value="Open">Open</option></select>
+      <button class="btn-primary" type="button" onclick="moveSelectedTicketsToBasket()">Move selected permanently</button>
+      <button class="btn-secondary" type="button" onclick="moveVisibleTicketsToBasketByFilter('critical')">Move all Critical in view</button>
+      <button class="btn-secondary" type="button" onclick="moveVisibleTicketsToBasketByFilter('openLate')">Move all Open But Late in view</button>
+    </div>`;
+  }
+
+  function taskHasUploadOrCommentOrUpdate(task, taskUpdates = []) {
+    const relatedUpdates = (taskUpdates || []).filter(update => isTaskUpdateForScoringTask(update, task));
+    const rows = relatedUpdates.length ? relatedUpdates : [task];
+    return relatedUpdates.length > 0 || rows.some(row => taskCommentText(row)) || rows.some(row => getProofLinksFromRow(row).length);
+  }
+
+  function taskHasUploadAndComment(task, taskUpdates = []) {
+    return taskHasUploadOrCommentOrUpdate(task, taskUpdates);
+  }
+
+  function isOpenLateTicketWithUploadsAndComments(task, taskUpdates = []) {
+    if (!task || isClosedTicket(task) || execDashIsReviewRow(task)) return false;
+    const status = String(task.Status || task.status || '').toLowerCase();
+    if (!(status.includes('open') || status.includes('in progress') || status.includes('pending') || !status)) return false;
+    const due = dateOnly(getTaskDueDate(task) || getDueDate(task));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return !!due && due < today && taskHasUploadOrCommentOrUpdate(task, taskUpdates);
+  }
+
+  async function moveTicketsToReviewBasketSilently(ticketRows, taskUpdates = []) {
+    const targets = (ticketRows || []).filter(row => {
+      if (isAutomatedTaskRow(row) || isClosedTicket(row) || getManualBasketOverride(row) || execDashIsReviewRow(row)) return false;
+      const criticalActive = String(getPriority(row)).toLowerCase() === 'critical';
+      return criticalActive || isOpenLateTicketWithUploadsAndComments(row, taskUpdates);
+    });
+    if (!targets.length) return [];
+    const moved = [];
+    for (const task of targets) {
+      const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
+      if (!id) continue;
+      const payload = Object.assign({}, task, {
+        ticketId: id,
+        ticketNumber: id,
+        taskId: id,
+        'Ticket ID': id,
+        'Ticket Number': id,
+        'Task ID': id,
+        status: 'Review Basket',
+        Status: 'Review Basket',
+        reviewBasket: 'Yes',
+        'Review Basket': 'Yes',
+        reviewStatus: 'Awaiting Executive 1 Review',
+        'Review Status': 'Awaiting Executive 1 Review',
+        reviewRoute: 'Executive 1 then Executive 2',
+        'Review Route': 'Executive 1 then Executive 2',
+        sheetTab: 'Tasks'
+      });
+      Object.assign(task, payload);
+      moved.push(task);
+      try {
+        await apiPost('updateTicketStatus', payload);
+      } catch(e) {
+        console.warn('Silent Review Basket move failed:', id, e.message);
+      }
+    }
+    return moved;
+  }
+
+  function isExecutiveReviewRouteTask(task) {
+    const route = String(task?.reviewRoute || task?.['Review Route'] || '').toLowerCase();
+    const status = String(task?.Status || task?.status || '').toLowerCase();
+    return isTaskIssuedByExecutive(task) || route.includes('executive 1') || route.includes('executive 2') || status.includes('waiting executive 2');
+  }
+
+  function scoringTaskTitle(task) {
+    return getCellValue(task, 'Title') || task?.['Task Name'] || task?.taskName || task?.Title || 'Task';
+  }
+
+  function scoringSummaryCardsHtml(tasks) {
+    const openReview = tasks.filter(t => !executiveIssuedTaskWaitingExecutive2(t)).length;
+    const waitingExec2 = tasks.filter(executiveIssuedTaskWaitingExecutive2).length;
+    const lateCount = tasks.filter(t => {
+      const due = dateOnly(getTaskDueDate(t) || getDueDate(t));
+      const today = new Date(); today.setHours(0,0,0,0);
+      return due && due < today;
+    }).length;
+    return `<div class="ticket-summary-window"><h3>Scoring Snapshot</h3><div class="ticket-summary-grid">
+      <div class="ticket-summary-item" onclick="document.getElementById('scoringDetailsPanel')?.scrollIntoView({behavior:'smooth'})"><div class="ticket-summary-number">${tasks.length}</div><div class="ticket-summary-label">Total waiting</div><div class="ticket-summary-names">Click any item below to view detail.</div></div>
+      <div class="ticket-summary-item"><div class="ticket-summary-number">${openReview}</div><div class="ticket-summary-label">Executive 1 review</div><div class="ticket-summary-names">Review Basket first action.</div></div>
+      <div class="ticket-summary-item"><div class="ticket-summary-number">${waitingExec2}</div><div class="ticket-summary-label">Executive 2 scoring</div><div class="ticket-summary-names">Executive 1 score already captured.</div></div>
+      <div class="ticket-summary-item"><div class="ticket-summary-number">${lateCount}</div><div class="ticket-summary-label">Open but late</div><div class="ticket-summary-names">Includes uploads and comments where available.</div></div>
+    </div></div>`;
+  }
+
+  function scoringChartsHtml(tasks) {
+    if (!tasks.length) return '';
+    return `<div class="chart-grid"><div class="chart-card"><h3>Scoring by Stage</h3><p>Click a segment to focus the list</p><canvas id="scoringStageChart"></canvas></div><div class="chart-card"><h3>Scoring by Person</h3><p>Open items grouped by assignee</p><canvas id="scoringPersonChart"></canvas></div></div>`;
+  }
+
+  function renderScoringCharts(tasks) {
+    if (typeof Chart === 'undefined' || !tasks.length) return;
+    const stageCounts = { 'Executive 1 review': tasks.filter(t => !executiveIssuedTaskWaitingExecutive2(t)).length, 'Executive 2 scoring': tasks.filter(executiveIssuedTaskWaitingExecutive2).length };
+    const peopleCounts = groupCount(tasks, t => getAssigneeName(t) || 'Unassigned');
+    const sCtx = document.getElementById('scoringStageChart')?.getContext('2d');
+    if (sCtx) { destroyChart('scoringStage'); charts.scoringStage = new Chart(sCtx, { type:'doughnut', data:{ labels:Object.keys(stageCounts), datasets:[{ data:Object.values(stageCounts) }] }, options:{ responsive:true, onClick: chartClickHandler('scoringStage') } }); }
+    const pCtx = document.getElementById('scoringPersonChart')?.getContext('2d');
+    if (pCtx) { destroyChart('scoringPerson'); charts.scoringPerson = new Chart(pCtx, { type:'bar', data:{ labels:Object.keys(peopleCounts), datasets:[{ label:'Items', data:Object.values(peopleCounts) }] }, options:{ responsive:true, onClick: chartClickHandler('scoringPerson') } }); }
+  }
+
+  window.openScoringTaskDetail = function(index) {
+    const task = (window.currentScoringBasketRows || [])[index];
+    if (!task) return;
+    alert(`Task: ${scoringTaskTitle(task)}\nTicket: ${getTicketIdentity(task) || getAutomatedTaskIdentity(task)}\nAssigned to: ${getAssigneeName(task)}\nDepartment: ${getDepartment(task)}\nDue: ${getTaskDueDate(task) || getDueDate(task)}\nStatus: ${task.Status || task.status || ''}\n\nComment: ${taskCommentText(task) || 'No comment on task row'}\n\nDescription:\n${getCellValue(task, 'Task Description') || task.Description || ''}`);
+  };
+
+  window.scoreTicketFromScoringBasket = async function(index) {
+    const task = (window.currentScoringBasketRows || [])[index];
+    if (!task) return alert('Task not found. Refresh and try again.');
+    window.currentTicketRows = [task];
+    await closeTicketFromTable(0);
+    await renderScoringBasket();
+  };
+
   function scoringExecutiveCommentHtml(index) {
     return `<textarea id="scoringComment_${index}" rows="2" placeholder="Executive comment..." style="min-width:180px"></textarea>`;
   }
@@ -2858,7 +3140,11 @@ Please log in to QuickBase to continue.`;
         </div>`;
       return;
     }
-    const [dueTasks, taskUpdates] = await Promise.all([getDueExecutiveScoringTasks(), getTaskUpdatesForScoring()]);
+    const [autoDueTasks, taskUpdates, ticketRowsRaw] = await Promise.all([getDueExecutiveScoringTasks(), getTaskUpdatesForScoring(), safeGet('tickets')]);
+    const ticketRows = applyManualBasketOverrides(Array.isArray(ticketRowsRaw) ? ticketRowsRaw.filter(hasPerformanceAssignee) : []);
+    await moveTicketsToReviewBasketSilently(ticketRows, taskUpdates);
+    const ticketDueTasks = ticketRows.filter(row => !isClosedTicket(row) && execDashIsReviewRow(row) && isExecutiveReviewRouteTask(row) && canCurrentUserCloseTask(row));
+    const dueTasks = [...ticketDueTasks, ...autoDueTasks];
     window.currentScoringBasketRows = dueTasks;
     window.currentScoringTaskUpdateRows = taskUpdates;
     const tasksByDepartment = {};
@@ -2868,10 +3154,11 @@ Please log in to QuickBase to continue.`;
       tasksByDepartment[department].push({ task, index });
     });
     const departmentTablesHtml = Object.keys(tasksByDepartment).sort().map(department => `
-      <div class="panel"><div class="panel-header"><h2>🧺 ${escapeHtml(department)} Automated Task Scoring</h2></div><div class="table-wrapper"><table><thead><tr><th>Task</th><th>Assigned To</th><th>Department</th><th>Due Date</th><th>Month</th><th>Status</th><th>Uploaded Content</th><th>Executive Scores</th><th>Average %</th><th>Executive Comment</th><th>Score</th></tr></thead><tbody>
+      <div class="panel"><div class="panel-header"><h2>🧺 ${escapeHtml(department)} Automated Task Scoring</h2></div><div style="padding:0 16px 12px 16px">${bulkBasketControlsHtml()}</div><div class="table-wrapper"><table><thead><tr><th>Select</th><th>Task</th><th>Assigned To</th><th>Department</th><th>Due Date</th><th>Month</th><th>Status</th><th>Uploaded Content</th><th>Executive Scores</th><th>Average %</th><th>Executive Comment</th><th>Score</th></tr></thead><tbody>
         ${tasksByDepartment[department].map(item => `
           <tr>
-            <td><strong>${escapeHtml(item.task['Task Name'] || item.task.taskName || item.task.Title || 'Automated task')}</strong><br><span style="font-size:12px;color:#64748b">${renderExpandableTextHtml(item.task.Description || item.task.description || '', 100)}</span></td>
+            <td><input type="checkbox" class="ticket-bulk-select" data-index="${item.index}"></td>
+            <td onclick="openScoringTaskDetail(${item.index})" style="cursor:pointer"><strong>${escapeHtml(scoringTaskTitle(item.task))}</strong><br><span style="font-size:12px;color:#64748b">${renderExpandableTextHtml(item.task.Description || item.task.description || getCellValue(item.task, 'Task Description') || '', 100)}</span></td>
             <td>${escapeHtml(getAssigneeName(item.task) || 'Assignee')}</td>
             <td>${escapeHtml(getDepartment(item.task))}</td>
             <td>${escapeHtml(getTaskDueDate(item.task) || '')}</td>
@@ -2881,13 +3168,14 @@ Please log in to QuickBase to continue.`;
             <td>${automatedTaskScoreBreakdownHtml(item.task)}</td>
             <td>${getAutomatedTaskAverageScorePercent(item.task, item.task.__autoOccurrenceMonth) === null ? '<span style="font-size:12px;color:#64748b;font-weight:700">Waiting</span>' : `<span class="score-pill ${scoreClass(getAutomatedTaskAverageScorePercent(item.task, item.task.__autoOccurrenceMonth))}">${getAutomatedTaskAverageScorePercent(item.task, item.task.__autoOccurrenceMonth)}%</span>`}</td>
             <td>${scoringExecutiveCommentHtml(item.index)}</td>
-            <td><button class="btn-primary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'On Time')">Done and ontime 100%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Late Done')">Done but late 50%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Not Done')">Not done 0%</button></td>
+            <td>${isAutomatedTaskRow(item.task) ? `<button class="btn-primary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'On Time')">Done and ontime 100%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Late Done')">Done but late 50%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Not Done')">Not done 0%</button>` : `<button class="btn-primary" onclick="scoreTicketFromScoringBasket(${item.index})">Open / Score</button>`}</td>
           </tr>`).join('')}
       </tbody></table></div></div>`).join('');
     const main = document.getElementById('mainContent');
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>Scoring Basket</h1><p>Completed or past-due automated tasks waiting for executive scoring</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
-      ${dueTasks.length ? departmentTablesHtml : '<div class="panel"><div class="panel-header"><h2>🧺 Automated Task Scoring</h2></div><div style="padding:24px;text-align:center">No scoring items waiting</div></div>'}`;
+      ${dueTasks.length ? `${scoringSummaryCardsHtml(dueTasks)}${scoringChartsHtml(dueTasks)}${departmentTablesHtml}` : '<div class="panel"><div class="panel-header"><h2>🧺 Automated Task Scoring</h2></div><div style="padding:24px;text-align:center">No scoring items waiting</div></div>'}`;
+    renderScoringCharts(dueTasks);
     await updateScoringBasketBadge();
   }
 
@@ -3028,8 +3316,10 @@ Please log in to QuickBase and action it urgently.`
 
   function execDashIsReviewRow(row) {
     if (!row || isClosedTicket(row)) return false;
+    const override = getManualBasketOverride(row);
+    if (override && String(override.basket || '').toLowerCase().includes('review')) return true;
     const status = String(row.Status || row.status || '').toLowerCase();
-    return status.includes('review basket') || status.includes('completed') || status.includes('awaiting review') || status.includes('score') || status.includes('sign-off') || status.includes('sign off') || String(row['Review Basket'] || row.reviewBasket || '').toLowerCase() === 'yes';
+    return status.includes('review basket') || status.includes('further review') || status.includes('completed') || status.includes('awaiting review') || status.includes('score') || status.includes('sign-off') || status.includes('sign off') || String(row['Review Basket'] || row.reviewBasket || '').toLowerCase() === 'yes';
   }
 
   function execDashTicketLine(row, rightText = '') {
@@ -3087,12 +3377,14 @@ Please log in to QuickBase and action it urgently.`
       await refreshScoreApprovalsCache();
       const dashboardResults = await Promise.all([
         dashboardFetch('tickets'), dashboardFetch('departments'), dashboardFetch('bscMetrics'),
-        dashboardFetch('kpis'), dashboardFetch('sla'), dashboardFetch('employees'), dashboardFetch('automatedTasks')
+        dashboardFetch('kpis'), dashboardFetch('sla'), dashboardFetch('employees'), dashboardFetch('automatedTasks'), dashboardFetch('taskUpdates')
       ]);
-      const [ticketsResult, departmentsResult, bscMetricsResult, kpisResult, slaResult, employeesResult, automatedTasksResult] = dashboardResults;
-      const ticketsArray = Array.isArray(ticketsResult.data) ? ticketsResult.data : [];
+      const [ticketsResult, departmentsResult, bscMetricsResult, kpisResult, slaResult, employeesResult, automatedTasksResult, taskUpdatesResult] = dashboardResults;
+      const ticketsArray = applyManualBasketOverrides(Array.isArray(ticketsResult.data) ? ticketsResult.data : []);
       const automatedTasks = Array.isArray(automatedTasksResult.data) ? automatedTasksResult.data : [];
+      const dashboardTaskUpdates = Array.isArray(taskUpdatesResult.data) ? taskUpdatesResult.data : [];
       await escalateCriticalTimeLapseTasks(ticketsArray);
+      await moveTicketsToReviewBasketSilently(ticketsArray, dashboardTaskUpdates);
 
       const dashboardAutomatedTaskRows = expandAutomatedTaskMonthlyOccurrences((automatedTasks || []).filter(hasPerformanceAssignee), true);
       const dashboardTicketRows = [...ticketsArray, ...dashboardAutomatedTaskRows];
@@ -3105,7 +3397,7 @@ Please log in to QuickBase and action it urgently.`
       const dueScoringCount = isExecutive() ? (await getDueExecutiveScoringTasks()).length : 0;
       const reviewRows = visibleDashboardTicketRows.filter(execDashIsReviewRow);
       const activeRows = activeDashboardRows;
-      const criticalRows = activeRows.filter(r => String(getPriority(r)).toLowerCase() === 'critical');
+      const criticalRows = activeRows.filter(r => !execDashIsReviewRow(r) && String(getPriority(r)).toLowerCase() === 'critical');
       const openLateRows = ticketStats.openLate || [];
       const waitingActionCount = reviewRows.length + waitingApprovalRows.length;
       const maxDeptOpen = Math.max(1, ...Object.values(deptTicketCount).map(Number));
@@ -3200,8 +3492,8 @@ Please log in to QuickBase and action it urgently.`
         </div>`;
 
       wireDashboardForms();
-      execDashRenderCharts(ticketStats, priorityCounts, visibleDashboardTicketRows);
-      renderMonthlyPerformanceChart(ticketsArray, automatedTasks.filter(hasPerformanceAssignee));
+      try { execDashRenderCharts(ticketStats, priorityCounts, visibleDashboardTicketRows); } catch(chartErr) { console.warn('Dashboard charts skipped:', chartErr); }
+      try { renderMonthlyPerformanceChart(ticketsArray, automatedTasks.filter(hasPerformanceAssignee)); } catch(scoreErr) { console.warn('Performance scorecard charts skipped:', scoreErr); }
     } catch (err) {
       main.innerHTML = `<div class="panel" style="padding:40px;text-align:center;color:#ef4444"><h2>⚠️ Error Loading Dashboard</h2><p>${escapeHtml(err.message)}</p><button class="refresh-btn" onclick="loadCurrentSection()">Try Again</button></div>`;
     }
@@ -3722,7 +4014,7 @@ Is this correct?`)) return null;
   }
 
   function canCurrentUserCloseTask(task) {
-    if (isTaskIssuedByExecutive(task)) {
+    if (isExecutiveReviewRouteTask(task)) {
       if (!isExecutive()) return false;
       if (executiveIssuedTaskWaitingExecutive2(task)) return !currentUserAlreadyExecutive1Scored(task);
       return true;
@@ -3732,7 +4024,7 @@ Is this correct?`)) return null;
   }
 
   function ticketCloseWaitingText(task) {
-    if (isTaskIssuedByExecutive(task)) {
+    if (isExecutiveReviewRouteTask(task)) {
       if (executiveIssuedTaskWaitingExecutive2(task)) return currentUserAlreadyExecutive1Scored(task) ? 'Waiting Executive 2 scoring' : 'Executive 2 scoring required';
       return 'Executive 1 scoring required';
     }
@@ -4239,7 +4531,7 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
     const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
     if (!id) return alert('Ticket/Task ID is missing. Please refresh and try again.');
 
-    if (isTaskIssuedByExecutive(task)) {
+    if (isExecutiveReviewRouteTask(task)) {
       if (!executiveIssuedTaskWaitingExecutive2(task)) {
         const firstRatingPayload = promptExecutiveTicketRating(task);
         if (firstRatingPayload === null) return;
@@ -4439,7 +4731,7 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
     today.setHours(0, 0, 0, 0);
     const getStatsDueDate = t => getTaskDueDate(t) || getDueDate(t);
     const isLateOpen = t => {
-      if (isClosedTicket(t)) return false;
+      if (isClosedTicket(t) || execDashIsReviewRow(t)) return false;
       const due = new Date(getStatsDueDate(t));
       if (isNaN(due)) return false;
       due.setHours(0, 0, 0, 0);
@@ -5272,9 +5564,11 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
   };
 
   async function renderTickets() {
-    const [allTicketsRaw, automatedTasksRaw] = await Promise.all([safeGet('tickets'), safeGet('automatedTasks')]);
-    const allTickets = Array.isArray(allTicketsRaw) ? allTicketsRaw : [];
+    const [allTicketsRaw, automatedTasksRaw, taskUpdatesRaw] = await Promise.all([safeGet('tickets'), safeGet('automatedTasks'), getTaskUpdatesForScoring()]);
+    const allTickets = applyManualBasketOverrides(Array.isArray(allTicketsRaw) ? allTicketsRaw : []);
+    const taskUpdates = Array.isArray(taskUpdatesRaw) ? taskUpdatesRaw : [];
     await escalateCriticalTimeLapseTasks(allTickets);
+    await moveTicketsToReviewBasketSilently(allTickets, taskUpdates);
     const automatedTasks = Array.isArray(automatedTasksRaw) ? automatedTasksRaw : [];
     const automatedTaskRows = expandAutomatedTaskMonthlyOccurrences(automatedTasks.filter(hasPerformanceAssignee), true);
     const allTicketRows = [...allTickets, ...automatedTaskRows];
@@ -5298,7 +5592,7 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
     else if (window.taskFilter === 'review') data = visibleTicketRows.filter(execDashIsReviewRow);
     else if (window.taskFilter === 'more-time') data = visibleTicketRows.filter(row => String(row.Status || row.status || '').toLowerCase().includes('more time'));
     else if (window.taskFilter === 'open-on-time') data = stats.open.filter(row => !stats.openLate.some(late => (getTicketIdentity(late) || getAutomatedTaskIdentity(late)) === (getTicketIdentity(row) || getAutomatedTaskIdentity(row))));
-    if (window.ticketPriorityFilter) data = data.filter(row => !isClosedTicket(row) && String(getPriority(row)).toLowerCase() === String(window.ticketPriorityFilter).toLowerCase());
+    if (window.ticketPriorityFilter) data = data.filter(row => !isClosedTicket(row) && !execDashIsReviewRow(row) && String(getPriority(row)).toLowerCase() === String(window.ticketPriorityFilter).toLowerCase());
     if (window.ticketDepartmentFilter) data = data.filter(row => getDepartment(row) === window.ticketDepartmentFilter);
     if (window.ticketAgeFilter) {
       const now = new Date(); now.setHours(0,0,0,0);
@@ -5320,7 +5614,7 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
     const main = document.getElementById('mainContent');
     const chartFilterText = window.ticketPriorityFilter ? `Priority: ${window.ticketPriorityFilter}` : (window.ticketDepartmentFilter ? `Department: ${window.ticketDepartmentFilter}` : (window.ticketAgeFilter ? `Ageing: ${window.ticketAgeFilter}` : ''));
     const activeFilterText = window.taskFilter ? `Filtered: ${window.taskFilter.replace(/-/g, ' ')}` : (chartFilterText || 'All tickets');
-    const ticketTablePanel = `<div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
+    const ticketTablePanel = `<div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div style="padding:0 16px 12px 16px">${bulkBasketControlsHtml()}</div><div class="table-wrapper"><table><thead><tr>${isExecutive() ? '<th>Select</th>' : ''}${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${isExecutive() ? `<td><input type="checkbox" class="ticket-bulk-select" data-index="${index}"></td>` : ''}${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1 + (isExecutive() ? 1 : 0)}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
 
     main.innerHTML = `
       <div class="top-bar"><div class="page-title"><h1>Tickets</h1><p>Sheet tab: Tasks · ${escapeHtml(activeFilterText)}</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
@@ -5660,8 +5954,10 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
     const isTaskTable = String(sheetTabName || '').toLowerCase().includes('task') || String(title || '').toLowerCase().includes('ticket');
     window.currentTicketRows = isTaskTable ? dataArray : (window.currentTicketRows || []);
     const actionHeader = isTaskTable ? '<th>Action</th>' : '';
+    const selectHeader = isTaskTable && isExecutive() ? '<th>Select</th>' : '';
     const actionCells = (row, index) => isTaskTable ? `<td>${ticketActionHtml(row, index)}</td>` : '';
-    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div><div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}${actionHeader}</tr></thead><tbody>${dataArray.length ? dataArray.map((row, index) => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}${actionCells(row, index)}</tr>`).join('') : `<tr><td colspan="${columns.length + (isTaskTable ? 1 : 0)}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
+    const selectCell = (row, index) => isTaskTable && isExecutive() ? `<td><input type="checkbox" class="ticket-bulk-select" data-index="${index}"></td>` : '';
+    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div><div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div>${isTaskTable ? `<div style="padding:0 16px 12px 16px">${bulkBasketControlsHtml()}</div>` : ''}<div class="table-wrapper"><table><thead><tr>${selectHeader}${columns.map(c => `<th>${c}</th>`).join('')}${actionHeader}</tr></thead><tbody>${dataArray.length ? dataArray.map((row, index) => `<tr>${selectCell(row, index)}${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}${actionCells(row, index)}</tr>`).join('') : `<tr><td colspan="${columns.length + (isTaskTable ? 1 : 0) + (isTaskTable && isExecutive() ? 1 : 0)}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
   }
 
   
