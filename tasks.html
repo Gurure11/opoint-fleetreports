@@ -3098,12 +3098,13 @@ Please log in to QuickBase and action it urgently.`
       const dashboardTicketRows = [...ticketsArray, ...dashboardAutomatedTaskRows];
       const visibleDashboardTicketRows = (isExecutive() || hasOtherTasksAccess()) ? dashboardTicketRows : (isManager() ? dashboardTicketRows.filter(canCurrentUserViewPerformanceRow) : filterRowsToCurrentUser(dashboardTicketRows));
       const ticketStats = calculateTicketStats(visibleDashboardTicketRows);
-      const priorityCounts = groupCount(visibleDashboardTicketRows, t => getPriority(t));
-      const deptTicketCount = groupCount(visibleDashboardTicketRows, t => getDepartment(t));
+      const activeDashboardRows = visibleDashboardTicketRows.filter(r => !isClosedTicket(r));
+      const priorityCounts = groupCount(activeDashboardRows, t => getPriority(t));
+      const deptTicketCount = groupCount(activeDashboardRows, t => getDepartment(t));
       const waitingApprovalRows = await getDashboardMoreTimeApprovalRows();
       const dueScoringCount = isExecutive() ? (await getDueExecutiveScoringTasks()).length : 0;
       const reviewRows = visibleDashboardTicketRows.filter(execDashIsReviewRow);
-      const activeRows = visibleDashboardTicketRows.filter(r => !isClosedTicket(r));
+      const activeRows = activeDashboardRows;
       const criticalRows = activeRows.filter(r => String(getPriority(r)).toLowerCase() === 'critical');
       const openLateRows = ticketStats.openLate || [];
       const waitingActionCount = reviewRows.length + waitingApprovalRows.length;
@@ -3504,17 +3505,33 @@ Please log in to QuickBase to review and update this item.`
     localStorage.setItem(TICKET_PRIORITY_STATUS_OVERRIDE_KEY, JSON.stringify(overrides || {}));
   }
 
+  function getTicketPriorityStatusOverrideKeys(task) {
+    const keys = [];
+    const directId = String(getTicketIdentity(task) || getAutomatedTaskIdentity(task) || '').trim();
+    if (directId && directId !== '-') keys.push(directId);
+    const title = String(task?.Title || task?.['Task Name'] || task?.Name || '').trim().toLowerCase();
+    const assignee = String(getAssigneeName(task) || '').trim().toLowerCase();
+    const due = String(getTaskDueDate(task) || getDueDate(task) || '').trim().toLowerCase();
+    const dept = String(getDepartment(task) || '').trim().toLowerCase();
+    const fallbackKey = [title, assignee, due, dept].filter(Boolean).join('__');
+    if (fallbackKey) keys.push(`fallback__${fallbackKey}`);
+    return [...new Set(keys)];
+  }
+
   function getTicketPriorityStatusOverride(task) {
-    const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
-    if (!id) return null;
-    return getTicketPriorityStatusOverrides()[id] || null;
+    const overrides = getTicketPriorityStatusOverrides();
+    const keys = getTicketPriorityStatusOverrideKeys(task);
+    for (const key of keys) {
+      if (overrides[key]) return overrides[key];
+    }
+    return null;
   }
 
   function setTicketPriorityStatusOverride(task, priority, status) {
-    const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
-    if (!id) return;
+    const keys = getTicketPriorityStatusOverrideKeys(task);
+    if (!keys.length) return;
     const overrides = getTicketPriorityStatusOverrides();
-    overrides[id] = { priority, status, savedAt: new Date().toISOString() };
+    keys.forEach(key => { overrides[key] = { priority, status, savedAt: new Date().toISOString() }; });
     saveTicketPriorityStatusOverrides(overrides);
   }
 
@@ -3541,9 +3558,27 @@ Please log in to QuickBase to review and update this item.`
     const override = getTicketPriorityStatusOverride(t);
     return String((override && override.status) || t.Status || t.status || '').trim().toLowerCase();
   }
+  function normalizePriorityValue(value) {
+    const text = String(value || '').trim();
+    const key = text.toLowerCase();
+    if (['critical', 'high', 'medium', 'low'].includes(key)) return key.charAt(0).toUpperCase() + key.slice(1);
+    return '';
+  }
+
   function getPriority(t) {
     const override = getTicketPriorityStatusOverride(t);
-    return String((override && override.priority) || t.Priority || t.priority || 'Medium').trim() || 'Medium';
+    const overridePriority = normalizePriorityValue(override && override.priority);
+    if (overridePriority) return overridePriority;
+
+    // Some update flows store the selected action level in Status/Action Status while the old Priority column remains Critical.
+    // Treat a valid action level as the effective priority so the row leaves the old Critical basket immediately.
+    const actionPriority = normalizePriorityValue(t?.['Action Status'] || t?.actionStatus || t?.Action || t?.action);
+    if (actionPriority) return actionPriority;
+
+    const statusPriority = normalizePriorityValue(t?.Status || t?.status);
+    if (statusPriority) return statusPriority;
+
+    return normalizePriorityValue(t?.Priority || t?.priority) || 'Medium';
   }
   function getDepartment(t) { return String(t.Department || t['Assigned Department'] || t.department || '').trim(); }
   function getCostCenter(t) {
@@ -3913,7 +3948,7 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
   }
 
   function ticketSummaryWindowHtml(ticketRows, stats) {
-    const priorityCounts = groupCount(ticketRows || [], t => getPriority(t));
+    const priorityCounts = groupCount((ticketRows || []).filter(row => !isClosedTicket(row)), t => getPriority(t));
     return `<div class="ticket-summary-window">
       <h3>Tickets Summary Window</h3>
       <div class="ticket-summary-grid">
@@ -4044,6 +4079,8 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
       await apiPost('updateTicketStatus', payload);
       task.Priority = priority;
       task.priority = priority;
+      task['Action Status'] = priority;
+      task.actionStatus = priority;
       task.Status = status;
       task.status = status;
       if (String(priority).toLowerCase() !== 'critical') {
@@ -5244,19 +5281,24 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
     const canViewAllTasks = hasOtherTasksAccess();
     const visibleTicketRows = canViewAllTasks ? allTicketRows : filterRowsToCurrentUser(allTicketRows);
     const stats = calculateTicketStats(visibleTicketRows);
-    const priorityCounts = groupCount(visibleTicketRows, t => getPriority(t));
-    const departmentCounts = groupCount(visibleTicketRows, t => getDepartment(t));
+    const activeTicketRows = visibleTicketRows.filter(row => !isClosedTicket(row));
+    const archivedTicketRows = [...stats.closed].sort((a, b) =>
+      String(getCostCenter(a) || '').localeCompare(String(getCostCenter(b) || '')) ||
+      String(getCompletionDate(b) || getTaskDueDate(b) || getCreatedDate(b) || '').localeCompare(String(getCompletionDate(a) || getTaskDueDate(a) || getCreatedDate(a) || ''))
+    );
+    const priorityCounts = groupCount(activeTicketRows, t => getPriority(t));
+    const departmentCounts = groupCount(activeTicketRows, t => getDepartment(t));
 
     let data = visibleTicketRows;
     if (window.taskFilter === 'open') data = stats.open;
-    else if (window.taskFilter === 'closed') data = stats.closed;
+    else if (window.taskFilter === 'closed') data = archivedTicketRows;
     else if (window.taskFilter === 'overdue') data = stats.openLate;
     else if (window.taskFilter === 'closed-on-time') data = stats.closedOnTime;
     else if (window.taskFilter === 'closed-late') data = stats.closedLate;
     else if (window.taskFilter === 'review') data = visibleTicketRows.filter(execDashIsReviewRow);
     else if (window.taskFilter === 'more-time') data = visibleTicketRows.filter(row => String(row.Status || row.status || '').toLowerCase().includes('more time'));
     else if (window.taskFilter === 'open-on-time') data = stats.open.filter(row => !stats.openLate.some(late => (getTicketIdentity(late) || getAutomatedTaskIdentity(late)) === (getTicketIdentity(row) || getAutomatedTaskIdentity(row))));
-    if (window.ticketPriorityFilter) data = data.filter(row => String(getPriority(row)).toLowerCase() === String(window.ticketPriorityFilter).toLowerCase());
+    if (window.ticketPriorityFilter) data = data.filter(row => !isClosedTicket(row) && String(getPriority(row)).toLowerCase() === String(window.ticketPriorityFilter).toLowerCase());
     if (window.ticketDepartmentFilter) data = data.filter(row => getDepartment(row) === window.ticketDepartmentFilter);
     if (window.ticketAgeFilter) {
       const now = new Date(); now.setHours(0,0,0,0);
@@ -5286,7 +5328,7 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
       ${personTicketSummaryHtml([...visibleTicketRows, ...automatedTaskRows])}
       <div class="task-status-grid">
         <div class="status-stat-card" onclick="window.taskFilter='open';renderTickets()" style="border-top:4px solid #3b82f6"><h3 style="color:#3b82f6">${stats.open.length}</h3><p>📋 Tickets Open</p></div>
-        <div class="status-stat-card" onclick="window.taskFilter='closed';renderTickets()" style="border-top:4px solid #22c55e"><h3 style="color:#22c55e">${stats.closed.length}</h3><p>✅ Tickets Closed</p></div>
+        <div class="status-stat-card" onclick="window.taskFilter='closed';renderTickets()" style="border-top:4px solid #22c55e"><h3 style="color:#22c55e">${stats.closed.length}</h3><p>🗄️ Archives</p></div>
         <div class="status-stat-card" onclick="window.taskFilter='overdue';renderTickets()" style="border-top:4px solid #ef4444"><h3 style="color:#ef4444">${stats.openLate.length}</h3><p>⚠️ Open Tickets But Late</p></div>
         <div class="status-stat-card" onclick="window.taskFilter='closed-on-time';renderTickets()" style="border-top:4px solid #10b981"><h3 style="color:#10b981">${stats.closedOnTime.length}</h3><p>🟢 Closed On Time Tickets</p></div>
       </div>
