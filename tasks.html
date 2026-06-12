@@ -852,7 +852,8 @@
     .exec-shell { min-height: 100vh; background: #eef2f6; color: #111827; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
     .exec-header { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: auto 1fr auto; gap: 28px; align-items: center; padding: 22px 34px 18px 34px; background: rgba(255,255,255,0.92); border-top: 3px solid #0ea5e9; border-bottom: 1px solid #d9e1ea; box-shadow: 0 10px 28px rgba(15,23,42,0.06); }
     .exec-brand { display: flex; gap: 14px; align-items: center; min-width: 310px; }
-    .exec-logo { width: 42px; height: 42px; border-radius: 13px; background: linear-gradient(135deg,#0ea5e9,#1d4ed8); color: white; display: grid; place-items: center; font-size: 25px; box-shadow: 0 8px 22px rgba(14,165,233,0.25); }
+    .exec-logo { width: 42px; height: 42px; border-radius: 13px; background: linear-gradient(135deg,#0ea5e9,#1d4ed8); color: white; display: grid; place-items: center; font-size: 25px; box-shadow: 0 8px 22px rgba(14,165,233,0.25); overflow: hidden; }
+    .exec-logo img, .brand-logo-img { width: 100%; height: 100%; object-fit: contain; display: block; }
     .exec-brand-title { font-size: 21px; font-weight: 900; letter-spacing: -0.02em; color: #0f172a; line-height: 1.15; }
     .exec-brand-title span { color: #8a96a8; font-weight: 800; }
     .exec-controls { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
@@ -1175,7 +1176,44 @@
       }
     }
 
+
+    /* Performance: skip off-screen rendering work while preserving layout. */
+    .panel,
+    .chart-card,
+    .performance-score-card,
+    .ticket-summary-window,
+    .exec-card,
+    .exec-snap-card,
+    .exec-top-card {
+      content-visibility: auto;
+      contain-intrinsic-size: 1px 320px;
+    }
+
+    .executive-inline-edit {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .executive-inline-edit select {
+      min-height: 34px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      max-width: 120px;
+    }
+
+    .executive-inline-edit button {
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
 </style>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
@@ -2571,8 +2609,9 @@ Please log in to QuickBase to continue.`;
     const automatedTasks = Array.isArray(autoTasksRaw) ? autoTasksRaw : [];
     const expandedAutomatedTasks = expandAutomatedTaskMonthlyOccurrences((automatedTasks || []).filter(hasPerformanceAssignee), true);
     return {
-      tickets: tickets.filter(t => hasPerformanceAssignee(t) && isTaskAssignedToCurrentUser(t)),
-      automatedTasks: expandedAutomatedTasks.filter(t => hasPerformanceAssignee(t) && isTaskAssignedToCurrentUser(t))
+      tickets: tickets.filter(t => hasPerformanceAssignee(t) && isTaskAssignedToCurrentUser(t) && !isClosedTicket(t)),
+      automatedTasks: expandedAutomatedTasks.filter(t => hasPerformanceAssignee(t) && isTaskAssignedToCurrentUser(t) && !isClosedTicket(t) && !isAutomatedTaskClosed(t)),
+      closedTickets: tickets.filter(t => hasPerformanceAssignee(t) && isTaskAssignedToCurrentUser(t) && isClosedTicket(t))
     };
   }
 
@@ -2600,9 +2639,10 @@ Please log in to QuickBase to continue.`;
     window.currentMyAutomatedTaskRows = assigned.automatedTasks;
     const main = document.getElementById('mainContent');
     main.innerHTML = `
-      <div class="top-bar"><div class="page-title"><h1>My Tickets</h1><p>Tickets and automated recurring tasks assigned to me</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
+      <div class="top-bar"><div class="page-title"><h1>My Tickets</h1><p>Tickets and automated recurring tasks assigned to me</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
       <div class="panel"><div class="panel-header"><h2>📋 My Tickets</h2></div><div class="table-wrapper fit-table-wrapper"><table class="responsive-fit-table"><thead><tr>${ticketColumns.map(c => `<th>${c}</th>`).join('')}<th>Comment / Proof / Submit</th></tr></thead><tbody>${assigned.tickets.length ? assigned.tickets.map((row, index) => `<tr>${ticketColumns.map(c => ticketCellHtml(row, c)).join('')}<td data-label="Comment / Proof / Submit">${myTicketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${ticketColumns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>
-      <div class="panel"><div class="panel-header"><h2>🔄 Automated Recurring Tasks</h2></div><div class="table-wrapper fit-table-wrapper"><table class="responsive-fit-table"><thead><tr>${autoColumns.map(c => `<th>${c}</th>`).join('')}<th>Comment / Proof / Submit</th></tr></thead><tbody>${assigned.automatedTasks.length ? assigned.automatedTasks.map((row, index) => `<tr>${autoColumns.map(c => autoCellHtml(row, c)).join('')}<td data-label="Comment / Proof / Submit">${myAutomatedTaskActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${autoColumns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
+      <div class="panel"><div class="panel-header"><h2>🔄 Automated Recurring Tasks</h2></div><div class="table-wrapper fit-table-wrapper"><table class="responsive-fit-table"><thead><tr>${autoColumns.map(c => `<th>${c}</th>`).join('')}<th>Comment / Proof / Submit</th></tr></thead><tbody>${assigned.automatedTasks.length ? assigned.automatedTasks.map((row, index) => `<tr>${autoColumns.map(c => autoCellHtml(row, c)).join('')}<td data-label="Comment / Proof / Submit">${myAutomatedTaskActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${autoColumns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>
+      <div class="panel"><div class="panel-header"><h2>✅ Closed Tickets Summary</h2></div><div class="table-wrapper fit-table-wrapper"><table class="responsive-fit-table"><thead><tr>${ticketColumns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${assigned.closedTickets.length ? assigned.closedTickets.map(row => `<tr>${ticketColumns.map(c => ticketCellHtml(row, c)).join('')}</tr>`).join('') : `<tr><td colspan="${ticketColumns.length}" style="text-align:center">No closed tickets found</td></tr>`}</tbody></table></div></div>`;
   }
 
   async function saveIssuedTaskToSentTickets(payload) {
@@ -2701,7 +2741,7 @@ Please log in to QuickBase to continue.`;
           <h1>Approvals Waiting</h1>
           <p>Waiting approvals queued · hiring approvals and more-time requests</p>
         </div>
-        <button class="refresh-btn" onclick="renderApprovals()">↻ Refresh</button>
+        <button class="refresh-btn" onclick="goHomePage()">🏠 Home</button>
       </div>
 
       <div class="panel">
@@ -2846,7 +2886,7 @@ Please log in to QuickBase to continue.`;
       </tbody></table></div></div>`).join('');
     const main = document.getElementById('mainContent');
     main.innerHTML = `
-      <div class="top-bar"><div class="page-title"><h1>Scoring Basket</h1><p>Completed or past-due automated tasks waiting for executive scoring</p></div><button class="refresh-btn" onclick="renderScoringBasket()">↻ Refresh</button></div>
+      <div class="top-bar"><div class="page-title"><h1>Scoring Basket</h1><p>Completed or past-due automated tasks waiting for executive scoring</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
       ${dueTasks.length ? departmentTablesHtml : '<div class="panel"><div class="panel-header"><h2>🧺 Automated Task Scoring</h2></div><div style="padding:24px;text-align:center">No scoring items waiting</div></div>'}`;
     await updateScoringBasketBadge();
   }
@@ -2931,7 +2971,10 @@ Please log in to QuickBase to continue.`;
 
   function needsCriticalTimeLapseEscalation(row) {
     if (!row || isClosedTicket(row) || isAutomatedTaskRow(row)) return false;
-    if (String(getPriority(row)).toLowerCase().includes('critical')) return false;
+    const priorityText = String(getPriority(row)).toLowerCase();
+    if (priorityText.includes('critical')) return false;
+    if (getTicketPriorityStatusOverride(row) && !priorityText.includes('critical')) return false;
+    if (String(row['Critical Manual Override'] || row.criticalManualOverride || '').toLowerCase() === 'yes') return false;
     if (String(row['Critical Alert Sent'] || row.criticalAlertSent || '').toLowerCase() === 'yes') return false;
     const ratio = taskTimeLapseRatio(row);
     return ratio !== null && ratio >= 0.9;
@@ -2986,7 +3029,7 @@ Please log in to QuickBase and action it urgently.`
   function execDashIsReviewRow(row) {
     if (!row || isClosedTicket(row)) return false;
     const status = String(row.Status || row.status || '').toLowerCase();
-    return status.includes('completed') || status.includes('awaiting review') || status.includes('score') || status.includes('sign-off') || status.includes('sign off');
+    return status.includes('review basket') || status.includes('completed') || status.includes('awaiting review') || status.includes('score') || status.includes('sign-off') || status.includes('sign off') || String(row['Review Basket'] || row.reviewBasket || '').toLowerCase() === 'yes';
   }
 
   function execDashTicketLine(row, rightText = '') {
@@ -3085,8 +3128,8 @@ Please log in to QuickBase and action it urgently.`
       main.innerHTML = `
         <div class="exec-shell">
           <div class="exec-header">
-            <div class="exec-brand"><div class="exec-logo">◇</div><div class="exec-brand-title">OnpointBase <span>· Management</span><br><span>Information</span></div></div>
-            <div class="exec-controls"><button class="exec-control"><kbd>⌘K</kbd> Search</button><button class="exec-control">▣ Compact</button><button class="exec-control">◉ Focus</button><button class="exec-control">✦ Assistant</button></div>
+            <div class="exec-brand"><div class="exec-logo"><img src="logo.png" alt="Onpoint logo" loading="lazy" decoding="async" onerror="this.style.display='none';this.parentNode.textContent='◇';"></div><div class="exec-brand-title">OnpointBase <span>· Management</span><br><span>Information</span></div></div>
+            <div class="exec-controls"><button class="exec-control"><kbd>⌘K</kbd> Search</button><button class="exec-control">▣ Compact</button><button class="exec-control" onclick="showTaskCreationChoice()">+ Create</button><button class="exec-control">◉ Focus</button><button class="exec-control">✦ Assistant</button></div>
             <div class="exec-user"><span class="exec-date">Data as at ${escapeHtml(dateLabel)}</span><span class="exec-role">${escapeHtml(String(role).toUpperCase())}</span><span>${escapeHtml(userName)}</span><button class="logout-btn" onclick="logout()">Logout</button></div>
           </div>
 
@@ -3110,7 +3153,7 @@ Please log in to QuickBase and action it urgently.`
             <button onclick="scrollToDashboardPanel('performanceScorePanel')">Performance</button>
             <button onclick="currentSection='tickets';window.taskFilter=null;loadCurrentSection()">Explore</button>
             <button onclick="currentSection='taskUpdates';loadCurrentSection()">Activity</button>
-            <button class="create" onclick="scrollToDashboardPanel('newTaskTicketPanel')">+ Create</button>
+            <button class="create" onclick="showTaskCreationChoice()">+ Create</button>
           </div></div>
 
           <div class="exec-content">
@@ -3163,9 +3206,43 @@ Please log in to QuickBase and action it urgently.`
     }
   }
 
+
+  function showTaskCreationChoice() {
+    scrollToDashboardPanel('newTaskTicketPanel');
+    setTimeout(() => {
+      const chooser = document.getElementById('taskCreationChoice');
+      if (chooser) chooser.style.display = 'flex';
+      showOnceOffTaskForm(false);
+    }, 80);
+  }
+
+  function showOnceOffTaskForm(scroll = true) {
+    const ticketForm = document.getElementById('newTicketForm');
+    const autoPanel = document.getElementById('automatedRecurringTaskPanel');
+    const onceBtn = document.getElementById('onceOffTaskChoiceBtn');
+    const autoBtn = document.getElementById('automaticTaskChoiceBtn');
+    if (ticketForm) ticketForm.style.display = 'block';
+    if (autoPanel) autoPanel.style.display = 'none';
+    if (onceBtn) onceBtn.className = 'btn-primary';
+    if (autoBtn) autoBtn.className = 'btn-secondary';
+    if (scroll) scrollToDashboardPanel('newTaskTicketPanel');
+  }
+
+  function showAutomaticTaskForm(scroll = true) {
+    const ticketForm = document.getElementById('newTicketForm');
+    const autoPanel = document.getElementById('automatedRecurringTaskPanel');
+    const onceBtn = document.getElementById('onceOffTaskChoiceBtn');
+    const autoBtn = document.getElementById('automaticTaskChoiceBtn');
+    if (ticketForm) ticketForm.style.display = 'none';
+    if (autoPanel) autoPanel.style.display = 'block';
+    if (onceBtn) onceBtn.className = 'btn-secondary';
+    if (autoBtn) autoBtn.className = 'btn-primary';
+    if (scroll) scrollToDashboardPanel('newTaskTicketPanel');
+  }
+
   function renderNewTicketForm() {
     return `<div class="panel" id="newTaskTicketPanel">
-      <div class="panel-header"><h2>➕ New Task / Ticket</h2><button class="btn-secondary" onclick="document.getElementById('newTicketForm').style.display='block'">Show Form</button></div>
+      <div class="panel-header"><h2>➕ New Task / Ticket</h2><div id="taskCreationChoice" style="display:flex;gap:10px;flex-wrap:wrap"><button id="onceOffTaskChoiceBtn" class="btn-primary" onclick="showOnceOffTaskForm()">Once Off (New Task)</button><button id="automaticTaskChoiceBtn" class="btn-secondary" onclick="showAutomaticTaskForm()">Automatic (Recurring) task</button></div></div>
       <div id="newTicketForm" style="padding:20px; display:block">
         <div class="form-row">
           <div class="form-field"><label>Ticket Number</label><input id="ticketNumber" readonly value="${generateTicketNumber()}" placeholder="Auto-generated"></div>
@@ -3193,8 +3270,8 @@ Please log in to QuickBase and action it urgently.`
   }
 
   function renderAutomatedTaskForm() {
-    return `<div class="panel" id="automatedRecurringTaskPanel">
-      <div class="panel-header"><h2>🔄 Automated Recurring Task</h2><button class="btn-secondary" onclick="document.getElementById('autoTaskForm').style.display='block'">Show Form</button></div>
+    return `<div class="panel" id="automatedRecurringTaskPanel" style="display:none">
+      <div class="panel-header"><h2>🔄 Automated Recurring Task</h2><button class="btn-secondary" onclick="showOnceOffTaskForm()">Back to Once Off</button></div>
       <div id="autoTaskForm" style="padding:20px; display:block">
         <div class="form-row">
           <div class="form-field"><label>Task Name *</label><input id="autoTaskName" placeholder="e.g., Weekly Report"></div>
@@ -3416,6 +3493,40 @@ Please log in to QuickBase to review and update this item.`
     }
   }
 
+  const TICKET_PRIORITY_STATUS_OVERRIDE_KEY = 'quickbase_ticket_priority_status_overrides';
+
+  function getTicketPriorityStatusOverrides() {
+    try { return JSON.parse(localStorage.getItem(TICKET_PRIORITY_STATUS_OVERRIDE_KEY) || '{}'); }
+    catch(e) { return {}; }
+  }
+
+  function saveTicketPriorityStatusOverrides(overrides) {
+    localStorage.setItem(TICKET_PRIORITY_STATUS_OVERRIDE_KEY, JSON.stringify(overrides || {}));
+  }
+
+  function getTicketPriorityStatusOverride(task) {
+    const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
+    if (!id) return null;
+    return getTicketPriorityStatusOverrides()[id] || null;
+  }
+
+  function setTicketPriorityStatusOverride(task, priority, status) {
+    const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
+    if (!id) return;
+    const overrides = getTicketPriorityStatusOverrides();
+    overrides[id] = { priority, status, savedAt: new Date().toISOString() };
+    saveTicketPriorityStatusOverrides(overrides);
+  }
+
+  function goHomePage() {
+    currentSection = 'dashboard';
+    window.taskFilter = null;
+    window.ticketPriorityFilter = '';
+    window.ticketDepartmentFilter = '';
+    window.ticketAgeFilter = '';
+    loadCurrentSection();
+  }
+
   function groupCount(rows, getter) {
     const result = {};
     rows.forEach(row => {
@@ -3426,8 +3537,14 @@ Please log in to QuickBase to review and update this item.`
     return result;
   }
 
-  function getStatus(t) { return String(t.Status || t.status || '').trim().toLowerCase(); }
-  function getPriority(t) { return String(t.Priority || t.priority || 'Medium').trim() || 'Medium'; }
+  function getStatus(t) {
+    const override = getTicketPriorityStatusOverride(t);
+    return String((override && override.status) || t.Status || t.status || '').trim().toLowerCase();
+  }
+  function getPriority(t) {
+    const override = getTicketPriorityStatusOverride(t);
+    return String((override && override.priority) || t.Priority || t.priority || 'Medium').trim() || 'Medium';
+  }
   function getDepartment(t) { return String(t.Department || t['Assigned Department'] || t.department || '').trim(); }
   function getCostCenter(t) {
     const direct = getCellValue(t, 'Cost Center');
@@ -3446,13 +3563,146 @@ Please log in to QuickBase to review and update this item.`
   function getCurrentUserName() { return String(currentUser?.['Full Name'] || currentUser?.Name || currentUser?.Email || '').trim(); }
   function isSamePerson(a, b) { return nameMatches(a, b); }
 
-  function canCurrentUserCloseTask(task) {
-    if (isExecutive()) return true;
+  function isTaskIssuedByExecutive(task) {
+    const issuerName = getTaskIssuerName(task);
+    const issuerEmail = getTaskIssuerEmail(task);
+    const executiveEmails = EXECUTIVE_MANAGERS.map(m => String(m.email || '').toLowerCase());
+    const executiveNames = EXECUTIVE_MANAGERS.map(m => String(m.name || ''));
+    return (issuerEmail && executiveEmails.includes(String(issuerEmail).toLowerCase())) || executiveNames.some(name => isSamePerson(name, issuerName));
+  }
+
+  function isCurrentUserTicketIssuer(task) {
     const currentName = getCurrentUserName();
     const currentEmail = String(currentUser?.Email || '').trim().toLowerCase();
     const issuerName = getTaskIssuerName(task);
     const issuerEmail = getTaskIssuerEmail(task);
-    return isSamePerson(currentName, issuerName) || (currentEmail && currentEmail === issuerEmail);
+    return isSamePerson(currentName, issuerName) || (currentEmail && issuerEmail && currentEmail === issuerEmail);
+  }
+
+  function isCurrentUserDepartmentManagerForTask(task) {
+    if (!isManager()) return false;
+    const myDept = String(currentUser?.Department || currentUser?.department || '').trim().toLowerCase();
+    const taskDept = String(getDepartment(task) || task.Department || task.department || '').trim().toLowerCase();
+    return !!myDept && !!taskDept && myDept === taskDept;
+  }
+
+
+  function getDepartmentManagerRowsForTask(task) {
+    const taskDept = String(getDepartment(task) || task?.Department || task?.department || '').trim().toLowerCase();
+    if (!taskDept) return [];
+    return (cachedPeopleRows || []).filter(row => {
+      const rowDept = String(row?.Department || row?.department || '').trim().toLowerCase();
+      const role = String(row?.Roles || row?.Role || row?.role || '').trim().toLowerCase();
+      return rowDept === taskDept && role === 'manager';
+    });
+  }
+
+  function getDepartmentManagerEmailsForTask(task) {
+    return [...new Set(getDepartmentManagerRowsForTask(task)
+      .map(row => String(row.Email || row.email || row['Email Address'] || row.WorkEmail || row['Work Email'] || '').trim().toLowerCase())
+      .filter(Boolean))];
+  }
+
+  function getTaskFirstExecutiveScore(task) {
+    const score = parseFloat(String(task?.['Executive 1 Score %'] || task?.executive1ScorePercent || task?.['Executive Score %'] || task?.executiveScorePercent || '').replace('%', ''));
+    return Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : null;
+  }
+
+  function executiveIssuedTaskWaitingExecutive2(task) {
+    const status = String(task?.Status || task?.status || '').toLowerCase();
+    return status.includes('waiting executive 2') || String(task?.['Executive 1 Scored'] || task?.executive1Scored || '').toLowerCase() === 'yes';
+  }
+
+  function currentUserAlreadyExecutive1Scored(task) {
+    const currentEmail = String(currentUser?.Email || '').trim().toLowerCase();
+    const currentName = getCurrentUserName();
+    const email = String(task?.['Executive 1 Email'] || task?.executive1Email || task?.executiveRatedByEmail || task?.['Executive Rated By Email'] || '').trim().toLowerCase();
+    const name = String(task?.['Executive 1 Name'] || task?.executive1Name || task?.executiveRatedBy || task?.['Executive Rated By'] || '').trim();
+    return (currentEmail && email && currentEmail === email) || (currentName && name && isSamePerson(currentName, name));
+  }
+
+  function promptTaskScoring(task, actorLabel = 'Reviewer', guideScore = null) {
+    const assignee = getAssigneeName(task) || 'the assignee';
+    const submittedDate = getCompletionDate(task) || task['Update Timestamp'] || task.updateTimestamp || task.completionRequestDate || '';
+    const dueDate = getTaskDueDate(task) || getDueDate(task) || '';
+    const suggested = (() => {
+      const due = dateOnly(dueDate);
+      const submitted = dateOnly(submittedDate) || new Date();
+      return due && submitted > due ? '2' : '1';
+    })();
+    const guideText = guideScore === null || guideScore === undefined ? '' : `
+
+Executive 1 guide score: ${guideScore}%`;
+    const decisionRaw = prompt(`${actorLabel} scoring required before closing this ticket.${guideText}
+
+Choose one option for ${assignee}:
+1. Done and ontime 100%
+2. Done but late 50%
+3. Not done 0%
+
+Type 1, 2, 3, Done and ontime, Done but late, or Not done.`, suggested);
+    if (decisionRaw === null) return null;
+    const decisionInput = String(decisionRaw || '').trim().toLowerCase();
+    const decision = decisionInput === '1' ? 'On Time' : (decisionInput === '2' ? 'Late Done' : (decisionInput === '3' ? 'Not Done' : normalizeAutomatedTaskReviewValue(decisionRaw)));
+    if (!['On Time', 'Late Done', 'Not Done'].includes(decision)) {
+      alert('Please choose 1, 2, or 3 before closing the ticket.');
+      return null;
+    }
+    const comments = prompt(`Optional ${actorLabel.toLowerCase()} scoring comment for the task assignee:`, '') || '';
+    const percent = automatedTaskDecisionPercent(decision);
+    const closureFolder = percent >= 100 ? 'Closed On Time' : 'Closed Late';
+    if (!confirm(`Confirm scoring before updating.
+
+Assignee: ${assignee}
+Submission: ${decision === 'On Time' ? 'Done and ontime' : (decision === 'Late Done' ? 'Done but late' : 'Not done')}
+Folder: ${closureFolder}
+Score: ${percent}%
+
+Is this correct?`)) return null;
+    return {
+      executiveAssigneeRating: decision === 'On Time' ? '5' : (decision === 'Late Done' ? '3' : '0'),
+      'Executive Assignee Rating': decision === 'On Time' ? '5' : (decision === 'Late Done' ? '3' : '0'),
+      executiveOnTimeReview: decision,
+      'Executive On Time Review': decision,
+      executiveScorePercent: percent,
+      'Executive Score %': percent,
+      closureFolder,
+      'Closure Folder': closureFolder,
+      'Closed Folder': closureFolder,
+      'Closed Timing': closureFolder,
+      executiveRatingComments: comments,
+      'Executive Rating Comments': comments,
+      executiveRatedBy: currentUser?.['Full Name'] || currentUser?.Email || '',
+      'Executive Rated By': currentUser?.['Full Name'] || currentUser?.Email || '',
+      executiveRatedByEmail: currentUser?.Email || '',
+      'Executive Rated By Email': currentUser?.Email || '',
+      executiveRatedDate: new Date().toISOString(),
+      'Executive Rated Date': new Date().toISOString()
+    };
+  }
+
+  function issuerHasClosedTask(task) {
+    const status = String(task.Status || task.status || '').toLowerCase();
+    return status.includes('issuer closed') || status.includes('waiting department manager') || String(task['Issuer Closed'] || task.issuerClosed || '').toLowerCase() === 'yes';
+  }
+
+  function canCurrentUserCloseTask(task) {
+    if (isTaskIssuedByExecutive(task)) {
+      if (!isExecutive()) return false;
+      if (executiveIssuedTaskWaitingExecutive2(task)) return !currentUserAlreadyExecutive1Scored(task);
+      return true;
+    }
+    if (!issuerHasClosedTask(task)) return isCurrentUserTicketIssuer(task);
+    return isCurrentUserDepartmentManagerForTask(task);
+  }
+
+  function ticketCloseWaitingText(task) {
+    if (isTaskIssuedByExecutive(task)) {
+      if (executiveIssuedTaskWaitingExecutive2(task)) return currentUserAlreadyExecutive1Scored(task) ? 'Waiting Executive 2 scoring' : 'Executive 2 scoring required';
+      return 'Executive 1 scoring required';
+    }
+    if (!issuerHasClosedTask(task)) return 'Waiting issuer approve / score';
+    return 'Waiting department manager approve / score';
   }
 
   function promptExecutiveTicketRating(task) {
@@ -3579,23 +3829,28 @@ Please log in to QuickBase to review and update this item.`
     const ticketId = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
     const title = getCellValue(task, 'Title') || task['Task Name'] || task.taskName || 'Task';
     const originatorEmail = getTaskIssuerEmail(task);
-    const recipients = [...EXECUTIVE_MANAGERS.map(m => m.email), originatorEmail]
-      .filter(Boolean)
-      .filter((email, index, arr) => arr.indexOf(email) === index);
-    if (!ticketId || !recipients.length) return;
-    const subject = `Task ready for scoring and closure: ${ticketId}`;
+    const managerEmails = getDepartmentManagerEmailsForTask(task);
+    const recipients = isTaskIssuedByExecutive(task)
+      ? [...EXECUTIVE_MANAGERS.map(m => m.email), originatorEmail]
+      : [originatorEmail, ...managerEmails];
+    const uniqueRecipients = recipients.filter(Boolean).filter((email, index, arr) => arr.indexOf(email) === index);
+    if (!ticketId || !uniqueRecipients.length) return;
+    const subject = `Task ready for Review Basket: ${ticketId}`;
     const body = `Hi,
 
-A task has been submitted and is waiting for scoring/review and closure in QuickBase.
+A task has been submitted with an update/upload and is now in the Review Basket.
 
 Ticket: ${ticketId}
 Task: ${title}
 Assigned to: ${getAssigneeName(task) || 'Not specified'}
+Department: ${getDepartment(task) || 'Not specified'}
 Due date: ${getTaskDueDate(task) || 'Not specified'}
-Status: ${task.Status || task.status || 'Completed - Awaiting Review'}
+Status: ${task.Status || task.status || 'Review Basket'}
 
-Please log in to QuickBase, open Tickets, score if required, and close the task if satisfied.`;
-    await Promise.all(recipients.map(email => sendGeneralEmailViaBackend(email, subject, body)));
+${isTaskIssuedByExecutive(task) ? 'Executive-issued task: Executive 1 must score first, then it moves to Executive 2 scoring basket with Executive 1 percentage as a guideline.' : 'Department task: the task issuer approves/scores first, then any manager in the same department gives final approval/scoring.'}
+
+Please log in to QuickBase and open Tickets / Review Basket.`;
+    await Promise.all(uniqueRecipients.map(email => sendGeneralEmailViaBackend(email, subject, body)));
   }
 
   function isAutomatedTaskRow(row) {
@@ -3732,11 +3987,81 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
     return '';
   }
 
-  function ticketActionHtml(task, index) {
-    if (isClosedTicket(task)) return '<span class="badge badge-open">Closed</span>';
-    if (!canCurrentUserCloseTask(task)) return '<span style="font-size:11px;color:#94a3b8">Waiting originator/executive close</span>';
-    return `<button class="btn-primary" onclick="closeTicketFromTable(${index})">Close / Score</button>`;
+  function executivePriorityStatusEditHtml(task, index) {
+    if (!isExecutive()) return '';
+    const currentPriority = getPriority(task) || 'Medium';
+    const currentStatus = String(task.Status || task.status || 'Open').trim() || 'Open';
+    const priorityOptions = ['Critical', 'High', 'Medium', 'Low'];
+    const statusOptions = ['Open', 'In Progress', 'Pending', 'Review Basket', 'More Time Requested', 'Closed'];
+    const optionHtml = (items, selected) => items.map(item => `<option value="${escapeHtml(item)}" ${String(item).toLowerCase() === String(selected).toLowerCase() ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('');
+    return `<div class="executive-inline-edit" title="Executive priority/status update">
+      <select id="execPriority_${index}" aria-label="Priority">${optionHtml(priorityOptions, currentPriority)}</select>
+      <select id="execStatus_${index}" aria-label="Status">${optionHtml(statusOptions, currentStatus)}</select>
+      <button type="button" class="btn-secondary" onclick="updateTicketPriorityStatus(${index})">Update</button>
+    </div>`;
   }
+
+  function ticketActionHtml(task, index) {
+    const executiveEdit = executivePriorityStatusEditHtml(task, index);
+    if (isClosedTicket(task)) return `<span class="badge badge-open">Closed</span>${executiveEdit}`;
+    if (!canCurrentUserCloseTask(task)) return `<span style="font-size:11px;color:#94a3b8">${ticketCloseWaitingText(task)}</span>${executiveEdit}`;
+    return `<button class="btn-primary" onclick="closeTicketFromTable(${index})">Close / Score</button>${executiveEdit}`;
+  }
+
+  window.updateTicketPriorityStatus = async function(index) {
+    if (!isExecutive()) return alert('Only executives can change task priority/status.');
+    const task = (window.currentTicketRows || [])[index];
+    if (!task) return alert('Task not found. Refresh and try again.');
+    const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
+    if (!id) return alert('Ticket/Task ID is missing. Please refresh and try again.');
+    const priority = document.getElementById(`execPriority_${index}`)?.value || getPriority(task);
+    const status = document.getElementById(`execStatus_${index}`)?.value || String(task.Status || task.status || 'Open');
+    const isAutomated = isAutomatedTaskRow(task);
+    const payload = Object.assign({}, task, {
+      ticketId: id,
+      ticketNumber: id,
+      taskId: id,
+      'Ticket ID': id,
+      'Ticket Number': id,
+      'Task ID': id,
+      priority,
+      Priority: priority,
+      status,
+      Status: status,
+      updatedBy: currentUser?.['Full Name'] || currentUser?.Email || '',
+      'Updated By': currentUser?.['Full Name'] || currentUser?.Email || '',
+      updatedByEmail: currentUser?.Email || '',
+      'Updated By Email': currentUser?.Email || '',
+      lastUpdated: new Date().toISOString(),
+      'Last Updated': new Date().toISOString(),
+      criticalManualOverride: String(priority).toLowerCase() === 'critical' ? '' : 'Yes',
+      'Critical Manual Override': String(priority).toLowerCase() === 'critical' ? '' : 'Yes',
+      criticalAlertSent: String(priority).toLowerCase() === 'critical' ? (task.criticalAlertSent || task['Critical Alert Sent'] || '') : 'Yes',
+      'Critical Alert Sent': String(priority).toLowerCase() === 'critical' ? (task['Critical Alert Sent'] || task.criticalAlertSent || '') : 'Yes',
+      sheetTab: isAutomated ? 'Automated Tasks' : 'Tasks'
+    });
+    try {
+      await apiPost('updateTicketStatus', payload);
+      task.Priority = priority;
+      task.priority = priority;
+      task.Status = status;
+      task.status = status;
+      if (String(priority).toLowerCase() !== 'critical') {
+        task['Critical Alert Sent'] = 'Yes';
+        task.criticalAlertSent = 'Yes';
+        task['Critical Manual Override'] = 'Yes';
+        task.criticalManualOverride = 'Yes';
+      }
+      setTicketPriorityStatusOverride(task, priority, status);
+      if (window.ticketPriorityFilter && String(window.ticketPriorityFilter).toLowerCase() !== String(priority).toLowerCase()) {
+        window.ticketPriorityFilter = priority;
+      }
+      alert(`Task updated. Priority: ${priority}. Status: ${status}.`);
+      await renderTickets();
+    } catch(e) {
+      alert(`Could not update task: ${e.message}`);
+    }
+  };
 
 
   function myTicketActionHtml(task, index) {
@@ -3831,8 +4156,16 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
         completionRequestDate: new Date().toISOString(),
         submittedBy: currentUser?.['Full Name'] || currentUser?.Email || '',
         submittedByEmail: currentUser?.Email || '',
-        status: moreTime ? 'More Time Requested' : 'Completed - Awaiting Review',
-        Status: moreTime ? 'More Time Requested' : 'Completed - Awaiting Review',
+        status: moreTime ? 'More Time Requested' : 'Review Basket',
+        Status: moreTime ? 'More Time Requested' : 'Review Basket',
+        reviewBasket: moreTime ? '' : 'Yes',
+        'Review Basket': moreTime ? '' : 'Yes',
+        reviewStatus: moreTime ? '' : 'Awaiting Review',
+        'Review Status': moreTime ? '' : 'Awaiting Review',
+        reviewRoute: moreTime ? '' : (isTaskIssuedByExecutive(task) ? 'Executive 1 then Executive 2' : 'Issuer then Department Manager'),
+        'Review Route': moreTime ? '' : (isTaskIssuedByExecutive(task) ? 'Executive 1 then Executive 2' : 'Issuer then Department Manager'),
+        departmentManagerEmails: moreTime ? '' : getDepartmentManagerEmailsForTask(task).join(', '),
+        'Department Manager Emails': moreTime ? '' : getDepartmentManagerEmailsForTask(task).join(', '),
         'More Time Executive Approval': moreTime ? 'Pending' : '',
         'More Time Issuer Approval': moreTime ? 'Pending' : '',
         sheetTab: 'Task Updates',
@@ -3848,8 +4181,9 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
         alert('More time request submitted to the task issuer and Executives. You will be notified when it is approved or rejected.');
       } else {
         await notifyTicketReadyForScoringAndClosure(payload);
-        showMessage('Submitted. Task marked as completed and sent to the originator and Executives for scoring/closure.', 'success', 'taskAssigneeUpdateMessage');
-        alert('Submitted. Task is now completed and awaiting originator/executive scoring and closure.');
+        const routeMessage = isTaskIssuedByExecutive(task) ? 'Submitted. Task moved to Review Basket for Executive 1 scoring, then Executive 2 scoring.' : 'Submitted. Task moved from Open/Open Late to Review Basket for issuer approval/scoring, then department manager approval/scoring.';
+        showMessage(routeMessage, 'success', 'taskAssigneeUpdateMessage');
+        alert(routeMessage);
       }
       await renderMyTickets();
     } catch(e) {
@@ -3863,14 +4197,164 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
   window.closeTicketFromTable = async function(index) {
     const task = (window.currentTicketRows || [])[index];
     if (!task) return alert('Task not found. Refresh and try again.');
-    if (!canCurrentUserCloseTask(task)) return alert('Only the person who originated this ticket or an Executive can close it.');
-    const executiveRatingPayload = promptExecutiveTicketRating(task);
-    if (executiveRatingPayload === null) return;
-    if (!confirm('Close this task?')) return;
+    if (!canCurrentUserCloseTask(task)) return alert(ticketCloseWaitingText(task));
     const isAutomated = isAutomatedTaskRow(task);
     const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
     if (!id) return alert('Ticket/Task ID is missing. Please refresh and try again.');
-    const payload = Object.assign({}, task, executiveRatingPayload, {
+
+    if (isTaskIssuedByExecutive(task)) {
+      if (!executiveIssuedTaskWaitingExecutive2(task)) {
+        const firstRatingPayload = promptExecutiveTicketRating(task);
+        if (firstRatingPayload === null) return;
+        const firstScore = executiveTicketRatingPercent(firstRatingPayload);
+        if (!confirm('Save Executive 1 score and move this ticket to Executive 2 scoring basket?')) return;
+        const firstPayload = Object.assign({}, task, firstRatingPayload, {
+          ticketId: id,
+          ticketNumber: id,
+          taskId: id,
+          'Ticket ID': id,
+          'Ticket Number': id,
+          'Task ID': id,
+          status: 'Waiting Executive 2 Scoring',
+          Status: 'Waiting Executive 2 Scoring',
+          executive1Scored: 'Yes',
+          'Executive 1 Scored': 'Yes',
+          executive1Name: currentUser?.['Full Name'] || currentUser?.Email || '',
+          'Executive 1 Name': currentUser?.['Full Name'] || currentUser?.Email || '',
+          executive1Email: currentUser?.Email || '',
+          'Executive 1 Email': currentUser?.Email || '',
+          executive1Decision: firstRatingPayload.executiveOnTimeReview || firstRatingPayload['Executive On Time Review'] || '',
+          'Executive 1 Decision': firstRatingPayload.executiveOnTimeReview || firstRatingPayload['Executive On Time Review'] || '',
+          executive1ScorePercent: firstScore,
+          'Executive 1 Score %': firstScore,
+          executive1Comment: firstRatingPayload.executiveRatingComments || firstRatingPayload['Executive Rating Comments'] || '',
+          'Executive 1 Comment': firstRatingPayload.executiveRatingComments || firstRatingPayload['Executive Rating Comments'] || '',
+          executive1Date: new Date().toISOString(),
+          'Executive 1 Date': new Date().toISOString(),
+          reviewBasket: 'Yes',
+          'Review Basket': 'Yes',
+          sheetTab: isAutomated ? 'Automated Tasks' : 'Tasks'
+        });
+        try {
+          await apiPost('updateTicketStatus', firstPayload);
+          await postTicketScoreApproval(task, firstPayload, 'Waiting Executive 2 Scoring');
+          alert(`Executive 1 score saved (${firstScore}%). Ticket moved to Executive 2 scoring basket.`);
+          await renderTickets();
+        } catch(e) {
+          alert(`Could not save Executive 1 score: ${e.message}`);
+        }
+        return;
+      }
+
+      const guideScore = getTaskFirstExecutiveScore(task);
+      const secondRatingPayload = promptExecutiveTicketRating(task, guideScore);
+      if (secondRatingPayload === null) return;
+      if (!confirm('Close this executive-issued task after Executive 2 scoring?')) return;
+      const secondScore = executiveTicketRatingPercent(secondRatingPayload);
+      const firstScore = guideScore === null ? secondScore : guideScore;
+      const averageScore = Math.round((Number(firstScore || 0) + Number(secondScore || 0)) / 2);
+      const closureFolder = averageScore >= 100 ? 'Closed On Time' : 'Closed Late';
+      const payload = Object.assign({}, task, secondRatingPayload, {
+        ticketId: id,
+        ticketNumber: id,
+        taskId: id,
+        'Ticket ID': id,
+        'Ticket Number': id,
+        'Task ID': id,
+        status: 'Closed',
+        Status: 'Closed',
+        'Completion Date': new Date().toISOString().slice(0, 10),
+        executive2Name: currentUser?.['Full Name'] || currentUser?.Email || '',
+        'Executive 2 Name': currentUser?.['Full Name'] || currentUser?.Email || '',
+        executive2Email: currentUser?.Email || '',
+        'Executive 2 Email': currentUser?.Email || '',
+        executive2Decision: secondRatingPayload.executiveOnTimeReview || secondRatingPayload['Executive On Time Review'] || '',
+        'Executive 2 Decision': secondRatingPayload.executiveOnTimeReview || secondRatingPayload['Executive On Time Review'] || '',
+        executive2ScorePercent: secondScore,
+        'Executive 2 Score %': secondScore,
+        executive2Comment: secondRatingPayload.executiveRatingComments || secondRatingPayload['Executive Rating Comments'] || '',
+        'Executive 2 Comment': secondRatingPayload.executiveRatingComments || secondRatingPayload['Executive Rating Comments'] || '',
+        executive2Date: new Date().toISOString(),
+        'Executive 2 Date': new Date().toISOString(),
+        executiveAverageScorePercent: averageScore,
+        finalScorePercent: averageScore,
+        'Average Score %': averageScore,
+        'Final %': averageScore,
+        closureFolder,
+        'Closure Folder': closureFolder,
+        'Closed Folder': closureFolder,
+        'Closed Timing': closureFolder,
+        closedBy: currentUser?.['Full Name'] || currentUser?.Email || '',
+        'Closed By': currentUser?.['Full Name'] || currentUser?.Email || '',
+        closedByEmail: currentUser?.Email || '',
+        'Closed By Email': currentUser?.Email || '',
+        closedTicketsSummary: 'Yes',
+        'Closed Tickets Summary': 'Yes',
+        myTicketsVisibility: 'Closed Tickets Summary',
+        'My Tickets Visibility': 'Closed Tickets Summary',
+        sheetTab: isAutomated ? 'Automated Tasks' : 'Tasks'
+      });
+      try {
+        await apiPost('updateTicketStatus', payload);
+        await postTicketScoreApproval(task, payload, 'Closed');
+        alert(`Executive 2 score saved (${secondScore}%). Final score: ${averageScore}%. Task closed.`);
+        await renderTickets();
+      } catch(e) {
+        alert(`Could not close task: ${e.message}`);
+      }
+      return;
+    }
+
+    if (isCurrentUserTicketIssuer(task) && !issuerHasClosedTask(task)) {
+      const issuerRatingPayload = promptTaskScoring(task, 'Issuer');
+      if (issuerRatingPayload === null) return;
+      const issuerScore = executiveTicketRatingPercent(issuerRatingPayload);
+      if (!confirm('Issuer approve/score completed. Send this ticket to the Department Manager for final approval/scoring?')) return;
+      const issuerPayload = Object.assign({}, task, issuerRatingPayload, {
+        ticketId: id,
+        ticketNumber: id,
+        taskId: id,
+        'Ticket ID': id,
+        'Ticket Number': id,
+        'Task ID': id,
+        status: 'Issuer Closed - Waiting Department Manager',
+        Status: 'Issuer Closed - Waiting Department Manager',
+        issuerClosed: 'Yes',
+        'Issuer Closed': 'Yes',
+        issuerScorePercent: issuerScore,
+        'Issuer Score %': issuerScore,
+        issuerDecision: issuerRatingPayload.executiveOnTimeReview || issuerRatingPayload['Executive On Time Review'] || '',
+        'Issuer Decision': issuerRatingPayload.executiveOnTimeReview || issuerRatingPayload['Executive On Time Review'] || '',
+        issuerComment: issuerRatingPayload.executiveRatingComments || issuerRatingPayload['Executive Rating Comments'] || '',
+        'Issuer Comment': issuerRatingPayload.executiveRatingComments || issuerRatingPayload['Executive Rating Comments'] || '',
+        issuerClosedBy: currentUser?.['Full Name'] || currentUser?.Email || '',
+        'Issuer Closed By': currentUser?.['Full Name'] || currentUser?.Email || '',
+        issuerClosedByEmail: currentUser?.Email || '',
+        'Issuer Closed By Email': currentUser?.Email || '',
+        issuerClosedDate: new Date().toISOString().slice(0, 10),
+        'Issuer Closed Date': new Date().toISOString().slice(0, 10),
+        reviewBasket: 'Yes',
+        'Review Basket': 'Yes',
+        sheetTab: isAutomated ? 'Automated Tasks' : 'Tasks'
+      });
+      try {
+        await apiPost('updateTicketStatus', issuerPayload);
+        alert(`Issuer score recorded (${issuerScore}%). Ticket sent to the Department Manager for final approval/scoring.`);
+        await renderTickets();
+      } catch(e) {
+        alert(`Could not record issuer score: ${e.message}`);
+      }
+      return;
+    }
+
+    const managerRatingPayload = promptTaskScoring(task, 'Department Manager');
+    if (managerRatingPayload === null) return;
+    if (!confirm('Close this task after Department Manager approval/scoring?')) return;
+    const managerScore = executiveTicketRatingPercent(managerRatingPayload);
+    const issuerScoreRaw = parseFloat(String(task['Issuer Score %'] || task.issuerScorePercent || '').replace('%', ''));
+    const finalScore = Number.isFinite(issuerScoreRaw) ? Math.round((issuerScoreRaw + managerScore) / 2) : managerScore;
+    const closureFolder = finalScore >= 100 ? 'Closed On Time' : 'Closed Late';
+    const payload = Object.assign({}, task, managerRatingPayload, {
       ticketId: id,
       ticketNumber: id,
       taskId: id,
@@ -3880,24 +4364,32 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
       status: 'Closed',
       Status: 'Closed',
       'Completion Date': new Date().toISOString().slice(0, 10),
-      closureFolder: executiveRatingPayload?.closureFolder || executiveRatingPayload?.['Closure Folder'] || '',
-      'Closure Folder': executiveRatingPayload?.closureFolder || executiveRatingPayload?.['Closure Folder'] || '',
+      managerScorePercent: managerScore,
+      'Manager Score %': managerScore,
+      finalScorePercent: finalScore,
+      'Final %': finalScore,
+      closureFolder,
+      'Closure Folder': closureFolder,
+      'Closed Folder': closureFolder,
+      'Closed Timing': closureFolder,
       closedBy: currentUser?.['Full Name'] || currentUser?.Email || '',
       'Closed By': currentUser?.['Full Name'] || currentUser?.Email || '',
       closedByEmail: currentUser?.Email || '',
       'Closed By Email': currentUser?.Email || '',
+      closedTicketsSummary: 'Yes',
+      'Closed Tickets Summary': 'Yes',
+      myTicketsVisibility: 'Closed Tickets Summary',
+      'My Tickets Visibility': 'Closed Tickets Summary',
       sheetTab: isAutomated ? 'Automated Tasks' : 'Tasks'
     });
     try {
       await apiPost('updateTicketStatus', payload);
-      await postTicketScoreApproval(task, executiveRatingPayload, 'Closed');
-      alert('Task closed and score saved.');
+      alert(`Department Manager score saved (${managerScore}%). Final score: ${finalScore}%. Task closed.`);
       await renderTickets();
     } catch(e) {
       alert(`Could not close task: ${e.message}`);
     }
   };
-
 
   function isClosedTicket(t) {
     const status = getStatus(t);
@@ -4789,7 +5281,7 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
     const ticketTablePanel = `<div class="panel"><div class="panel-header"><h2>📋 Tickets</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}<th>Action</th></tr></thead><tbody>${data.length ? data.map((row, index) => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}<td>${ticketActionHtml(row, index)}</td></tr>`).join('') : `<tr><td colspan="${columns.length + 1}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
 
     main.innerHTML = `
-      <div class="top-bar"><div class="page-title"><h1>Tickets</h1><p>Sheet tab: Tasks · ${escapeHtml(activeFilterText)}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
+      <div class="top-bar"><div class="page-title"><h1>Tickets</h1><p>Sheet tab: Tasks · ${escapeHtml(activeFilterText)}</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
       ${window.taskFilter ? ticketTablePanel : ''}
       ${personTicketSummaryHtml([...visibleTicketRows, ...automatedTaskRows])}
       <div class="task-status-grid">
@@ -4860,7 +5352,7 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
       const pct = score.possible ? Math.round((score.earned / score.possible) * 100) : (item.__scoreType === 'Automated' ? getAutomatedTaskAverageScorePercent(item, item.__autoOccurrenceMonth) : 0);
       return { item, pct: pct === null ? 'Waiting' : `${pct}%`, period: getPeriodKeyForFilter(item, selectedPeriod) };
     }).sort((a,b) => String(getTaskDueDate(b.item)).localeCompare(String(getTaskDueDate(a.item))));
-    document.getElementById('mainContent').innerHTML = `<div class="top-bar"><div class="page-title"><h1>📋 Executive Scoring Details</h1><p>Score details with department, individual, cost center and period filters</p></div><button class="refresh-btn" onclick="renderExecutiveScoringDetails()">↻ Refresh</button></div>
+    document.getElementById('mainContent').innerHTML = `<div class="top-bar"><div class="page-title"><h1>📋 Executive Scoring Details</h1><p>Score details with department, individual, cost center and period filters</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
       <div class="panel"><div class="panel-header"><h2>Filters</h2></div><div style="padding:20px"><div class="form-row">
         <div class="form-field"><label>Department</label><select id="scoreFilterDept"><option value="">All departments</option>${departments.map(d => `<option value="${escapeHtml(d)}" ${d===selectedDept?'selected':''}>${escapeHtml(d)}</option>`).join('')}</select></div>
         <div class="form-field"><label>Individual</label><select id="scoreFilterPerson"><option value="">All individuals</option>${people.map(p => `<option value="${escapeHtml(p)}" ${p===selectedPerson?'selected':''}>${escapeHtml(p)}</option>`).join('')}</select></div>
@@ -5051,7 +5543,7 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
     const fieldId = c => `entry_${c.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const generatedAutoTaskNumber = sheetTabName === 'Automated Tasks' ? generateAutomatedTaskNumber() : '';
     main.innerHTML = `
-      <div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div>
+      <div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
       <div class="panel"><div class="panel-header"><h2>➕ Enter New ${title}</h2></div><div style="padding:20px">
         <div class="form-row">
           ${columns.map(c => `<div class="form-field"><label>${escapeHtml(c)}</label>${
@@ -5127,7 +5619,7 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
     window.currentTicketRows = isTaskTable ? dataArray : (window.currentTicketRows || []);
     const actionHeader = isTaskTable ? '<th>Action</th>' : '';
     const actionCells = (row, index) => isTaskTable ? `<td>${ticketActionHtml(row, index)}</td>` : '';
-    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="loadCurrentSection()">↻ Refresh</button></div><div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}${actionHeader}</tr></thead><tbody>${dataArray.length ? dataArray.map((row, index) => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}${actionCells(row, index)}</tr>`).join('') : `<tr><td colspan="${columns.length + (isTaskTable ? 1 : 0)}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
+    main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>${title}</h1><p>Sheet tab: ${sheetTabName}</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div><div class="panel"><div class="panel-header"><h2>📋 ${title}</h2></div><div class="table-wrapper"><table><thead><tr>${columns.map(c => `<th>${c}</th>`).join('')}${actionHeader}</tr></thead><tbody>${dataArray.length ? dataArray.map((row, index) => `<tr>${columns.map(c => `<td>${renderTaskCellHtml(row, c)}</td>`).join('')}${actionCells(row, index)}</tr>`).join('') : `<tr><td colspan="${columns.length + (isTaskTable ? 1 : 0)}" style="text-align:center">No data found</td></tr>`}</tbody></table></div></div>`;
   }
 
   
@@ -5146,8 +5638,8 @@ Please log in to QuickBase, open Tickets, score if required, and close the task 
     const name = currentUser?.['Full Name'] || currentUser?.Email || 'User';
     const role = (getUserRole(currentUser) || 'USER').toUpperCase();
     return `<header class="exec-header">
-      <div class="exec-brand"><div class="exec-logo">◇</div><div class="exec-brand-title">OnpointBase <span>· Management</span><br><span>Information</span></div></div>
-      <div class="exec-controls"><button class="exec-control"><kbd>⌘K</kbd> Search</button><button class="exec-control">▣ Compact</button><button class="exec-control">◉ Focus</button><button class="exec-control">✦ Assistant</button></div>
+      <div class="exec-brand"><div class="exec-logo"><img src="logo.png" alt="Onpoint logo" loading="lazy" decoding="async" onerror="this.style.display='none';this.parentNode.textContent='◇';"></div><div class="exec-brand-title">OnpointBase <span>· Management</span><br><span>Information</span></div></div>
+      <div class="exec-controls"><button class="exec-control"><kbd>⌘K</kbd> Search</button><button class="exec-control">▣ Compact</button><button class="exec-control" onclick="showTaskCreationChoice()">+ Create</button><button class="exec-control">◉ Focus</button><button class="exec-control">✦ Assistant</button></div>
       <div class="exec-user"><span class="exec-date">Data as at ${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</span><span class="exec-role">${escapeHtml(role)}</span><span>${escapeHtml(name)}</span></div>
     </header>`;
   }
