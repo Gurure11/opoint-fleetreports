@@ -731,6 +731,71 @@
       cursor: pointer;
     }
 
+
+    /* Robust scoring chart fix: render scoring charts as normal HTML, not canvas. */
+    .scoring-chart-card {
+      content-visibility: visible !important;
+      contain: none !important;
+      contain-intrinsic-size: auto !important;
+      min-height: 230px;
+    }
+    .scoring-chart-visual {
+      min-height: 185px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      justify-content: center;
+    }
+    .scoring-chart-row {
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) 3fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+    .scoring-chart-row:hover {
+      border-color: #3b82f6;
+      transform: translateY(-1px);
+      background: #eff6ff;
+    }
+    .scoring-chart-label {
+      font-size: 13px;
+      font-weight: 800;
+      color: #334155;
+    }
+    .scoring-chart-track {
+      height: 12px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+    .scoring-chart-fill {
+      height: 100%;
+      min-width: 3px;
+      border-radius: 999px;
+      background: #3b82f6;
+    }
+    .scoring-chart-count {
+      min-width: 28px;
+      text-align: right;
+      font-weight: 900;
+      color: #0f172a;
+    }
+    .scoring-chart-empty {
+      padding: 30px;
+      text-align: center;
+      border: 1px dashed #cbd5e1;
+      border-radius: 16px;
+      color: #64748b;
+      background: #f8fafc;
+      font-weight: 700;
+    }
+
     /* Login and rights layer */
     .login-screen {
       min-height: 100vh;
@@ -1187,6 +1252,23 @@
     .exec-top-card {
       content-visibility: auto;
       contain-intrinsic-size: 1px 320px;
+    }
+
+    /* Keep scoring charts rendered while viewing/filtering the scoring basket. */
+    #scoringStageChart,
+    #scoringPersonChart,
+    #scoringStageChart.closest-chart-fix,
+    #scoringPersonChart.closest-chart-fix {
+      content-visibility: visible !important;
+      contain: none !important;
+      contain-intrinsic-size: auto !important;
+    }
+
+    .chart-card:has(#scoringStageChart),
+    .chart-card:has(#scoringPersonChart) {
+      content-visibility: visible !important;
+      contain: none !important;
+      contain-intrinsic-size: auto !important;
     }
 
     .executive-inline-edit {
@@ -1669,44 +1751,77 @@
     const executiveKey = getExecutiveReviewUserKey();
     const reviewedDate = new Date().toISOString();
     const month = monthOverride || task.__autoOccurrenceMonth || getMonthKey(getTaskDueDate(task));
+
     reviews[key] = reviews[key] || {};
     reviews[key].byExecutive = reviews[key].byExecutive || {};
+    const beforeExecutiveKeys = Object.keys(reviews[key].byExecutive).filter(k => normalizeAutomatedTaskReviewValue(reviews[key].byExecutive[k]?.decision || ''));
+    const isExecutive2Score = beforeExecutiveKeys.length > 0 && !reviews[key].byExecutive[executiveKey];
+
     reviews[key].byExecutive[executiveKey] = { decision, reviewedBy, reviewedByEmail, reviewedDate, executiveComment };
     saveStoredAutomatedTaskReviews(reviews);
+
     const selectedScorePercent = automatedTaskDecisionPercent(decision);
-    const closureFolder = selectedScorePercent >= 100 ? 'Closed On Time' : 'Closed Late';
+    const reviewDetails = getAutomatedTaskExecutiveReviewDetails(task, month).filter(item => item.percent !== null);
+    const hasFinalAverage = reviewDetails.length >= (EXECUTIVE_MANAGERS.length || 2);
+    const averageScore = hasFinalAverage ? Math.round(reviewDetails.reduce((sum, item) => sum + item.percent, 0) / reviewDetails.length) : selectedScorePercent;
+    const closureFolder = hasFinalAverage && averageScore >= 100 ? 'Closed On Time' : (hasFinalAverage ? 'Closed Late' : 'Review Basket');
+    const slot = isExecutive2Score ? 2 : 1;
+
+    const payload = {
+      scoreApprovalId: scoreApprovalIdentity(task, month),
+      taskId: getAutomatedTaskIdentity(task),
+      'Task ID': getAutomatedTaskIdentity(task),
+      taskName: task['Task Name'] || task.taskName || task.Title || '',
+      'Task Name': task['Task Name'] || task.taskName || task.Title || '',
+      assignedTo: getAssigneeName(task),
+      'Assigned To': getAssigneeName(task),
+      assignedEmail: getAssigneeEmail(task),
+      'Assigned Email': getAssigneeEmail(task),
+      department: getDepartment(task),
+      Department: getDepartment(task),
+      costCenter: getCostCenter(task),
+      'Cost Center': getCostCenter(task),
+      month,
+      Month: month,
+      executiveOnTimeReview: decision,
+      executiveScorePercent: selectedScorePercent,
+      [`Executive ${slot} Name`]: reviewedBy,
+      [`Executive ${slot} Email`]: reviewedByEmail,
+      [`Executive ${slot} Score %`]: selectedScorePercent,
+      [`Executive ${slot} Decision`]: decision,
+      [`Executive ${slot} Comment`]: executiveComment,
+      [`Executive ${slot} Date`]: reviewedDate,
+      approvalStatus: hasFinalAverage ? 'Completed' : 'Awaiting Executive 2 Review',
+      'Approval Status': hasFinalAverage ? 'Completed' : 'Awaiting Executive 2 Review',
+      status: hasFinalAverage ? 'Closed' : 'Waiting Executive 2 Scoring',
+      Status: hasFinalAverage ? 'Closed' : 'Waiting Executive 2 Scoring',
+      reviewBasket: hasFinalAverage ? '' : 'Yes',
+      'Review Basket': hasFinalAverage ? '' : 'Yes',
+      reviewStatus: hasFinalAverage ? 'Completed' : 'Awaiting Executive 2 Review',
+      'Review Status': hasFinalAverage ? 'Completed' : 'Awaiting Executive 2 Review',
+      reviewRoute: 'Executive 1 then Executive 2',
+      'Review Route': 'Executive 1 then Executive 2',
+      executiveAverageScorePercent: hasFinalAverage ? averageScore : '',
+      finalScorePercent: hasFinalAverage ? averageScore : '',
+      'Average Score %': hasFinalAverage ? averageScore : '',
+      'Final %': hasFinalAverage ? averageScore : '',
+      closureFolder,
+      'Closure Folder': closureFolder,
+      executiveScoreComment: executiveComment,
+      'Executive Score Comment': executiveComment,
+      taskUpdateExecutiveComment: executiveComment,
+      taskUpdateSheetTab: 'Task Updates',
+      reviewedBy,
+      reviewedByEmail,
+      reviewedDate,
+      executiveReviewBy: reviewedBy,
+      executiveReviewByEmail: reviewedByEmail,
+      sheetTab: 'Automated Tasks'
+    };
 
     try {
-      await apiPost('updateScoreApproval', {
-        scoreApprovalId: scoreApprovalIdentity(task, month),
-        taskId: getAutomatedTaskIdentity(task),
-        'Task ID': getAutomatedTaskIdentity(task),
-        taskName: task['Task Name'] || task.taskName || task.Title || '',
-        'Task Name': task['Task Name'] || task.taskName || task.Title || '',
-        assignedTo: getAssigneeName(task),
-        assignedEmail: getAssigneeEmail(task),
-        department: getDepartment(task),
-        costCenter: getCostCenter(task),
-        month,
-        executiveOnTimeReview: decision,
-        executiveScorePercent: automatedTaskDecisionPercent(decision),
-        executiveAverageScorePercent: selectedScorePercent,
-        finalScorePercent: selectedScorePercent,
-        status: 'Closed',
-        Status: 'Closed',
-        closureFolder,
-        'Closure Folder': closureFolder,
-        executiveScoreComment: executiveComment,
-        'Executive Score Comment': executiveComment,
-        taskUpdateExecutiveComment: executiveComment,
-        taskUpdateSheetTab: 'Task Updates',
-        reviewedBy,
-        reviewedByEmail,
-        reviewedDate,
-        executiveReviewBy: reviewedBy,
-        executiveReviewByEmail: reviewedByEmail,
-        sheetTab: 'Automated Tasks'
-      });
+      await apiPost('updateScoreApproval', payload);
+      try { await apiPost('updateTicketStatus', Object.assign({}, task, payload)); } catch(statusErr) { console.warn('Automated task status update skipped:', statusErr.message); }
     } catch(e) {
       console.warn('Automated task executive review saved locally only:', e.message);
     }
@@ -1775,6 +1890,13 @@
   function escapeHtml(str) {
     if (str === undefined || str === null) return '';
     return String(str).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  }
+
+  function jsSafe(str) {
+    return String(str === undefined || str === null ? '' : str)
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r?\n/g, ' ');
   }
 
   function canonicalPersonName(str) {
@@ -3035,7 +3157,8 @@ Please log in to QuickBase to continue.`;
     const targets = (ticketRows || []).filter(row => {
       if (isAutomatedTaskRow(row) || isClosedTicket(row) || getManualBasketOverride(row) || execDashIsReviewRow(row)) return false;
       const criticalActive = String(getPriority(row)).toLowerCase() === 'critical';
-      return criticalActive || isOpenLateTicketWithUploadsAndComments(row, taskUpdates);
+      const hasCommentOrUpload = taskHasUploadOrCommentOrUpdate(row, taskUpdates);
+      return hasCommentOrUpload || criticalActive || isOpenLateTicketWithUploadsAndComments(row, taskUpdates);
     });
     if (!targets.length) return [];
     const moved = [];
@@ -3097,19 +3220,116 @@ Please log in to QuickBase to continue.`;
   }
 
   function scoringChartsHtml(tasks) {
-    if (!tasks.length) return '';
-    return `<div class="chart-grid"><div class="chart-card"><h3>Scoring by Stage</h3><p>Click a segment to focus the list</p><canvas id="scoringStageChart"></canvas></div><div class="chart-card"><h3>Scoring by Person</h3><p>Open items grouped by assignee</p><canvas id="scoringPersonChart"></canvas></div></div>`;
+    return `<div class="chart-grid" id="scoringChartsArea">
+      <div class="chart-card scoring-chart-card"><h3>Scoring by Stage</h3><p>Click a segment to focus the list</p><div id="scoringStageChartHtml" class="scoring-chart-visual"></div></div>
+      <div class="chart-card scoring-chart-card"><h3>Scoring by Person</h3><p>Open items grouped by assignee</p><div id="scoringPersonChartHtml" class="scoring-chart-visual"></div></div>
+    </div>`;
+  }
+
+  function scoringChartRowsHtml(counts, filterType) {
+    const entries = Object.entries(counts || {}).filter(([label, count]) => String(label || '').trim() && Number(count) > 0);
+    if (!entries.length) return '<div class="scoring-chart-empty">No scoring items to display yet.</div>';
+    const max = Math.max(...entries.map(([, count]) => Number(count) || 0), 1);
+    return entries.map(([label, count]) => {
+      const pct = Math.max(3, Math.round((Number(count) / max) * 100));
+      const clickAction = filterType === 'scoringPerson'
+        ? `openScoringPersonDetails('${jsSafe(label)}')`
+        : `applyScoringChartFilter('${filterType}', '${jsSafe(label)}')`;
+      return `<div class="scoring-chart-row" onclick="${clickAction}">
+        <div class="scoring-chart-label">${escapeHtml(label)}</div>
+        <div class="scoring-chart-track"><div class="scoring-chart-fill" style="width:${pct}%"></div></div>
+        <div class="scoring-chart-count">${escapeHtml(count)}</div>
+      </div>`;
+    }).join('');
   }
 
   function renderScoringCharts(tasks) {
-    if (typeof Chart === 'undefined' || !tasks.length) return;
-    const stageCounts = { 'Executive 1 review': tasks.filter(t => !executiveIssuedTaskWaitingExecutive2(t)).length, 'Executive 2 scoring': tasks.filter(executiveIssuedTaskWaitingExecutive2).length };
+    tasks = tasks || [];
+    // Do not use Chart.js canvas here. The scoring basket refreshes frequently and canvas charts were being destroyed/re-measured.
+    // These HTML charts stay visible and only filter the scoring list.
+    destroyChart('scoringStage');
+    destroyChart('scoringPerson');
+    const stageCounts = {
+      'Executive 1 review': tasks.filter(t => !executiveIssuedTaskWaitingExecutive2(t)).length,
+      'Executive 2 scoring': tasks.filter(executiveIssuedTaskWaitingExecutive2).length
+    };
     const peopleCounts = groupCount(tasks, t => getAssigneeName(t) || 'Unassigned');
-    const sCtx = document.getElementById('scoringStageChart')?.getContext('2d');
-    if (sCtx) { destroyChart('scoringStage'); charts.scoringStage = new Chart(sCtx, { type:'doughnut', data:{ labels:Object.keys(stageCounts), datasets:[{ data:Object.values(stageCounts) }] }, options:{ responsive:true, onClick: chartClickHandler('scoringStage') } }); }
-    const pCtx = document.getElementById('scoringPersonChart')?.getContext('2d');
-    if (pCtx) { destroyChart('scoringPerson'); charts.scoringPerson = new Chart(pCtx, { type:'bar', data:{ labels:Object.keys(peopleCounts), datasets:[{ label:'Items', data:Object.values(peopleCounts) }] }, options:{ responsive:true, onClick: chartClickHandler('scoringPerson') } }); }
+    const stageEl = document.getElementById('scoringStageChartHtml');
+    if (stageEl) stageEl.innerHTML = scoringChartRowsHtml(stageCounts, 'scoringStage');
+    const personEl = document.getElementById('scoringPersonChartHtml');
+    if (personEl) personEl.innerHTML = scoringChartRowsHtml(peopleCounts, 'scoringPerson');
   }
+
+  function scoringPersonDetailsHtml(personName, tasks) {
+    const person = String(personName || '').trim();
+    const rows = (tasks || []).filter(task => String(getAssigneeName(task) || 'Unassigned') === person);
+    if (!person || !rows.length) return '';
+
+    const executive1Count = rows.filter(t => !executiveIssuedTaskWaitingExecutive2(t)).length;
+    const executive2Count = rows.filter(executiveIssuedTaskWaitingExecutive2).length;
+    const lateCount = rows.filter(t => {
+      const due = dateOnly(getTaskDueDate(t) || getDueDate(t));
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      return due && due < today;
+    }).length;
+
+    const rowHtml = rows.map((task, index) => {
+      const taskIndex = (window.currentScoringBasketRows || []).indexOf(task);
+      const safeIndex = taskIndex >= 0 ? taskIndex : index;
+      const score = getAutomatedTaskAverageScorePercent(task, task.__autoOccurrenceMonth);
+      const stage = executiveIssuedTaskWaitingExecutive2(task) ? 'Executive 2 scoring' : 'Executive 1 review';
+      return `<tr>
+        <td><strong>${escapeHtml(scoringTaskTitle(task))}</strong><br><span style="font-size:12px;color:#64748b">${escapeHtml(getTicketIdentity(task) || getAutomatedTaskIdentity(task) || '')}</span></td>
+        <td>${escapeHtml(stage)}</td>
+        <td>${escapeHtml(getDepartment(task) || '')}</td>
+        <td>${escapeHtml(getCostCenter(task) || '')}</td>
+        <td>${escapeHtml(getTaskDueDate(task) || getDueDate(task) || '')}</td>
+        <td>${escapeHtml(monthLabelFromKey(task.__autoOccurrenceMonth))}</td>
+        <td>${escapeHtml(getAutomatedTaskDisplayStatus(task))}</td>
+        <td>${scoringProofLinksHtml(task)}${taskCommentText(task) ? `<div style="margin-top:8px;font-size:12px;color:#475569"><strong>Comment:</strong> ${escapeHtml(taskCommentText(task))}</div>` : ''}</td>
+        <td>${automatedTaskScoreBreakdownHtml(task)}</td>
+        <td>${score === null ? '<span style="font-size:12px;color:#64748b;font-weight:700">Waiting</span>' : `<span class="score-pill ${scoreClass(score)}">${score}%</span>`}</td>
+        <td><button class="btn-secondary" type="button" onclick="openScoringTaskDetail(${safeIndex})">View full detail</button></td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="panel" id="scoringPersonDetailPanelInner">
+      <div class="panel-header">
+        <h2>👤 ${escapeHtml(person)} scoring details</h2>
+        <button class="btn-secondary" type="button" onclick="clearScoringChartFilter()">Show all</button>
+      </div>
+      <div style="padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;background:#f8fafc;border-bottom:1px solid #e2e8f0">
+        <div><strong>${rows.length}</strong><br><span style="font-size:12px;color:#64748b">Total items</span></div>
+        <div><strong>${executive1Count}</strong><br><span style="font-size:12px;color:#64748b">Executive 1 review</span></div>
+        <div><strong>${executive2Count}</strong><br><span style="font-size:12px;color:#64748b">Executive 2 scoring</span></div>
+        <div><strong>${lateCount}</strong><br><span style="font-size:12px;color:#64748b">Late items</span></div>
+      </div>
+      <div class="table-wrapper"><table>
+        <thead><tr><th>Task</th><th>Stage</th><th>Department</th><th>Cost Center</th><th>Due Date</th><th>Month</th><th>Status</th><th>Uploaded Content / Comments</th><th>Executive Scores</th><th>Average %</th><th>Action</th></tr></thead>
+        <tbody>${rowHtml}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  function renderScoringPersonDetailsPanel() {
+    const panel = document.getElementById('scoringPersonDetailPanel');
+    if (!panel) return;
+    const person = String(window.scoringPersonFilter || '').trim();
+    panel.innerHTML = person ? scoringPersonDetailsHtml(person, window.currentScoringBasketRows || []) : '';
+  }
+
+  window.openScoringPersonDetails = function(personName) {
+    window.scoringStageFilter = '';
+    window.scoringPersonFilter = String(personName || '').trim();
+    if (typeof renderScoringBasketListOnly === 'function' && document.getElementById('scoringBasketListContainer')) {
+      renderScoringBasketListOnly();
+      const panel = document.getElementById('scoringPersonDetailPanelInner') || document.getElementById('scoringPersonDetailPanel');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      renderScoringBasket();
+    }
+  };
 
   window.openScoringTaskDetail = function(index) {
     const task = (window.currentScoringBasketRows || [])[index];
@@ -3129,31 +3349,42 @@ Please log in to QuickBase to continue.`;
     return `<textarea id="scoringComment_${index}" rows="2" placeholder="Executive comment..." style="min-width:180px"></textarea>`;
   }
 
-  async function renderScoringBasket() {
-    if (!isExecutive()) {
-      document.getElementById('mainContent').innerHTML = `
-        <div class="panel">
-          <div style="padding:40px;text-align:center">
-            <h2>Restricted Access</h2>
-            <p>Scoring basket is only visible to Executives.</p>
-          </div>
-        </div>`;
-      return;
-    }
-    const [autoDueTasks, taskUpdates, ticketRowsRaw] = await Promise.all([getDueExecutiveScoringTasks(), getTaskUpdatesForScoring(), safeGet('tickets')]);
-    const ticketRows = applyManualBasketOverrides(Array.isArray(ticketRowsRaw) ? ticketRowsRaw.filter(hasPerformanceAssignee) : []);
-    await moveTicketsToReviewBasketSilently(ticketRows, taskUpdates);
-    const ticketDueTasks = ticketRows.filter(row => !isClosedTicket(row) && execDashIsReviewRow(row) && isExecutiveReviewRouteTask(row) && canCurrentUserCloseTask(row));
-    const dueTasks = [...ticketDueTasks, ...autoDueTasks];
-    window.currentScoringBasketRows = dueTasks;
-    window.currentScoringTaskUpdateRows = taskUpdates;
+
+  function filterScoringBasketTasks(allDueTasks) {
+    const stageFilter = String(window.scoringStageFilter || '');
+    const personFilter = String(window.scoringPersonFilter || '');
+    return (allDueTasks || []).filter(task => {
+      if (stageFilter) {
+        const label = executiveIssuedTaskWaitingExecutive2(task) ? 'Executive 2 scoring' : 'Executive 1 review';
+        if (label !== stageFilter) return false;
+      }
+      if (personFilter && String(getAssigneeName(task) || 'Unassigned') !== personFilter) return false;
+      return true;
+    });
+  }
+
+  function scoringFilterBarHtml() {
+    const stageFilter = String(window.scoringStageFilter || '');
+    const personFilter = String(window.scoringPersonFilter || '');
+    return (stageFilter || personFilter)
+      ? `<div class="message-bar message-info" style="display:block;margin-bottom:16px">Filtered by ${escapeHtml(stageFilter || personFilter)}. <button class="btn-secondary" type="button" onclick="clearScoringChartFilter()">Show all</button></div>`
+      : '';
+  }
+
+  function buildScoringDepartmentTablesHtml(dueTasks) {
+    window.currentScoringBasketRows = dueTasks || [];
     const tasksByDepartment = {};
-    dueTasks.forEach((task, index) => {
+    (dueTasks || []).forEach((task, index) => {
       const department = getDepartment(task) || 'Unknown';
       if (!tasksByDepartment[department]) tasksByDepartment[department] = [];
       tasksByDepartment[department].push({ task, index });
     });
-    const departmentTablesHtml = Object.keys(tasksByDepartment).sort().map(department => `
+
+    if (!Object.keys(tasksByDepartment).length) {
+      return '<div class="panel"><div style="padding:24px;text-align:center">No items match this chart filter.</div></div>';
+    }
+
+    return Object.keys(tasksByDepartment).sort().map(department => `
       <div class="panel"><div class="panel-header"><h2>🧺 ${escapeHtml(department)} Automated Task Scoring</h2></div><div style="padding:0 16px 12px 16px">${bulkBasketControlsHtml()}</div><div class="table-wrapper"><table><thead><tr><th>Select</th><th>Task</th><th>Assigned To</th><th>Department</th><th>Due Date</th><th>Month</th><th>Status</th><th>Uploaded Content</th><th>Executive Scores</th><th>Average %</th><th>Executive Comment</th><th>Score</th></tr></thead><tbody>
         ${tasksByDepartment[department].map(item => `
           <tr>
@@ -3171,11 +3402,49 @@ Please log in to QuickBase to continue.`;
             <td>${isAutomatedTaskRow(item.task) ? `<button class="btn-primary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'On Time')">Done and ontime 100%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Late Done')">Done but late 50%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Not Done')">Not done 0%</button>` : `<button class="btn-primary" onclick="scoreTicketFromScoringBasket(${item.index})">Open / Score</button>`}</td>
           </tr>`).join('')}
       </tbody></table></div></div>`).join('');
+  }
+
+  function renderScoringBasketListOnly() {
+    const allDueTasks = window.currentScoringAllDueTasks || [];
+    const dueTasks = filterScoringBasketTasks(allDueTasks);
+    renderScoringCharts(allDueTasks);
+    window.currentScoringBasketRows = dueTasks;
+
+    const filterBar = document.getElementById('scoringFilterBar');
+    if (filterBar) filterBar.innerHTML = scoringFilterBarHtml();
+
+    renderScoringPersonDetailsPanel();
+
+    const list = document.getElementById('scoringBasketListContainer');
+    if (list) list.innerHTML = dueTasks.length ? buildScoringDepartmentTablesHtml(dueTasks) : '<div class="panel"><div style="padding:24px;text-align:center">No items match this chart filter.</div></div>';
+  }
+
+  async function renderScoringBasket() {
+    if (!isExecutive()) {
+      document.getElementById('mainContent').innerHTML = `
+        <div class="panel">
+          <div style="padding:40px;text-align:center">
+            <h2>Restricted Access</h2>
+            <p>Scoring basket is only visible to Executives.</p>
+          </div>
+        </div>`;
+      return;
+    }
+    const [autoDueTasks, taskUpdates, ticketRowsRaw] = await Promise.all([getDueExecutiveScoringTasks(), getTaskUpdatesForScoring(), safeGet('tickets')]);
+    const ticketRows = applyManualBasketOverrides(Array.isArray(ticketRowsRaw) ? ticketRowsRaw.filter(hasPerformanceAssignee) : []);
+    await moveTicketsToReviewBasketSilently(ticketRows, taskUpdates);
+    const ticketDueTasks = ticketRows.filter(row => !isClosedTicket(row) && execDashIsReviewRow(row) && isExecutiveReviewRouteTask(row) && canCurrentUserCloseTask(row));
+    const allDueTasks = [...ticketDueTasks, ...autoDueTasks];
+    window.currentScoringAllDueTasks = allDueTasks;
+    const dueTasks = filterScoringBasketTasks(allDueTasks);
+    window.currentScoringBasketRows = dueTasks;
+    window.currentScoringTaskUpdateRows = taskUpdates;
     const main = document.getElementById('mainContent');
     main.innerHTML = `
-      <div class="top-bar"><div class="page-title"><h1>Scoring Basket</h1><p>Completed or past-due automated tasks waiting for executive scoring</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
-      ${dueTasks.length ? `${scoringSummaryCardsHtml(dueTasks)}${scoringChartsHtml(dueTasks)}${departmentTablesHtml}` : '<div class="panel"><div class="panel-header"><h2>🧺 Automated Task Scoring</h2></div><div style="padding:24px;text-align:center">No scoring items waiting</div></div>'}`;
-    renderScoringCharts(dueTasks);
+      <div class="top-bar"><div class="page-title"><h1>Scoring Basket</h1><p>Completed or past-due tasks waiting for executive scoring</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>
+      ${scoringSummaryCardsHtml(allDueTasks)}${scoringChartsHtml(allDueTasks)}<div id="scoringFilterBar">${scoringFilterBarHtml()}</div><div id="scoringPersonDetailPanel"></div><div id="scoringBasketListContainer">${allDueTasks.length ? (dueTasks.length ? buildScoringDepartmentTablesHtml(dueTasks) : '<div class="panel"><div style="padding:24px;text-align:center">No items match this chart filter.</div></div>') : '<div class="panel"><div class="panel-header"><h2>🧺 Automated Task Scoring</h2></div><div style="padding:24px;text-align:center">No scoring items waiting</div></div>'}</div>`;
+    renderScoringCharts(allDueTasks);
+    renderScoringPersonDetailsPanel();
     await updateScoringBasketBadge();
   }
 
@@ -3190,7 +3459,9 @@ Please log in to QuickBase to continue.`;
     try {
       await saveAutomatedTaskExecutiveReview(task, decision, task.__autoOccurrenceMonth, executiveComment);
       suppressAutomatedTaskExecutiveAlert(task, task.__autoOccurrenceMonth);
-      await renderScoringBasket();
+      await refreshScoreApprovalsCache();
+      if (typeof renderScoringBasketListOnly === 'function') renderScoringBasketListOnly();
+      await updateScoringBasketBadge();
     } catch(e) {
       alert(`Could not save score: ${e.message}`);
     }
@@ -3744,12 +4015,42 @@ Please log in to QuickBase to review and update this item.`
     loadCurrentSection();
   }
 
+  function applyScoringChartFilter(filterType, label) {
+    window.scoringStageFilter = filterType === 'scoringStage' ? String(label || '') : '';
+    window.scoringPersonFilter = filterType === 'scoringPerson' ? String(label || '') : '';
+    if (filterType === 'scoringStage') {
+      const panel = document.getElementById('scoringPersonDetailPanel');
+      if (panel) panel.innerHTML = '';
+    }
+    if (typeof renderScoringBasketListOnly === 'function' && document.getElementById('scoringBasketListContainer')) {
+      renderScoringBasketListOnly();
+    } else {
+      renderScoringBasket();
+    }
+  }
+
+  function clearScoringChartFilter() {
+    window.scoringStageFilter = '';
+    window.scoringPersonFilter = '';
+    const panel = document.getElementById('scoringPersonDetailPanel');
+    if (panel) panel.innerHTML = '';
+    if (typeof renderScoringBasketListOnly === 'function' && document.getElementById('scoringBasketListContainer')) {
+      renderScoringBasketListOnly();
+    } else {
+      renderScoringBasket();
+    }
+  }
+
   function chartClickHandler(filterType) {
     return function(event, elements, chart) {
       if (!elements || !elements.length) return;
       const index = elements[0].index;
       const label = chart?.data?.labels?.[index] || '';
       if (!label) return;
+      if (filterType === 'scoringStage' || filterType === 'scoringPerson') {
+        applyScoringChartFilter(filterType, label);
+        return;
+      }
       openTicketsFromChart(filterType, label);
     };
   }
@@ -4489,10 +4790,10 @@ Please log in to QuickBase and open Tickets / Review Basket.`;
         Status: moreTime ? 'More Time Requested' : 'Review Basket',
         reviewBasket: moreTime ? '' : 'Yes',
         'Review Basket': moreTime ? '' : 'Yes',
-        reviewStatus: moreTime ? '' : 'Awaiting Review',
-        'Review Status': moreTime ? '' : 'Awaiting Review',
-        reviewRoute: moreTime ? '' : (isTaskIssuedByExecutive(task) ? 'Executive 1 then Executive 2' : 'Issuer then Department Manager'),
-        'Review Route': moreTime ? '' : (isTaskIssuedByExecutive(task) ? 'Executive 1 then Executive 2' : 'Issuer then Department Manager'),
+        reviewStatus: moreTime ? '' : 'Awaiting Executive 1 Review',
+        'Review Status': moreTime ? '' : 'Awaiting Executive 1 Review',
+        reviewRoute: moreTime ? '' : 'Executive 1 then Executive 2',
+        'Review Route': moreTime ? '' : 'Executive 1 then Executive 2',
         departmentManagerEmails: moreTime ? '' : getDepartmentManagerEmailsForTask(task).join(', '),
         'Department Manager Emails': moreTime ? '' : getDepartmentManagerEmailsForTask(task).join(', '),
         'More Time Executive Approval': moreTime ? 'Pending' : '',
