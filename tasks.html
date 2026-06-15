@@ -6338,6 +6338,357 @@ async function loadCurrentSection() {
   } else {
     showLoginScreen();
   }
+
+
+  /* === Targeted scoring basket + issuer close patch ===
+     Scope: scoring-stage drill-down, ticket scoring queue, Executive 1 -> Executive 2 flow,
+     auto-close after Executive 2, and allowing the task issuer to close their own issued ticket.
+  */
+  (function(){
+    function todayStartLocal() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+    function scorePatchDateValue(task) {
+      const raw = getTaskDueDate(task) || getDueDate(task) || task['Submitted Date'] || task.submittedDate || task['Completion Date'] || task.completionDate || task['Created Date'] || task.createdDate || '';
+      const d = dateOnly(raw);
+      return d ? d.getTime() : Number.MAX_SAFE_INTEGER;
+    }
+    function scorePatchSubmittedValue(task) {
+      return task['Update Timestamp'] || task.updateTimestamp || task.completionRequestDate || task['Completion Date'] || task.completionDate || task['Submitted Date'] || task.submittedDate || '';
+    }
+    function scorePatchCostCenter(task) { return getCostCenter(task) || task.CostCenter || task.costCenter || task['Cost Centre'] || 'Unknown Cost Center'; }
+    function scorePatchStage(task) { return executiveIssuedTaskWaitingExecutive2(task) ? 'Executive 2 scoring' : 'Executive 1 review'; }
+    function scorePatchExecutiveSlot() {
+      const email = String(currentUser?.Email || '').trim().toLowerCase();
+      const idx = (EXECUTIVE_MANAGERS || []).findIndex(m => String(m.email || '').trim().toLowerCase() === email);
+      return idx >= 0 ? idx + 1 : 0;
+    }
+    function scorePatchHasExecutive2Score(task) {
+      const raw = task?.['Executive 2 Score %'] ?? task?.executive2ScorePercent ?? '';
+      const n = parseFloat(String(raw).replace('%',''));
+      return Number.isFinite(n) || String(task?.['Executive 2 Scored'] || task?.executive2Scored || '').toLowerCase() === 'yes';
+    }
+    function scorePatchHasExecutive1Score(task) {
+      return getTaskFirstExecutiveScore(task) !== null || executiveIssuedTaskWaitingExecutive2(task);
+    }
+    function scorePatchIsSubmittedOpenTicket(task, taskUpdates) {
+      if (!task || isClosedTicket(task) || isAutomatedTaskRow(task)) return false;
+      const status = String(task.Status || task.status || '').toLowerCase();
+      if (status.includes('more time requested')) return false;
+      if (status.includes('waiting department manager')) return false;
+      const hasUpdate = taskHasUploadOrCommentOrUpdate(task, taskUpdates || window.currentScoringTaskUpdateRows || []);
+      const isReview = execDashIsReviewRow(task);
+      const submittedWords = ['submitted','completed','complete','done','review basket','awaiting review','open'];
+      const statusSaysSubmittedOrOpen = submittedWords.some(w => status.includes(w));
+      const due = dateOnly(getTaskDueDate(task) || getDueDate(task));
+      const openOnTimeOrLate = !isClosedTicket(task) && (!!due || status.includes('open'));
+      return (hasUpdate || isReview || statusSaysSubmittedOrOpen) && openOnTimeOrLate;
+    }
+    function scorePatchCanCurrentExecutiveScore(task) {
+      if (!isExecutive()) return false;
+      const slot = scorePatchExecutiveSlot();
+      const waitingExec2 = executiveIssuedTaskWaitingExecutive2(task);
+      if (waitingExec2) {
+        if (scorePatchHasExecutive2Score(task)) return false;
+        if (currentUserAlreadyExecutive1Scored(task)) return false;
+        return slot === 2 || slot === 0;
+      }
+      if (scorePatchHasExecutive1Score(task)) return false;
+      return slot === 1 || slot === 0;
+    }
+    function scorePatchSort(a,b) {
+      return scorePatchDateValue(a) - scorePatchDateValue(b)
+        || String(scorePatchCostCenter(a)).localeCompare(String(scorePatchCostCenter(b)))
+        || String(getDepartment(a) || '').localeCompare(String(getDepartment(b) || ''))
+        || String(getAssigneeName(a) || '').localeCompare(String(getAssigneeName(b) || ''));
+    }
+    async function scorePatchBuildTicketQueue(taskUpdates) {
+      const raw = await safeGet('tickets');
+      const rows = applyManualBasketOverrides(Array.isArray(raw) ? raw.filter(hasPerformanceAssignee) : []);
+      await moveTicketsToReviewBasketSilently(rows, taskUpdates || []);
+      return rows.filter(row => scorePatchIsSubmittedOpenTicket(row, taskUpdates || []) && scorePatchCanCurrentExecutiveScore(row)).sort(scorePatchSort);
+    }
+    async function scorePatchBuildAutoQueue() {
+      const raw = await safeGet('automatedTasks');
+      const expanded = expandAutomatedTaskMonthlyOccurrences(Array.isArray(raw) ? raw : [], true);
+      const today = todayStartLocal();
+      return expanded.filter(task => {
+        const statusText = String(task.Status || task.status || '').toLowerCase();
+        const closureFolderText = String(task.closureFolder || task['Closure Folder'] || task['Closed Folder'] || task['Closed Timing'] || '').toLowerCase();
+        if (statusText.includes('paused')) return false;
+        if (statusText.includes('closed') || closureFolderText.includes('closed')) return false;
+        const due = dateOnly(getTaskDueDate(task));
+        const completedForReview = statusText.includes('completed') || statusText.includes('awaiting review') || statusText.includes('review basket') || statusText.includes('submitted');
+        const pastDue = !!due && due <= today;
+        if (!completedForReview && !pastDue) return false;
+        return scorePatchCanCurrentExecutiveScore(task);
+      }).sort(scorePatchSort);
+    }
+
+    getDueExecutiveScoringTasks = async function() {
+      if (!isExecutive()) return [];
+      await refreshScoreApprovalsCache();
+      const taskUpdates = await getTaskUpdatesForScoring();
+      window.currentScoringTaskUpdateRows = taskUpdates;
+      const [tickets, autos] = await Promise.all([scorePatchBuildTicketQueue(taskUpdates), scorePatchBuildAutoQueue()]);
+      return [...tickets, ...autos].sort(scorePatchSort);
+    };
+
+    renderScoringCharts = function(tasks) {
+      tasks = tasks || [];
+      destroyChart('scoringStage');
+      destroyChart('scoringPerson');
+      const stageCounts = {
+        'Executive 1 review': tasks.filter(t => scorePatchStage(t) === 'Executive 1 review').length,
+        'Executive 2 scoring': tasks.filter(t => scorePatchStage(t) === 'Executive 2 scoring').length
+      };
+      const costCounts = groupCount(tasks, t => scorePatchCostCenter(t));
+      const stageEl = document.getElementById('scoringStageChartHtml');
+      if (stageEl) stageEl.innerHTML = scoringChartRowsHtml(stageCounts, 'scoringStage');
+      const personEl = document.getElementById('scoringPersonChartHtml');
+      if (personEl) {
+        const html = scoringChartRowsHtml(costCounts, 'scoringCostCenter').replace(/openScoringPersonDetails/g, 'openScoringCostCenterDetails');
+        personEl.innerHTML = html || '<div class="scoring-chart-empty">No cost centers to display yet.</div>';
+        const title = personEl.closest('.chart-card')?.querySelector('h3');
+        const p = personEl.closest('.chart-card')?.querySelector('p');
+        if (title) title.textContent = 'Scoring by Cost Center';
+        if (p) p.textContent = 'Click a cost center to open waiting items in date order';
+      }
+    };
+
+    function scoringPatchRowsTable(tasks, heading, showStage) {
+      const rows = (tasks || []).slice().sort(scorePatchSort);
+      if (!rows.length) return '<div class="panel"><div style="padding:24px;text-align:center">No waiting scoring items found.</div></div>';
+      return `<div class="panel" id="scoringStageDetailPanelInner"><div class="panel-header"><h2>${escapeHtml(heading)}</h2><button class="btn-secondary" type="button" onclick="clearScoringChartFilter()">Show all</button></div><div class="table-wrapper"><table><thead><tr><th>Date</th><th>Cost Center</th>${showStage ? '<th>Stage</th>' : ''}<th>Task</th><th>Assigned To</th><th>Department</th><th>Status</th><th>Uploaded Content</th><th>Score</th></tr></thead><tbody>${rows.map(task => {
+        const index = (window.currentScoringAllDueTasks || []).indexOf(task);
+        const listIndex = (window.currentScoringBasketRows || []).indexOf(task);
+        const safeIndex = listIndex >= 0 ? listIndex : index;
+        return `<tr onclick="openScoringTaskDetail(${safeIndex})" style="cursor:pointer"><td>${escapeHtml(getTaskDueDate(task) || getDueDate(task) || scorePatchSubmittedValue(task) || '')}</td><td>${escapeHtml(scorePatchCostCenter(task))}</td>${showStage ? `<td>${escapeHtml(scorePatchStage(task))}</td>` : ''}<td><strong>${escapeHtml(scoringTaskTitle(task))}</strong><br><span style="font-size:12px;color:#64748b">${escapeHtml(getTicketIdentity(task) || getAutomatedTaskIdentity(task) || '')}</span></td><td>${escapeHtml(getAssigneeName(task) || '')}</td><td>${escapeHtml(getDepartment(task) || '')}</td><td>${escapeHtml(task.Status || task.status || '')}</td><td>${scoringProofLinksHtml(task)}${taskCommentText(task) ? `<div style="margin-top:6px;font-size:12px;color:#475569"><strong>Comment:</strong> ${escapeHtml(taskCommentText(task))}</div>` : ''}</td><td>${isAutomatedTaskRow(task) ? automatedTaskScoreBreakdownHtml(task) : (getTaskFirstExecutiveScore(task) === null ? 'Waiting' : getTaskFirstExecutiveScore(task) + '%')}</td></tr>`;
+      }).join('')}</tbody></table></div></div>`;
+    }
+
+    function renderScoringStageDetailsPanel() {
+      const panel = document.getElementById('scoringPersonDetailPanel');
+      if (!panel) return;
+      const stage = String(window.scoringStageFilter || '').trim();
+      const cost = String(window.scoringCostCenterFilter || '').trim();
+      if (stage) {
+        const rows = (window.currentScoringAllDueTasks || []).filter(t => scorePatchStage(t) === stage);
+        const byCost = {};
+        rows.forEach(t => { const c = scorePatchCostCenter(t); (byCost[c] = byCost[c] || []).push(t); });
+        panel.innerHTML = Object.keys(byCost).sort().map(c => scoringPatchRowsTable(byCost[c], `${stage} · ${c}`, false)).join('');
+        return;
+      }
+      if (cost) {
+        const rows = (window.currentScoringAllDueTasks || []).filter(t => scorePatchCostCenter(t) === cost);
+        panel.innerHTML = scoringPatchRowsTable(rows, `Cost Center · ${cost}`, true);
+        return;
+      }
+      const person = String(window.scoringPersonFilter || '').trim();
+      panel.innerHTML = person ? scoringPersonDetailsHtml(person, window.currentScoringBasketRows || []) : '';
+    }
+
+    applyScoringChartFilter = function(filterType, label) {
+      window.scoringStageFilter = filterType === 'scoringStage' ? String(label || '') : '';
+      window.scoringPersonFilter = filterType === 'scoringPerson' ? String(label || '') : '';
+      window.scoringCostCenterFilter = filterType === 'scoringCostCenter' ? String(label || '') : '';
+      if (typeof renderScoringBasketListOnly === 'function' && document.getElementById('scoringBasketListContainer')) renderScoringBasketListOnly();
+      else renderScoringBasket();
+      setTimeout(() => {
+        const panel = document.getElementById('scoringStageDetailPanelInner') || document.getElementById('scoringPersonDetailPanel');
+        if (panel) panel.scrollIntoView({behavior:'smooth', block:'start'});
+      }, 50);
+    };
+
+    window.openScoringCostCenterDetails = function(costCenter) { applyScoringChartFilter('scoringCostCenter', costCenter); };
+
+    clearScoringChartFilter = function() {
+      window.scoringStageFilter = '';
+      window.scoringPersonFilter = '';
+      window.scoringCostCenterFilter = '';
+      const panel = document.getElementById('scoringPersonDetailPanel');
+      if (panel) panel.innerHTML = '';
+      if (typeof renderScoringBasketListOnly === 'function' && document.getElementById('scoringBasketListContainer')) renderScoringBasketListOnly();
+      else renderScoringBasket();
+    };
+
+    filterScoringBasketTasks = function(allDueTasks) {
+      const stageFilter = String(window.scoringStageFilter || '');
+      const personFilter = String(window.scoringPersonFilter || '');
+      const costFilter = String(window.scoringCostCenterFilter || '');
+      return (allDueTasks || []).filter(task => {
+        if (stageFilter && scorePatchStage(task) !== stageFilter) return false;
+        if (personFilter && String(getAssigneeName(task) || 'Unassigned') !== personFilter) return false;
+        if (costFilter && scorePatchCostCenter(task) !== costFilter) return false;
+        return true;
+      }).sort(scorePatchSort);
+    };
+
+    scoringFilterBarHtml = function() {
+      const label = String(window.scoringStageFilter || window.scoringPersonFilter || window.scoringCostCenterFilter || '');
+      return label ? `<div class="message-bar message-info" style="display:block;margin-bottom:16px">Filtered by ${escapeHtml(label)}. <button class="btn-secondary" type="button" onclick="clearScoringChartFilter()">Show all</button></div>` : '';
+    };
+
+    buildScoringDepartmentTablesHtml = function(dueTasks) {
+      window.currentScoringBasketRows = (dueTasks || []).slice().sort(scorePatchSort);
+      const tasksByCostCenter = {};
+      window.currentScoringBasketRows.forEach((task, index) => {
+        const cc = scorePatchCostCenter(task);
+        if (!tasksByCostCenter[cc]) tasksByCostCenter[cc] = [];
+        tasksByCostCenter[cc].push({ task, index });
+      });
+      if (!Object.keys(tasksByCostCenter).length) return '<div class="panel"><div style="padding:24px;text-align:center">No items match this chart filter.</div></div>';
+      return Object.keys(tasksByCostCenter).sort().map(costCenter => `
+        <div class="panel"><div class="panel-header"><h2>🧺 ${escapeHtml(costCenter)} · Scoring Queue</h2></div><div style="padding:0 16px 12px 16px">${bulkBasketControlsHtml()}</div><div class="table-wrapper"><table><thead><tr><th>Select</th><th>Date</th><th>Stage</th><th>Task</th><th>Assigned To</th><th>Department</th><th>Status</th><th>Uploaded Content</th><th>Executive Scores</th><th>Executive Comment</th><th>Score</th></tr></thead><tbody>
+          ${tasksByCostCenter[costCenter].sort((a,b) => scorePatchSort(a.task,b.task)).map(item => {
+            const stage = scorePatchStage(item.task);
+            const avg = isAutomatedTaskRow(item.task) ? getAutomatedTaskAverageScorePercent(item.task, item.task.__autoOccurrenceMonth) : getTaskFirstExecutiveScore(item.task);
+            return `<tr>
+              <td><input type="checkbox" class="ticket-bulk-select" data-index="${item.index}"></td>
+              <td>${escapeHtml(getTaskDueDate(item.task) || getDueDate(item.task) || scorePatchSubmittedValue(item.task) || '')}</td>
+              <td>${escapeHtml(stage)}</td>
+              <td onclick="openScoringTaskDetail(${item.index})" style="cursor:pointer"><strong>${escapeHtml(scoringTaskTitle(item.task))}</strong><br><span style="font-size:12px;color:#64748b">${escapeHtml(getTicketIdentity(item.task) || getAutomatedTaskIdentity(item.task) || '')}</span><br><span style="font-size:12px;color:#64748b">${renderExpandableTextHtml(item.task.Description || item.task.description || getCellValue(item.task, 'Task Description') || '', 100)}</span></td>
+              <td>${escapeHtml(getAssigneeName(item.task) || 'Assignee')}</td>
+              <td>${escapeHtml(getDepartment(item.task))}</td>
+              <td>${escapeHtml(item.task.Status || item.task.status || getAutomatedTaskDisplayStatus(item.task))}</td>
+              <td>${scoringProofLinksHtml(item.task)}${taskCommentText(item.task) ? `<div style="margin-top:8px;font-size:12px;color:#475569"><strong>Comment:</strong> ${escapeHtml(taskCommentText(item.task))}</div>` : ''}</td>
+              <td>${isAutomatedTaskRow(item.task) ? automatedTaskScoreBreakdownHtml(item.task) : (getTaskFirstExecutiveScore(item.task) === null ? '<span style="font-size:12px;color:#64748b;font-weight:700">Waiting Executive 1</span>' : `<span class="score-pill ${scoreClass(getTaskFirstExecutiveScore(item.task))}">Executive 1: ${getTaskFirstExecutiveScore(item.task)}%</span>`)}</td>
+              <td>${scoringExecutiveCommentHtml(item.index)}</td>
+              <td>${isAutomatedTaskRow(item.task) ? `<button class="btn-primary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'On Time')">Done on time 100%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Late Done')">Done late 50%</button> <button class="btn-secondary" onclick="scoreAutomatedTaskFromBasket(${item.index}, 'Not Done')">Not done 0%</button>` : `<button class="btn-primary" onclick="scoreTicketFromBasket(${item.index}, 'On Time')">Done on time 100%</button> <button class="btn-secondary" onclick="scoreTicketFromBasket(${item.index}, 'Late Done')">Done late 50%</button> <button class="btn-secondary" onclick="scoreTicketFromBasket(${item.index}, 'Not Done')">Not done 0%</button>`}</td>
+            </tr>`;
+          }).join('')}
+        </tbody></table></div></div>`).join('');
+    };
+
+    renderScoringPersonDetailsPanel = function() { renderScoringStageDetailsPanel(); };
+
+    renderScoringBasketListOnly = function() {
+      const allDueTasks = (window.currentScoringAllDueTasks || []).slice().sort(scorePatchSort);
+      const dueTasks = filterScoringBasketTasks(allDueTasks);
+      renderScoringCharts(allDueTasks);
+      window.currentScoringBasketRows = dueTasks;
+      const filterBar = document.getElementById('scoringFilterBar');
+      if (filterBar) filterBar.innerHTML = scoringFilterBarHtml();
+      renderScoringStageDetailsPanel();
+      const list = document.getElementById('scoringBasketListContainer');
+      if (list) list.innerHTML = dueTasks.length ? buildScoringDepartmentTablesHtml(dueTasks) : '<div class="panel"><div style="padding:24px;text-align:center">No items match this chart filter.</div></div>';
+    };
+
+    renderScoringBasket = async function() {
+      if (!isExecutive()) {
+        document.getElementById('mainContent').innerHTML = '<div class="panel"><div style="padding:40px;text-align:center"><h2>Restricted Access</h2><p>Scoring basket is only visible to Executives.</p></div></div>';
+        return;
+      }
+      await refreshScoreApprovalsCache();
+      const taskUpdates = await getTaskUpdatesForScoring();
+      window.currentScoringTaskUpdateRows = taskUpdates;
+      const [ticketDueTasks, autoDueTasks] = await Promise.all([scorePatchBuildTicketQueue(taskUpdates), scorePatchBuildAutoQueue()]);
+      const allDueTasks = [...ticketDueTasks, ...autoDueTasks].sort(scorePatchSort);
+      window.currentScoringAllDueTasks = allDueTasks;
+      const dueTasks = filterScoringBasketTasks(allDueTasks);
+      window.currentScoringBasketRows = dueTasks;
+      const main = document.getElementById('mainContent');
+      main.innerHTML = `<div class="top-bar"><div class="page-title"><h1>Scoring Basket</h1><p>Submitted Open/Open Late tickets and completed recurring tasks awaiting Executive scoring, oldest first by cost center.</p></div><button class="refresh-btn" onclick="goHomePage()">🏠 Home</button></div>${scoringSummaryCardsHtml(allDueTasks)}${scoringChartsHtml(allDueTasks)}<div id="scoringFilterBar">${scoringFilterBarHtml()}</div><div id="scoringPersonDetailPanel"></div><div id="scoringBasketListContainer">${allDueTasks.length ? (dueTasks.length ? buildScoringDepartmentTablesHtml(dueTasks) : '<div class="panel"><div style="padding:24px;text-align:center">No items match this chart filter.</div></div>') : '<div class="panel"><div class="panel-header"><h2>🧺 Scoring Queue</h2></div><div style="padding:24px;text-align:center">No scoring items waiting</div></div>'}</div>`;
+      renderScoringCharts(allDueTasks);
+      renderScoringStageDetailsPanel();
+      await updateScoringBasketBadge();
+    };
+
+    window.scoreTicketFromBasket = async function(index, decision) {
+      const task = (window.currentScoringBasketRows || [])[index];
+      if (!task) return alert('Ticket not found. Refresh and try again.');
+      if (!scorePatchCanCurrentExecutiveScore(task)) return alert('This ticket is not waiting for your scoring stage.');
+      const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
+      if (!id) return alert('Ticket ID is missing.');
+      const executiveComment = document.getElementById(`scoringComment_${index}`)?.value || '';
+      const percent = automatedTaskDecisionPercent(decision);
+      const waitingExec2 = executiveIssuedTaskWaitingExecutive2(task);
+      const label = decision === 'On Time' ? 'Done on time' : (decision === 'Late Done' ? 'Done but late' : 'Not done');
+      if (!confirm(`Confirm ${waitingExec2 ? 'Executive 2 final' : 'Executive 1'} score.\n\nTicket: ${id}\nTask: ${scoringTaskTitle(task)}\nScore: ${label} (${percent}%)\nComment: ${executiveComment || 'No comment'}\n\nContinue?`)) return;
+      const common = {
+        ticketId: id, ticketNumber: id, taskId: id, 'Ticket ID': id, 'Ticket Number': id, 'Task ID': id,
+        executiveOnTimeReview: decision, 'Executive On Time Review': decision,
+        executiveScorePercent: percent, 'Executive Score %': percent,
+        executiveRatingComments: executiveComment, 'Executive Rating Comments': executiveComment,
+        reviewedBy: currentUser?.['Full Name'] || currentUser?.Email || '', reviewedByEmail: currentUser?.Email || '', reviewedDate: new Date().toISOString(),
+        reviewRoute: 'Executive 1 then Executive 2', 'Review Route': 'Executive 1 then Executive 2', sheetTab: 'Tasks'
+      };
+      let payload;
+      if (!waitingExec2) {
+        payload = Object.assign({}, task, common, {
+          status: 'Waiting Executive 2 Scoring', Status: 'Waiting Executive 2 Scoring',
+          executive1Scored: 'Yes', 'Executive 1 Scored': 'Yes',
+          executive1Name: currentUser?.['Full Name'] || currentUser?.Email || '', 'Executive 1 Name': currentUser?.['Full Name'] || currentUser?.Email || '',
+          executive1Email: currentUser?.Email || '', 'Executive 1 Email': currentUser?.Email || '',
+          executive1Decision: decision, 'Executive 1 Decision': decision,
+          executive1ScorePercent: percent, 'Executive 1 Score %': percent,
+          executive1Comment: executiveComment, 'Executive 1 Comment': executiveComment,
+          executive1Date: new Date().toISOString(), 'Executive 1 Date': new Date().toISOString(),
+          reviewBasket: 'Yes', 'Review Basket': 'Yes', reviewStatus: 'Awaiting Executive 2 Review', 'Review Status': 'Awaiting Executive 2 Review'
+        });
+      } else {
+        const firstScore = getTaskFirstExecutiveScore(task);
+        const finalScore = Math.round(((Number.isFinite(Number(firstScore)) ? Number(firstScore) : percent) + percent) / 2);
+        const closureFolder = finalScore >= 100 ? 'Closed On Time' : 'Closed Late';
+        payload = Object.assign({}, task, common, {
+          status: 'Closed', Status: 'Closed', 'Completion Date': new Date().toISOString().slice(0,10),
+          executive2Scored: 'Yes', 'Executive 2 Scored': 'Yes',
+          executive2Name: currentUser?.['Full Name'] || currentUser?.Email || '', 'Executive 2 Name': currentUser?.['Full Name'] || currentUser?.Email || '',
+          executive2Email: currentUser?.Email || '', 'Executive 2 Email': currentUser?.Email || '',
+          executive2Decision: decision, 'Executive 2 Decision': decision,
+          executive2ScorePercent: percent, 'Executive 2 Score %': percent,
+          executive2Comment: executiveComment, 'Executive 2 Comment': executiveComment,
+          executive2Date: new Date().toISOString(), 'Executive 2 Date': new Date().toISOString(),
+          executiveAverageScorePercent: finalScore, finalScorePercent: finalScore, 'Average Score %': finalScore, 'Final %': finalScore,
+          closureFolder, 'Closure Folder': closureFolder, 'Closed Folder': closureFolder, 'Closed Timing': closureFolder,
+          reviewBasket: '', 'Review Basket': '', reviewStatus: 'Completed', 'Review Status': 'Completed',
+          closedBy: currentUser?.['Full Name'] || currentUser?.Email || '', 'Closed By': currentUser?.['Full Name'] || currentUser?.Email || '',
+          closedByEmail: currentUser?.Email || '', 'Closed By Email': currentUser?.Email || '',
+          closedTicketsSummary: 'Yes', 'Closed Tickets Summary': 'Yes', myTicketsVisibility: 'Closed Tickets Summary', 'My Tickets Visibility': 'Closed Tickets Summary'
+        });
+      }
+      try {
+        await apiPost('updateTicketStatus', payload);
+        await postTicketScoreApproval(task, payload, payload.Status || payload.status);
+        alert(waitingExec2 ? `Executive 2 score saved. Final score: ${payload['Final %']}%. Ticket closed.` : `Executive 1 score saved. Ticket moved to Executive 2 scoring basket.`);
+        await renderScoringBasket();
+      } catch(e) { alert(`Could not save score: ${e.message}`); }
+    };
+
+    window.scoreTicketFromScoringBasket = async function(index) {
+      const task = (window.currentScoringBasketRows || [])[index];
+      if (!task) return alert('Ticket not found. Refresh and try again.');
+      const due = dateOnly(getTaskDueDate(task) || getDueDate(task));
+      const submitted = dateOnly(scorePatchSubmittedValue(task)) || new Date();
+      const suggested = due && submitted > due ? 'Late Done' : 'On Time';
+      return window.scoreTicketFromBasket(index, suggested);
+    };
+
+    const originalCloseTicketFromTable = window.closeTicketFromTable;
+    window.closeTicketFromTable = async function(index) {
+      const task = (window.currentTicketRows || [])[index];
+      if (task && isCurrentUserTicketIssuer(task) && !isClosedTicket(task) && !isExecutiveReviewRouteTask(task)) {
+        const id = getTicketIdentity(task) || getAutomatedTaskIdentity(task);
+        const ratingPayload = promptTaskScoring(task, 'Issuer');
+        if (ratingPayload === null) return;
+        const finalScore = executiveTicketRatingPercent(ratingPayload);
+        const closureFolder = finalScore >= 100 ? 'Closed On Time' : 'Closed Late';
+        if (!confirm('Close this ticket now as the task issuer?')) return;
+        const payload = Object.assign({}, task, ratingPayload, {
+          ticketId: id, ticketNumber: id, taskId: id, 'Ticket ID': id, 'Ticket Number': id, 'Task ID': id,
+          status: 'Closed', Status: 'Closed', 'Completion Date': new Date().toISOString().slice(0,10),
+          issuerClosed: 'Yes', 'Issuer Closed': 'Yes', issuerScorePercent: finalScore, 'Issuer Score %': finalScore,
+          finalScorePercent: finalScore, 'Final %': finalScore,
+          closureFolder, 'Closure Folder': closureFolder, 'Closed Folder': closureFolder, 'Closed Timing': closureFolder,
+          closedBy: currentUser?.['Full Name'] || currentUser?.Email || '', 'Closed By': currentUser?.['Full Name'] || currentUser?.Email || '',
+          closedByEmail: currentUser?.Email || '', 'Closed By Email': currentUser?.Email || '',
+          closedTicketsSummary: 'Yes', 'Closed Tickets Summary': 'Yes', myTicketsVisibility: 'Closed Tickets Summary', 'My Tickets Visibility': 'Closed Tickets Summary', sheetTab: 'Tasks'
+        });
+        try { await apiPost('updateTicketStatus', payload); alert(`Ticket closed by issuer. Final score: ${finalScore}%.`); await renderTickets(); }
+        catch(e) { alert(`Could not close ticket: ${e.message}`); }
+        return;
+      }
+      return originalCloseTicketFromTable(index);
+    };
+  })();
 </script>
 
 </body>
