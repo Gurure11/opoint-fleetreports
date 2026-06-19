@@ -177,9 +177,21 @@
     }
 
     .action-btn {
-      margin: 0 4px 4px 0;
-      padding: 8px 10px;
-      font-size: 12px;
+      margin: 0 2px 2px 0;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 6px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+    }
+
+    .edit-btn {
+      background: #2563eb;
+    }
+    .edit-btn:hover {
+      background: #1d4ed8;
     }
 
     .delete-btn {
@@ -197,6 +209,25 @@
 
     .cancel-btn:hover {
       background: #4b5563;
+    }
+
+    /* table action cell: right-aligned, compact */
+    .action-cell {
+      text-align: right;
+      white-space: nowrap;
+      padding: 6px 8px;
+    }
+    .action-cell .action-btn {
+      margin: 0 0 0 4px;
+    }
+
+    /* search result action row */
+    .person-actions {
+      margin-top: 6px;
+      text-align: right;
+    }
+    .person-actions .action-btn {
+      margin: 0 0 0 4px;
     }
 
   </style>
@@ -485,7 +516,7 @@
               : '';
 
             const actions = getRecordKey(p)
-              ? '<button class="action-btn" type="button" onclick="startEdit(\'transactions\', ' + index + ')">Edit</button>' +
+              ? '<button class="action-btn edit-btn" type="button" onclick="startEdit(\'transactions\', ' + index + ')">Edit</button>' +
                 '<button class="action-btn delete-btn" type="button" onclick="deleteLicenceRecord(\'transactions\', ' + index + ')">Delete</button>'
               : '<span class="empty">No row ID</span>';
 
@@ -504,7 +535,7 @@
               '<td style="padding:10px; border:1px solid #e5e7eb;">' + licenceLink + '</td>' +
               '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.fleetCardPolicyIssuedSigned) + '</td>' +
               '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.fleetPolicyIssuedSigned) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb; white-space:nowrap;">' + actions + '</td>' +
+              '<td class="action-cell">' + actions + '</td>' +
             '</tr>';
           }).join('');
         })
@@ -715,6 +746,13 @@
 
       searchLicenceRecords = results;
       box.innerHTML = results.map(function(p, index) {
+        const actions = getRecordKey(p)
+          ? '<div class="person-actions">' +
+            '<button class="action-btn edit-btn" type="button" onclick="startEdit(\'search\', ' + index + ')">Edit</button>' +
+            '<button class="action-btn delete-btn" type="button" onclick="deleteLicenceRecord(\'search\', ' + index + ')">Delete</button>' +
+            '</div>'
+          : '<span class="empty">No row ID</span>';
+
         return '<div class="person">' +
           '<strong>' + escapeHtml(p.name) + ' ' + escapeHtml(p.surname) + '</strong><br>' +
           'Licence Number: ' + escapeHtml(p.licenceNumber) + '<br>' +
@@ -729,10 +767,7 @@
           'Licence Link: ' + (p.licenceFileLink ? '<a href="' + escapeAttr(p.licenceFileLink) + '" target="_blank">View Licence</a>' : '') + '<br>' +
           'Fleet Card Policy: ' + escapeHtml(p.fleetCardPolicyIssuedSigned) + '<br>' +
           'Fleet Policy: ' + escapeHtml(p.fleetPolicyIssuedSigned) + '<br>' +
-          (getRecordKey(p)
-            ? '<button class="action-btn" type="button" onclick="startEdit(\'search\', ' + index + ')">Edit</button>' +
-              '<button class="action-btn delete-btn" type="button" onclick="deleteLicenceRecord(\'search\', ' + index + ')">Delete</button>'
-            : '<span class="empty">No row ID</span>') +
+          actions +
         '</div>';
       }).join('');
     }
