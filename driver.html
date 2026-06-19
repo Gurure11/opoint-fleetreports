@@ -922,7 +922,7 @@
                     </div>
                 </div>
 
-                <!-- Merchant Field (NEW) -->
+                <!-- Merchant & Project Name fields (side by side) -->
                 <div class="form-grid-2" style="margin-top: 0;">
                     <div class="field">
                         <label><i class="fas fa-store"></i>Merchant *</label>
@@ -940,7 +940,10 @@
                         <button type="button" class="add-btn" style="margin-top:8px;" onclick="addNewOption('merchant')">
                             <i class="fas fa-plus"></i> Add Merchant
                         </button>
-
+                    </div>
+                    <div class="field">
+                        <label><i class="fas fa-project-diagram"></i>Project Name</label>
+                        <input type="text" id="projectName" placeholder="e.g. N3 Roadworks, Sandton Project">
                     </div>
                 </div>
 
@@ -1185,7 +1188,7 @@
             const receiptDriveFolderId = '19GoN9yzz0ODP_F-4ffba_olb3cD0b0f4';
             let receiptFileData = null;
             let uploadedReceiptLink = '';
-            const scriptURL = 'https://script.google.com/macros/s/AKfycbxKsIOSzqgKUAQjIKmbBD-t8LS5B6YfuZE13LlfABeMRZcgHYySVx8-AqewSeDXyFQ4/exec';
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbyTYRBNRsQt9LDQ2vcSvYp8dLAixKeA9EocjYe3xWFbFFfCRCa7l7j8n_DeBPC4KHtG/exec';
             const fuelSheetId = '1SnhLTWgzJfkKNmIvtj8uwa-8x7TsnRtqkfX3deEuHIQ';
             const fuelSheetTab = 'Fuel Log';
             const persistentSelectIds = ['driverName', 'vehicleReg'];
@@ -1526,6 +1529,7 @@
                 const vehicle = document.getElementById('vehicleReg').value;
                 const erNumber = getFormattedErNumber(true);
                 const merchant = document.getElementById('merchant').value;
+                const projectName = document.getElementById('projectName').value;
                 const start = parseFloat(odoStart.value);
                 const finish = parseFloat(odoFinish.value);
                 const fuelType = document.getElementById('fuelType').value;
@@ -1588,6 +1592,7 @@
                     vehicle: vehicle,
                     erNumber: erNumber,
                     merchant: merchant,
+                    projectName: projectName,
                     odoStart: start,
                     odoFinish: finish,
                     fuelType: fuelType,
@@ -1671,6 +1676,7 @@
                 fillIfExists('vehicleReg', row.vehicle || row.regNumber);
                 fillIfExists('erNumber', row.erNumber);
                 fillIfExists('merchant', row.merchant);
+                fillIfExists('projectName', row.projectName);
                 fillIfExists('odoStart', row.odoStart);
                 fillIfExists('odoFinish', row.odoFinish || row.finalOdo);
                 fillIfExists('fuelType', row.fuelType);
@@ -1756,6 +1762,7 @@
                 const vehicle = document.getElementById('vehicleReg').value || 'N/A';
                 const erNumber = document.getElementById('erNumber').value || 'N/A';
                 const merchant = document.getElementById('merchant').value || 'N/A';
+                const projectName = document.getElementById('projectName').value || 'N/A';
                 const start = odoStart.value || '0';
                 const finish = odoFinish.value || '0';
                 const fuelType = document.getElementById('fuelType').value || 'N/A';
@@ -1777,6 +1784,7 @@
                 doc.text(`Vehicle: ${vehicle}`, 20, y); y += lineHeight;
                 doc.text(`ER No.: ${erNumber}`, 20, y); y += lineHeight;
                 doc.text(`Merchant: ${merchant}`, 20, y); y += lineHeight;
+                doc.text(`Project: ${projectName}`, 20, y); y += lineHeight;
                 doc.text(`Odometer: ${start} km → ${finish} km`, 20, y); y += lineHeight;
                 doc.text(`Distance: ${kmTraveledSpan.innerText} km`, 20, y); y += lineHeight;
                 doc.text(`Fuel: ${liters} L × R${price} = R${fuelTotalDisplay.innerText}`, 20, y); y += lineHeight;
@@ -1800,6 +1808,7 @@
                     `Vehicle: ${document.getElementById('vehicleReg').value || 'N/A'}\n` +
                     `ER No.: ${document.getElementById('erNumber').value || 'N/A'}\n` +
                     `Merchant: ${document.getElementById('merchant').value || 'N/A'}\n` +
+                    `Project: ${document.getElementById('projectName').value || 'N/A'}\n` +
                     `Distance: ${kmTraveledSpan.innerText} km\n` +
                     `Fuel cost: ${fuelCostTotalSpan.innerText}\n` +
                     `Lube cost: ${summaryLube.innerText}\n` +
