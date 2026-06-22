@@ -3,41 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Distinct Infrastructure - Asset Register</title>
+  <title>Distinct Infrastructure · Dashboard</title>
+  <!-- Font Awesome for icons (optional but adds visual polish) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    :root{
-      --primary-blue:#0b2f6b;
-      --deep-blue:#071f47;
-      --bright-blue:#1464d2;
-      --soft-blue:#eaf3ff;
-      --gold:#d4af37;
-      --gold-light:#ffe7a3;
-      --gold-deep:#9a7416;
-      --white:#ffffff;
-      --text:#12304f;
-      --muted:#6b7a90;
-      --line:rgba(20,68,126,0.16);
-      --shadow:0 20px 60px rgba(7,31,71,0.18);
+    :root {
+      --primary-blue: #0b2f6b;
+      --deep-blue: #071f47;
+      --bright-blue: #1464d2;
+      --soft-blue: #eaf3ff;
+      --gold: #d4af37;
+      --gold-light: #ffe7a3;
+      --gold-deep: #9a7416;
+      --white: #ffffff;
+      --text: #12304f;
+      --muted: #6b7a90;
+      --line: rgba(20,68,126,0.16);
+      --shadow: 0 20px 60px rgba(7,31,71,0.18);
+      --card-radius: 22px;
+      --transition: 0.2s ease;
     }
-
-    *{
-      margin:0;
-      padding:0;
-      box-sizing:border-box;
-      font-family: Arial, sans-serif;
-    }
-
-    body{
+    * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+    body {
       min-height:100vh;
-      background:
-        radial-gradient(circle at top left, rgba(212,175,55,0.32), transparent 30%),
-        linear-gradient(135deg, var(--deep-blue) 0%, var(--primary-blue) 45%, var(--bright-blue) 100%);
+      background: radial-gradient(circle at top left, rgba(212,175,55,0.32), transparent 30%),
+                  linear-gradient(135deg, var(--deep-blue) 0%, var(--primary-blue) 45%, var(--bright-blue) 100%);
       padding:24px;
       color:var(--text);
       overflow-x:hidden;
     }
-
-    body::before{
+    body::before {
       content:"";
       position:fixed;
       inset:-30%;
@@ -45,14 +40,11 @@
       animation:shine 8s linear infinite;
       pointer-events:none;
     }
-
-    @keyframes shine{
+    @keyframes shine {
       0%{transform:translateX(-40%) rotate(10deg)}
       100%{transform:translateX(40%) rotate(10deg)}
     }
-
-    .container{
-      position:relative;
+    .container {
       max-width:1400px;
       margin:auto;
       background:rgba(255,255,255,0.96);
@@ -62,13 +54,11 @@
       border:1px solid rgba(255,255,255,0.5);
       animation:pageIn 0.75s ease both;
     }
-
-    @keyframes pageIn{
+    @keyframes pageIn {
       from{opacity:0; transform:translateY(18px)}
       to{opacity:1; transform:translateY(0)}
     }
-
-    .header{
+    .header {
       text-align:center;
       margin-bottom:28px;
       padding:28px 20px;
@@ -79,8 +69,7 @@
       position:relative;
       overflow:hidden;
     }
-
-    .header::after{
+    .header::after {
       content:"";
       position:absolute;
       width:180px;
@@ -91,37 +80,135 @@
       top:-70px;
       animation:floatOrb 5s ease-in-out infinite alternate;
     }
-
-    @keyframes floatOrb{
+    @keyframes floatOrb {
       from{transform:translateY(0) scale(1)}
       to{transform:translateY(22px) scale(1.08)}
     }
+    .header h1 { color:white; margin-bottom:8px; font-size:clamp(26px, 4vw, 42px); letter-spacing:0.5px; }
+    .header p { color:#eef6ff; font-size:14px; line-height:1.5; position:relative; z-index:1; }
+    .header strong { color:var(--gold-light); }
 
-    .header h1{
-      color:white;
-      margin-bottom:8px;
-      font-size:clamp(26px, 4vw, 42px);
-      letter-spacing:0.5px;
+    /* ----- DASHBOARD CARDS ----- */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 18px;
+      margin: 28px 0 24px 0;
+    }
+    .stat-card {
+      background: white;
+      padding: 18px 12px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(11,47,107,0.06);
+      text-align: center;
+      transition: transform var(--transition), box-shadow var(--transition);
+      backdrop-filter: blur(2px);
+      background: rgba(255,255,255,0.85);
+    }
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 30px rgba(11,47,107,0.12);
+      border-color: var(--gold);
+    }
+    .stat-card i {
+      font-size: 28px;
+      color: var(--bright-blue);
+      background: var(--soft-blue);
+      padding: 10px;
+      border-radius: 50%;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+    .stat-card .count {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary-blue);
+      line-height: 1.2;
+    }
+    .stat-card .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .stat-card .sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
     }
 
-    .header p{
-      color:#eef6ff;
-      font-size:14px;
-      line-height:1.5;
-      position:relative;
-      z-index:1;
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 0 22px 0;
+      gap: 12px;
+    }
+    .action-row .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+      color: #071f47;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 10px 24px rgba(154,116,22,0.28);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-gold:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px rgba(154,116,22,0.36);
+      filter: saturate(1.1);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary-blue);
+      color: var(--primary-blue);
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-outline:hover {
+      background: var(--primary-blue);
+      color: white;
     }
 
-    .header strong{ color:var(--gold-light); }
+    /* form section (hidden by default) */
+    #entrySection {
+      margin-top: 28px;
+      border-top: 2px dashed var(--line);
+      padding-top: 20px;
+    }
+    #entrySection h2 {
+      color: var(--primary-blue);
+      margin-bottom: 16px;
+      font-size: 22px;
+    }
 
-    .form-grid{
+    /* preserve original form-grid style */
+    .form-grid {
       display:grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap:16px;
       margin-bottom:22px;
     }
-
-    .form-group{
+    .form-group {
       display:flex;
       flex-direction:column;
       padding:14px;
@@ -131,26 +218,22 @@
       transition:transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
       animation:cardIn 0.45s ease both;
     }
-
-    .form-group:hover{
+    .form-group:hover {
       transform:translateY(-3px);
       box-shadow:0 14px 28px rgba(11,47,107,0.12);
       border-color:rgba(212,175,55,0.7);
     }
-
-    @keyframes cardIn{
+    @keyframes cardIn {
       from{opacity:0; transform:translateY(10px)}
       to{opacity:1; transform:translateY(0)}
     }
-
-    label{
+    label {
       margin-bottom:7px;
       font-weight:bold;
       color:var(--primary-blue);
       font-size:13px;
     }
-
-    input, select, textarea{
+    input, select, textarea {
       width:100%;
       padding:12px 13px;
       border:1px solid rgba(11,47,107,0.22);
@@ -160,17 +243,14 @@
       color:var(--text);
       transition:border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     }
-
-    input:focus, select:focus, textarea:focus{
+    input:focus, select:focus, textarea:focus {
       outline:none;
       border-color:var(--gold);
       box-shadow:0 0 0 4px rgba(212,175,55,0.2);
       transform:translateY(-1px);
     }
-
-    textarea{ min-height:44px; resize:vertical; }
-
-    button{
+    textarea { min-height:44px; resize:vertical; }
+    button {
       background:linear-gradient(135deg, var(--gold), var(--gold-deep));
       color:#071f47;
       border:none;
@@ -183,14 +263,20 @@
       box-shadow:0 12px 26px rgba(154,116,22,0.28);
       transition:transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
     }
-
-    button:hover{
+    button:hover {
       transform:translateY(-3px);
       box-shadow:0 18px 34px rgba(154,116,22,0.36);
       filter:saturate(1.1);
     }
-
-    .status{
+    .btn-blue {
+      background:linear-gradient(135deg, var(--bright-blue), var(--primary-blue));
+      color:white;
+    }
+    .btn-danger {
+      background:linear-gradient(135deg, #ef4444, #991b1b);
+      color:white;
+    }
+    .status {
       margin-top:16px;
       font-weight:bold;
       color:var(--primary-blue);
@@ -200,8 +286,7 @@
       border-radius:12px;
       min-height:20px;
     }
-
-    .table-wrap{
+    .table-wrap {
       width:100%;
       overflow-x:auto;
       border-radius:18px;
@@ -209,15 +294,13 @@
       margin-top:28px;
       box-shadow:0 10px 24px rgba(11,47,107,0.08);
     }
-
-    table{
+    table {
       width:100%;
       min-width:980px;
       border-collapse:collapse;
       background:white;
     }
-
-    th{
+    th {
       background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
       color:white;
       padding:13px;
@@ -226,611 +309,318 @@
       white-space:nowrap;
       border-bottom:3px solid var(--gold);
     }
-
-    td{
+    td {
       padding:11px 13px;
       border-bottom:1px solid var(--line);
       font-size:13px;
       color:var(--text);
       white-space:nowrap;
     }
-
-    tr{ transition:background 0.2s ease; }
-    tr:hover{ background:#f4f8ff; }
-
-    @media (max-width: 768px){
-      body{ padding:12px; }
-      .container{ padding:16px; border-radius:20px; }
-      .header{ padding:24px 14px; }
-      .form-grid{ grid-template-columns:1fr; gap:12px; }
-      .form-group{ padding:12px; }
-      button{ width:100%; }
-      .table-wrap{ margin-top:20px; }
-      table{ min-width:900px; }
+    tr:hover { background:#f4f8ff; }
+    .hidden { display:none !important; }
+    @media (max-width: 768px) {
+      body { padding:12px; }
+      .container { padding:16px; border-radius:20px; }
+      .dashboard-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .action-row { flex-direction: column; align-items: stretch; }
+      .btn-gold, .btn-outline { justify-content: center; }
     }
-
-    @media (prefers-reduced-motion: reduce){
-      *, *::before, *::after{
-        animation-duration:0.01ms !important;
-        animation-iteration-count:1 !important;
-        scroll-behavior:auto !important;
-      }
+    @media print {
+      body { background:white; }
+      .header, .action-row, #entrySection, .toolbar, .connection-panel, .status, .btn-gold, .btn-outline { display:none !important; }
+      .container { box-shadow:none; border:none; max-width:none; padding:0; }
     }
-
-    .login-card, .toolbar, .connection-panel{
-      background:linear-gradient(180deg, #ffffff, var(--soft-blue));
-      border:1px solid var(--line);
-      border-radius:22px;
-      padding:18px;
-      margin-bottom:20px;
-      box-shadow:0 10px 24px rgba(11,47,107,0.08);
-    }
-
-    .login-card{
-      max-width:460px;
-      margin:60px auto;
-      animation:pageIn 0.65s ease both;
-    }
-
-    .login-card h2, .toolbar h2, .connection-panel h2{
-      color:var(--primary-blue);
-      margin-bottom:12px;
-    }
-
-    .login-actions, .top-actions, .filter-grid{
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
-      align-items:end;
-    }
-
-    .filter-grid{
-      margin-top:12px;
-    }
-
-    .filter-grid .form-group{
-      flex:1 1 200px;
-      padding:10px;
-      animation:none;
-    }
-
-    .btn-blue{
-      background:linear-gradient(135deg, var(--bright-blue), var(--primary-blue));
-      color:white;
-    }
-
-    .btn-danger{
-      background:linear-gradient(135deg, #ef4444, #991b1b);
-      color:white;
-    }
-
-    .btn-small{
-      padding:8px 14px;
-      font-size:12px;
-      margin:0 4px 0 0;
-      border-radius:999px;
-    }
-
-    .headings-list{
-      margin-top:8px;
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.5;
-    }
-
-    .hidden{
-      display:none !important;
-    }
-
-    @media print{
-      body{background:white; padding:0;}
-      body::before, .header, #assetForm, #status, .toolbar, .connection-panel, .action-col, .login-card{display:none !important;}
-      .container{box-shadow:none; border:none; max-width:none; padding:0;}
-      .table-wrap{box-shadow:none; border:none; overflow:visible;}
-      table{min-width:0; font-size:10px;}
-      th,td{padding:5px; white-space:normal;}
-    }
-
+    /* small utility for action column removal */
+    .action-col { display: none; }
   </style>
 </head>
 <body>
-<div class="login-card" id="loginPanel">
-  <h2>Login</h2>
-  <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Sign in using the Users sheet tab credentials.</p>
-  <div class="form-grid" style="grid-template-columns:1fr;">
-    <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="Enter email"></div>
-    <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="Enter password"></div>
-  </div>
-  <div class="login-actions">
-    <button type="button" id="loginBtn">Login</button>
-  </div>
-  <div class="status" id="loginStatus"></div>
-</div>
-
-<div class="container" id="appContainer" style="display:none">
+<div class="container" id="appContainer">
   <div class="header">
     <h1>Distinct Infrastructure</h1>
-    <p>Vehicle & Asset Register Management System</p>
+    <p>Vehicle & Asset Register · Dashboard</p>
     <p><strong>Google Sheet ID:</strong> 1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw</p>
   </div>
 
-  <form id="assetForm">
-    <div class="form-grid">
-      <div class="form-group"><label>Code</label><select id="code"><option value="">Select Code</option><option>73803</option><option>73802</option><option>73801</option><option>73800</option></select></div>
-      <div class="form-group"><label>Asset Class</label><select id="assetClass"><option value="">Select Asset Class</option><option>Admin</option><option>Bowser</option><option>Drilling</option><option>Executive</option><option>Projects &amp; Tender</option><option>Small Plant</option><option>Trailers</option><option>Trucks</option><option>Yellow Plant</option></select></div>
-      <div class="form-group"><label>Purchase Date</label><input type="date" id="purchaseDate"></div>
-      <div class="form-group"><label>Purchased by</label><select id="purchasedBy"><option value="">Select Purchased By</option><option>Onpoint</option><option>Aqua Telecoms</option><option>Nkanyezi</option><option>Distinct</option></select></div>
-      <div class="form-group"><label>Financing</label><input type="text" id="financing"></div>
-      <div class="form-group"><label>Description</label><input type="text" id="description"></div>
-      <div class="form-group"><label>Model</label><select id="model"><option value="">Select Model Year</option>
-          <option value="2000">2000</option>
-          <option value="2001">2001</option>
-          <option value="2002">2002</option>
-          <option value="2003">2003</option>
-          <option value="2004">2004</option>
-          <option value="2005">2005</option>
-          <option value="2006">2006</option>
-          <option value="2007">2007</option>
-          <option value="2008">2008</option>
-          <option value="2009">2009</option>
-          <option value="2010">2010</option>
-          <option value="2011">2011</option>
-          <option value="2012">2012</option>
-          <option value="2013">2013</option>
-          <option value="2014">2014</option>
-          <option value="2015">2015</option>
-          <option value="2016">2016</option>
-          <option value="2017">2017</option>
-          <option value="2018">2018</option>
-          <option value="2019">2019</option>
-          <option value="2020">2020</option>
-          <option value="2021">2021</option>
-          <option value="2022">2022</option>
-          <option value="2023">2023</option>
-          <option value="2024">2024</option>
-          <option value="2025">2025</option>
-          <option value="2026">2026</option>
-          <option value="2027">2027</option>
-          <option value="2028">2028</option>
-          <option value="2029">2029</option>
-          <option value="2030">2030</option>
-          <option value="2031">2031</option>
-          <option value="2032">2032</option>
-          <option value="2033">2033</option>
-          <option value="2034">2034</option>
-          <option value="2035">2035</option>
-          <option value="2036">2036</option>
-          <option value="2037">2037</option>
-          <option value="2038">2038</option>
-          <option value="2039">2039</option>
-          <option value="2040">2040</option>
-          <option value="2041">2041</option>
-          <option value="2042">2042</option>
-          <option value="2043">2043</option>
-          <option value="2044">2044</option>
-          <option value="2045">2045</option>
-        </select></div>
-      <div class="form-group"><label>Make of Vehicle</label><select id="makeOfVehicle"><option value="">Select Make of Vehicle</option><option>Toyota</option><option>Faw</option><option>Ford</option><option>Foton</option><option>Mahindra</option><option>Issuzu</option><option>Mercedes Benz</option><option>VW</option><option>Nissan</option></select></div>
-      <div class="form-group"><label>Body Type</label><select id="bodyType"><option value="">Select Body Type</option><option>Sedan</option><option>Hatchback</option><option>Truck</option><option>Minibus</option><option>SUV</option><option>Bukkie</option><option>Lorry</option></select></div>
-      <div class="form-group"><label>Registration no</label><input type="text" id="registrationNo"></div>
-      <div class="form-group"><label>Engine no</label><input type="text" id="engineNo"></div>
-      <div class="form-group"><label>Vin no</label><input type="text" id="vinNo"></div>
-      <div class="form-group"><label>Cost</label><input type="number" id="cost"></div>
-      <div class="form-group"><label>Market Value</label><input type="number" id="marketValue"></div>
-      <div class="form-group"><label>ZOHO</label><select id="zoho"><option value="">Select ZOHO</option><option>Yes</option><option>No</option></select></div>
-      <div class="form-group"><label>Location</label><input type="text" id="location"></div>
-      <div class="form-group"><label>Driver/Operator</label><input type="text" id="driverOperator"></div>
-      <div class="form-group"><label>Licenced</label><select id="licenced"><option value="">Select Licenced</option><option>Yes</option><option>No</option></select></div>
-      <div class="form-group"><label>Type of Licence</label><input type="text" id="typeOfLicence"></div>
-      <div class="form-group"><label>Validity of Licence</label><input type="date" id="validityOfLicence"></div>
-      <div class="form-group"><label>Allocation/Dept</label><input type="text" id="allocationDept"></div>
-      <div class="form-group"><label>Registered Entity</label><input type="text" id="registeredEntity"></div>
-      <div class="form-group"><label>Covered by</label><select id="coveredBy"><option value="">Select Insurance</option><option>Outsurance</option><option>Auto General</option><option>Standard Bank</option><option>Other</option></select></div>
-      <div class="form-group"><label>TRACKING COMPANY</label><select id="trackingCompany"><option value="">Select Tracking Company</option><option>Netstar</option><option>Car Tracker</option><option>The Both(Car Tracker & Netstar)</option></select></div>
-      <div class="form-group"><label>Installment Amount</label><input type="number" id="installmentAmount"></div>
-      <div class="form-group"><label>Last Installment date</label><input type="date" id="lastInstallmentDate"></div>
-      <div class="form-group"><label>eTag Toll</label><select id="eTagToll"><option value="">Select eTag Toll</option><option>Yes</option><option>No</option></select></div>
-      <div class="form-group"><label>NOTES</label><textarea id="notes"></textarea></div>
-      <div class="form-group"><label>Reg. Boo</label><input type="text" id="regBoo"></div>
-      <div class="form-group"><label>Useful life</label><input type="number" id="usefulLife"></div>
-      <div class="form-group"><label>Recharge</label><input type="number" id="recharge"></div>
-      <div class="form-group"><label>Monthly dpn</label><input type="number" id="monthlyDpn"></div>
-      <div class="form-group"><label>Year</label><select id="year"><option value="">Select Year</option>
-          <option value="2000">2000</option>
-          <option value="2001">2001</option>
-          <option value="2002">2002</option>
-          <option value="2003">2003</option>
-          <option value="2004">2004</option>
-          <option value="2005">2005</option>
-          <option value="2006">2006</option>
-          <option value="2007">2007</option>
-          <option value="2008">2008</option>
-          <option value="2009">2009</option>
-          <option value="2010">2010</option>
-          <option value="2011">2011</option>
-          <option value="2012">2012</option>
-          <option value="2013">2013</option>
-          <option value="2014">2014</option>
-          <option value="2015">2015</option>
-          <option value="2016">2016</option>
-          <option value="2017">2017</option>
-          <option value="2018">2018</option>
-          <option value="2019">2019</option>
-          <option value="2020">2020</option>
-          <option value="2021">2021</option>
-          <option value="2022">2022</option>
-          <option value="2023">2023</option>
-          <option value="2024">2024</option>
-          <option value="2025">2025</option>
-          <option value="2026">2026</option>
-          <option value="2027">2027</option>
-          <option value="2028">2028</option>
-          <option value="2029">2029</option>
-          <option value="2030">2030</option>
-          <option value="2031">2031</option>
-          <option value="2032">2032</option>
-          <option value="2033">2033</option>
-          <option value="2034">2034</option>
-          <option value="2035">2035</option>
-          <option value="2036">2036</option>
-          <option value="2037">2037</option>
-          <option value="2038">2038</option>
-          <option value="2039">2039</option>
-          <option value="2040">2040</option>
-          <option value="2041">2041</option>
-          <option value="2042">2042</option>
-          <option value="2043">2043</option>
-          <option value="2044">2044</option>
-          <option value="2045">2045</option>
-        </select></div>
-      <div class="form-group"><label>Months Dpn</label><input type="number" id="monthsDpn"></div>
-      <div class="form-group"><label>Accum dpn</label><input type="number" id="accumDpn"></div>
-      <div class="form-group"><label>NBV</label><input type="number" id="nbv"></div>
-      <div class="form-group"><label>Oustanding VAF</label><input type="number" id="oustandingVaf"></div>
-      <div class="form-group"><label>Value</label><input type="number" id="value"></div>
-    </div>
-    <input type="hidden" id="rowNumber">
-    <button type="submit" id="saveBtn">Save Asset</button>
-    <button type="button" class="btn-blue" id="clearBtn">Clear Form</button>
-  </form>
-
-  <div class="status" id="status"></div>
-
-  <div class="connection-panel">
-    <h2>Google Sheet Connection</h2>
-    <p><strong>Sheet Tab:</strong> <span id="connectedSheetTab">Assert Reg</span></p>
-    <p><strong>Users Tab:</strong> <span>Users</span></p>
-    <div class="headings-list"><strong>Headings:</strong> <span id="sheetHeadings">Loading headings...</span></div>
+  <!-- DASHBOARD CARDS -->
+  <div class="dashboard-grid" id="dashboardCards">
+    <div class="stat-card"><i class="fas fa-truck"></i><div class="count" id="cntTrucks">0</div><div class="label">Trucks</div></div>
+    <div class="stat-card"><i class="fas fa-trailer"></i><div class="count" id="cntTrailers">0</div><div class="label">Trailers</div></div>
+    <div class="stat-card"><i class="fas fa-car"></i><div class="count" id="cntExecutive">0</div><div class="label">Executive Cars</div></div>
+    <div class="stat-card"><i class="fas fa-oil-can"></i><div class="count" id="cntDrilling">0</div><div class="label">Drilling Plant</div></div>
+    <div class="stat-card"><i class="fas fa-digging"></i><div class="count" id="cntYellow">0</div><div class="label">Yellow Plant</div></div>
+    <div class="stat-card"><i class="fas fa-gas-pump"></i><div class="count" id="cntBowser">0</div><div class="label">Bowsers</div></div>
+    <div class="stat-card"><i class="fas fa-building"></i><div class="count" id="cntAdmin">0</div><div class="label">Admin</div></div>
+    <div class="stat-card"><i class="fas fa-th-list"></i><div class="count" id="cntSmallPlant">0</div><div class="label">Small Plant</div></div>
+    <div class="stat-card"><i class="fas fa-briefcase"></i><div class="count" id="cntProjects">0</div><div class="label">Projects &amp; Tender</div></div>
   </div>
 
-  <div class="toolbar">
-    <h2>Search, Filter & Reports</h2>
-    <div class="filter-grid">
-      <div class="form-group"><label>Search records</label><input type="text" id="searchInput" placeholder="Search any record"></div>
-      <div class="form-group"><label>Asset Class</label><select id="filterAssetClass"><option value="">All Classes</option><option>Admin</option><option>Bowser</option><option>Drilling</option><option>Executive</option><option>Projects &amp; Tender</option><option>Small Plant</option><option>Trailers</option><option>Trucks</option><option>Yellow Plant</option></select></div>
-      <div class="form-group"><label>Allocation/Dept</label><input type="text" id="filterDept" placeholder="Filter by department"></div>
-      <div class="form-group"><label>Purchased by</label><select id="filterPurchasedBy"><option value="">All Purchasers</option><option>Onpoint</option><option>Aqua Telecoms</option><option>Nkanyezi</option><option>Distinct</option></select></div>
+  <!-- ACTION ROW: New Entry + other controls -->
+  <div class="action-row">
+    <div class="btn-group">
+      <button class="btn-gold" id="newEntryBtn"><i class="fas fa-plus-circle"></i> New Entry</button>
+      <button class="btn-outline" id="refreshDashBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
     </div>
-    <div class="top-actions">
-      <button type="button" class="btn-blue" id="refreshBtn">Refresh Journal</button>
-      <button type="button" id="printBtn">Print / Save PDF Report</button>
-      <button type="button" class="btn-blue" id="excelBtn">Download Excel CSV</button>
-      <button type="button" class="btn-danger" id="logoutBtn">Logout</button>
+    <div class="btn-group">
+      <button class="btn-outline" id="printBtn"><i class="fas fa-print"></i> Print</button>
+      <button class="btn-outline" id="excelBtn"><i class="fas fa-file-excel"></i> CSV</button>
     </div>
   </div>
 
+  <!-- ENTRY SECTION (hidden by default) -->
+  <div id="entrySection" class="hidden">
+    <h2><i class="fas fa-pen-alt" style="color:var(--gold);"></i> New Asset Entry</h2>
+    <form id="assetForm">
+      <div class="form-grid">
+        <div class="form-group"><label>Code</label><select id="code"><option value="">Select Code</option><option>73803</option><option>73802</option><option>73801</option><option>73800</option></select></div>
+        <div class="form-group"><label>Asset Class</label><select id="assetClass"><option value="">Select Asset Class</option><option>Admin</option><option>Bowser</option><option>Drilling</option><option>Executive</option><option>Projects &amp; Tender</option><option>Small Plant</option><option>Trailers</option><option>Trucks</option><option>Yellow Plant</option></select></div>
+        <div class="form-group"><label>Purchase Date</label><input type="date" id="purchaseDate"></div>
+        <div class="form-group"><label>Purchased by</label><select id="purchasedBy"><option value="">Select Purchased By</option><option>Onpoint</option><option>Aqua Telecoms</option><option>Nkanyezi</option><option>Distinct</option></select></div>
+        <div class="form-group"><label>Financing</label><input type="text" id="financing"></div>
+        <div class="form-group"><label>Description</label><input type="text" id="description"></div>
+        <div class="form-group"><label>Model</label><select id="model"><option value="">Select Model Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
+        <div class="form-group"><label>Make of Vehicle</label><select id="makeOfVehicle"><option value="">Select Make of Vehicle</option><option>Toyota</option><option>Faw</option><option>Ford</option><option>Foton</option><option>Mahindra</option><option>Issuzu</option><option>Mercedes Benz</option><option>VW</option><option>Nissan</option></select></div>
+        <div class="form-group"><label>Body Type</label><select id="bodyType"><option value="">Select Body Type</option><option>Sedan</option><option>Hatchback</option><option>Truck</option><option>Minibus</option><option>SUV</option><option>Bukkie</option><option>Lorry</option></select></div>
+        <div class="form-group"><label>Registration no</label><input type="text" id="registrationNo"></div>
+        <div class="form-group"><label>Engine no</label><input type="text" id="engineNo"></div>
+        <div class="form-group"><label>Vin no</label><input type="text" id="vinNo"></div>
+        <div class="form-group"><label>Cost</label><input type="number" id="cost"></div>
+        <div class="form-group"><label>Market Value</label><input type="number" id="marketValue"></div>
+        <div class="form-group"><label>ZOHO</label><select id="zoho"><option value="">Select ZOHO</option><option>Yes</option><option>No</option></select></div>
+        <div class="form-group"><label>Location</label><input type="text" id="location"></div>
+        <div class="form-group"><label>Driver/Operator</label><input type="text" id="driverOperator"></div>
+        <div class="form-group"><label>Licenced</label><select id="licenced"><option value="">Select Licenced</option><option>Yes</option><option>No</option></select></div>
+        <div class="form-group"><label>Type of Licence</label><input type="text" id="typeOfLicence"></div>
+        <div class="form-group"><label>Validity of Licence</label><input type="date" id="validityOfLicence"></div>
+        <div class="form-group"><label>Allocation/Dept</label><input type="text" id="allocationDept"></div>
+        <div class="form-group"><label>Registered Entity</label><input type="text" id="registeredEntity"></div>
+        <div class="form-group"><label>Covered by</label><select id="coveredBy"><option value="">Select Insurance</option><option>Outsurance</option><option>Auto General</option><option>Standard Bank</option><option>Other</option></select></div>
+        <div class="form-group"><label>TRACKING COMPANY</label><select id="trackingCompany"><option value="">Select Tracking Company</option><option>Netstar</option><option>Car Tracker</option><option>The Both(Car Tracker & Netstar)</option></select></div>
+        <div class="form-group"><label>Installment Amount</label><input type="number" id="installmentAmount"></div>
+        <div class="form-group"><label>Last Installment date</label><input type="date" id="lastInstallmentDate"></div>
+        <div class="form-group"><label>eTag Toll</label><select id="eTagToll"><option value="">Select eTag Toll</option><option>Yes</option><option>No</option></select></div>
+        <div class="form-group"><label>NOTES</label><textarea id="notes"></textarea></div>
+        <div class="form-group"><label>Reg. Boo</label><input type="text" id="regBoo"></div>
+        <div class="form-group"><label>Useful life</label><input type="number" id="usefulLife"></div>
+        <div class="form-group"><label>Recharge</label><input type="number" id="recharge"></div>
+        <div class="form-group"><label>Monthly dpn</label><input type="number" id="monthlyDpn"></div>
+        <div class="form-group"><label>Year</label><select id="year"><option value="">Select Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
+        <div class="form-group"><label>Months Dpn</label><input type="number" id="monthsDpn"></div>
+        <div class="form-group"><label>Accum dpn</label><input type="number" id="accumDpn"></div>
+        <div class="form-group"><label>NBV</label><input type="number" id="nbv"></div>
+        <div class="form-group"><label>Oustanding VAF</label><input type="number" id="oustandingVaf"></div>
+        <div class="form-group"><label>Value</label><input type="number" id="value"></div>
+      </div>
+      <input type="hidden" id="rowNumber">
+      <button type="submit" id="saveBtn">Save Asset</button>
+      <button type="button" class="btn-blue" id="clearBtn">Clear Form</button>
+      <button type="button" class="btn-outline" id="cancelEntryBtn" style="margin-left:12px;">Cancel</button>
+    </form>
+    <div class="status" id="status"></div>
+  </div>
+
+  <!-- transaction journal (preserved) -->
   <div class="table-wrap">
     <h2 style="color:var(--primary-blue);margin-top:28px;margin-bottom:10px;">Transaction Journal</h2>
     <table id="assetTable">
-      <thead>
-        <tr>
-          <th class="action-col">Actions</th>
-          <th>Code</th>
-          <th>Asset Class</th>
-          <th>Purchase Date</th>
-          <th>Purchased by</th>
-          <th>Financing</th>
-          <th>Description</th>
-          <th>Model</th>
-          <th>Make of Vehicle</th>
-          <th>Body Type</th>
-          <th>Registration no</th>
-          <th>Engine no</th>
-          <th>Vin no</th>
-          <th>Cost</th>
-          <th>Market Value</th>
-          <th>ZOHO</th>
-          <th>Location</th>
-          <th>Driver/Operator</th>
-          <th>Licenced</th>
-          <th>Type of Licence</th>
-          <th>Validity of Licence</th>
-          <th>Allocation/Dept</th>
-          <th>Registered Entity</th>
-          <th>Covered by</th>
-          <th>TRACKING COMPANY</th>
-          <th>Installment Amount</th>
-          <th>Last Installment date</th>
-          <th>eTag Toll</th>
-          <th>NOTES</th>
-          <th>Reg. Boo</th>
-          <th>Useful life</th>
-          <th>Recharge</th>
-          <th>Monthly dpn</th>
-          <th>Year</th>
-          <th>Months Dpn</th>
-          <th>Accum dpn</th>
-          <th>NBV</th>
-          <th>Oustanding VAF</th>
-          <th>Value</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <!-- action column removed via CSS display:none on .action-col -->
+        <th class="action-col">Actions</th>
+        <th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th><th>Licenced</th><th>Type of Licence</th><th>Validity of Licence</th><th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>NBV</th><th>Oustanding VAF</th><th>Value</th>
+      </tr></thead>
       <tbody></tbody>
     </table>
-  </div></div>
+  </div>
+</div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxP2JrG5YkLUdeFPvSn_oVA2qH2SSq0nOKc-IhG6ekNQdjx5g3EVQa2xcNTFBdt2fSlCQ/exec";
+  // ====  SCRIPT_URL (same as original) ====
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxP2JrG5YkLUdeFPvSn_oVA2qH2SSq0nOKc-IhG6ekNQdjx5g3EVQa2xcNTFBdt2fSlCQ/exec";
+  const FIELD_IDS = [
+    "code","assetClass","purchaseDate","purchasedBy","financing","description",
+    "model","makeOfVehicle","bodyType","registrationNo","engineNo","vinNo","cost","marketValue",
+    "zoho","location","driverOperator","licenced","typeOfLicence","validityOfLicence",
+    "allocationDept","registeredEntity","coveredBy","trackingCompany","installmentAmount",
+    "lastInstallmentDate","eTagToll","notes","regBoo","usefulLife","recharge",
+    "monthlyDpn","year","monthsDpn","accumDpn","nbv","oustandingVaf","value"
+  ];
+  let allAssets = [];
 
-const FIELD_IDS = [
-  "code", "assetClass", "purchaseDate", "purchasedBy", "financing", "description",
-  "model", "makeOfVehicle", "bodyType", "registrationNo", "engineNo", "vinNo", "cost", "marketValue",
-  "zoho", "location", "driverOperator", "licenced", "typeOfLicence", "validityOfLicence",
-  "allocationDept", "registeredEntity", "coveredBy", "trackingCompany", "installmentAmount",
-  "lastInstallmentDate", "eTagToll", "notes", "regBoo", "usefulLife", "recharge",
-  "monthlyDpn", "year", "monthsDpn", "accumDpn", "nbv", "oustandingVaf", "value"
-];
+  // ---- helpers ----
+  function valueOrBlank(v) { return (v === undefined || v === null) ? "" : v; }
 
-let allAssets = [];
-let currentUser = null;
-
-function apiPost(payload){
-  return fetch(SCRIPT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(payload)
-  }).then(res => res.json());
-}
-
-function showStatus(message){
-  document.getElementById("status").innerHTML = message;
-}
-
-function showLoginStatus(message){
-  document.getElementById("loginStatus").innerHTML = message;
-}
-
-function valueOrBlank(value){
-  return value === undefined || value === null ? "" : value;
-}
-
-function getFormData(){
-  const data = {};
-  FIELD_IDS.forEach(function(id){
-    data[id] = document.getElementById(id).value;
-  });
-  const rowNumber = document.getElementById("rowNumber").value;
-  if (rowNumber) data.rowNumber = rowNumber;
-  return data;
-}
-
-function setFormData(data){
-  FIELD_IDS.forEach(function(id){
-    const el = document.getElementById(id);
-    if (el) el.value = valueOrBlank(data[id]);
-  });
-  document.getElementById("rowNumber").value = valueOrBlank(data.rowNumber);
-  document.getElementById("saveBtn").textContent = data.rowNumber ? "Update Asset" : "Save Asset";
-  window.scrollTo({ top: document.getElementById("assetForm").offsetTop - 20, behavior: "smooth" });
-}
-
-function clearForm(){
-  document.getElementById("assetForm").reset();
-  document.getElementById("rowNumber").value = "";
-  document.getElementById("saveBtn").textContent = "Save Asset";
-}
-
-function currentFilters(){
-  return {
-    search: document.getElementById("searchInput").value.trim().toLowerCase(),
-    assetClass: document.getElementById("filterAssetClass").value.trim().toLowerCase(),
-    dept: document.getElementById("filterDept").value.trim().toLowerCase(),
-    purchasedBy: document.getElementById("filterPurchasedBy").value.trim().toLowerCase()
-  };
-}
-
-function filteredAssets(){
-  const filters = currentFilters();
-  return allAssets.filter(function(asset){
-    const fullText = FIELD_IDS.map(id => valueOrBlank(asset[id])).join(" ").toLowerCase();
-    const matchSearch = !filters.search || fullText.includes(filters.search);
-    const matchClass = !filters.assetClass || String(asset.assetClass || "").toLowerCase() === filters.assetClass;
-    const matchDept = !filters.dept || String(asset.allocationDept || "").toLowerCase().includes(filters.dept);
-    const matchPurchased = !filters.purchasedBy || String(asset.purchasedBy || "").toLowerCase() === filters.purchasedBy;
-    return matchSearch && matchClass && matchDept && matchPurchased;
-  });
-}
-
-function renderTable(){
-  const tbody = document.querySelector("#assetTable tbody");
-  const rows = filteredAssets();
-  tbody.innerHTML = "";
-
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="39">No transaction journal entries found.</td></tr>`;
-    return;
+  function apiPost(payload) {
+    return fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(res => res.json());
   }
 
-  rows.forEach(function(data){
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td class="action-col">
-        <button type="button" class="btn-small btn-blue" onclick="editAsset('${data.rowNumber}')">Edit</button>
-        <button type="button" class="btn-small btn-danger" onclick="deleteAsset('${data.rowNumber}')">Delete</button>
-      </td>
-      ${FIELD_IDS.map(field => `<td>${valueOrBlank(data[field])}</td>`).join("")}
-    `;
-    tbody.appendChild(row);
+  function showStatus(msg) {
+    document.getElementById("status").innerHTML = msg;
+  }
+
+  // ---- dashboard update ----
+  function updateDashboard(assets) {
+    // Define the asset classes we want to count with flexible matching
+    const classMap = {
+      'Trucks': ['truck', 'trucks'],
+      'Trailers': ['trailer', 'trailers'],
+      'Executive': ['executive', 'executive cars', 'exec'],
+      'Drilling': ['drilling', 'drilling plant'],
+      'Yellow Plant': ['yellow plant', 'yellow', 'yellowplant'],
+      'Bowser': ['bowser', 'bowsers'],
+      'Admin': ['admin', 'administration'],
+      'Small Plant': ['small plant', 'smallplant', 'small'],
+      'Projects & Tender': ['projects', 'projects & tender', 'projects and tender', 'project & tender', 'project and tender', 'tender']
+    };
+
+    // Initialize counts
+    const counts = {};
+    Object.keys(classMap).forEach(key => counts[key] = 0);
+
+    // Count assets with flexible matching
+    assets.forEach(a => {
+      const cls = String(a.assetClass || "").trim().toLowerCase();
+      
+      // Check each category
+      Object.keys(classMap).forEach(key => {
+        const keywords = classMap[key];
+        if (keywords.some(kw => cls.includes(kw) || cls === kw)) {
+          counts[key]++;
+        }
+      });
+    });
+
+    // Update the dashboard cards
+    document.getElementById("cntTrucks").textContent = counts['Trucks'];
+    document.getElementById("cntTrailers").textContent = counts['Trailers'];
+    document.getElementById("cntExecutive").textContent = counts['Executive'];
+    document.getElementById("cntDrilling").textContent = counts['Drilling'];
+    document.getElementById("cntYellow").textContent = counts['Yellow Plant'];
+    document.getElementById("cntBowser").textContent = counts['Bowser'];
+    document.getElementById("cntAdmin").textContent = counts['Admin'];
+    document.getElementById("cntSmallPlant").textContent = counts['Small Plant'];
+    document.getElementById("cntProjects").textContent = counts['Projects & Tender'];
+  }
+
+  // ---- render table (edit/delete removed) ----
+  function renderTable(assets) {
+    const tbody = document.querySelector("#assetTable tbody");
+    const rows = assets || allAssets;
+    tbody.innerHTML = "";
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="39">No transaction journal entries found.</td></tr>`;
+      return;
+    }
+    rows.forEach(function(data){
+      const row = document.createElement("tr");
+      // action column is hidden via CSS, but we still keep an empty cell for structure
+      row.innerHTML = `
+        <td class="action-col"></td>
+        ${FIELD_IDS.map(field => `<td>${valueOrBlank(data[field])}</td>`).join("")}
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  // ---- load assets ----
+  function loadAssets() {
+    return fetch(`${SCRIPT_URL}?action=list`)
+      .then(res => res.json())
+      .then(rows => {
+        allAssets = Array.isArray(rows) ? rows : [];
+        renderTable(allAssets);
+        updateDashboard(allAssets);
+      })
+      .catch(err => {
+        console.error(err);
+        showStatus("Could not load transaction journal from Google Sheet");
+      });
+  }
+
+  // ---- form submit ----
+  document.getElementById("assetForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    const data = {};
+    FIELD_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
+    const rowNum = document.getElementById("rowNumber").value;
+    if (rowNum) data.rowNumber = rowNum;
+    data.action = "saveAsset";
+
+    apiPost(data)
+      .then(response => {
+        if (response.status !== "success") throw new Error(response.message || "Save failed");
+        showStatus(rowNum ? "Asset Updated Successfully" : "Asset Saved Successfully");
+        document.getElementById("assetForm").reset();
+        document.getElementById("rowNumber").value = "";
+        document.getElementById("saveBtn").textContent = "Save Asset";
+        return loadAssets();
+      })
+      .catch(err => {
+        console.error(err);
+        showStatus("Error Saving Asset: " + err.message);
+      });
   });
-}
 
-function editAsset(rowNumber){
-  const asset = allAssets.find(item => String(item.rowNumber) === String(rowNumber));
-  if (!asset) return showStatus("Could not find this record. Refresh and try again.");
-  setFormData(asset);
-  showStatus("Editing selected entry. Click Update Asset to save changes.");
-}
+  // ---- clear form ----
+  document.getElementById("clearBtn").addEventListener("click", function(){
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    showStatus("Form cleared.");
+  });
 
-function deleteAsset(rowNumber){
-  if (!confirm("Delete this entry from Google Sheet?")) return;
+  // ---- new entry button ----
+  document.getElementById("newEntryBtn").addEventListener("click", function(){
+    document.getElementById("entrySection").classList.toggle("hidden");
+    if (!document.getElementById("entrySection").classList.contains("hidden")) {
+      document.getElementById("assetForm").reset();
+      document.getElementById("rowNumber").value = "";
+      document.getElementById("saveBtn").textContent = "Save Asset";
+      window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
+    }
+  });
 
-  apiPost({ action: "deleteAsset", rowNumber: rowNumber })
-    .then(function(response){
-      if (response.status !== "success") throw new Error(response.message || "Delete failed");
-      showStatus("Entry deleted successfully");
-      clearForm();
-      return loadAssets();
-    })
-    .catch(function(err){
-      console.error(err);
-      showStatus("Error deleting entry: " + err.message);
-    });
-}
+  // ---- cancel entry ----
+  document.getElementById("cancelEntryBtn").addEventListener("click", function(){
+    document.getElementById("entrySection").classList.add("hidden");
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    showStatus("");
+  });
 
-document.getElementById("assetForm").addEventListener("submit", function(e){
-  e.preventDefault();
-
-  const data = getFormData();
-  data.action = "saveAsset";
-
-  apiPost(data)
-    .then(function(response){
-      if (response.status !== "success") throw new Error(response.message || "Save failed");
-      showStatus(data.rowNumber ? "Asset Updated Successfully" : "Asset Saved Successfully");
-      clearForm();
-      return loadAssets();
-    })
-    .catch(function(err){
-      console.error(err);
-      showStatus("Error Saving Asset: " + err.message);
-    });
-});
-
-function loadAssets(){
-  return fetch(`${SCRIPT_URL}?action=list`)
-    .then(res => res.json())
-    .then(rows => {
-      allAssets = Array.isArray(rows) ? rows : [];
-      renderTable();
-    })
-    .catch(err => {
-      console.error(err);
-      showStatus("Could not load transaction journal from Google Sheet");
-    });
-}
-
-function loadSheetHeadings(){
-  fetch(`${SCRIPT_URL}?action=headings`)
-    .then(res => res.json())
-    .then(info => {
-      document.getElementById("connectedSheetTab").textContent = info.sheetTab || "Assert Reg";
-      document.getElementById("sheetHeadings").textContent = Array.isArray(info.headings) ? info.headings.join(" | ") : "";
-    })
-    .catch(() => {
-      document.getElementById("sheetHeadings").textContent = "Could not fetch headings.";
-    });
-}
-
-function downloadExcelCsv(){
-  const rows = filteredAssets();
-  const headers = FIELD_IDS.map(id => ({
-    code:"Code", assetClass:"Asset Class", purchaseDate:"Purchase Date", purchasedBy:"Purchased by",
-    financing:"Financing", description:"Description", model:"Model", makeOfVehicle:"Make of Vehicle",
-    bodyType:"Body Type", registrationNo:"Registration no", engineNo:"Engine no", vinNo:"Vin no",
-    cost:"Cost", marketValue:"Market Value", zoho:"ZOHO", location:"Location",
-    driverOperator:"Driver/Operator", licenced:"Licenced", typeOfLicence:"Type of Licence",
-    validityOfLicence:"Validity of Licence", allocationDept:"Allocation/Dept",
-    registeredEntity:"Registered Entity", coveredBy:"Covered by", trackingCompany:"TRACKING COMPANY",
-    installmentAmount:"Installment Amount", lastInstallmentDate:"Last Installment date",
-    eTagToll:"eTag Toll", notes:"NOTES", regBoo:"Reg. Boo", usefulLife:"Useful life",
-    recharge:"Recharge", monthlyDpn:"Monthly dpn", year:"Year", monthsDpn:"Months Dpn",
-    accumDpn:"Accum dpn", nbv:"NBV", oustandingVaf:"Oustanding VAF", value:"Value"
-  }[id] || id));
-
-  const csvRows = [headers, ...rows.map(row => FIELD_IDS.map(id => valueOrBlank(row[id])))];
-  const csv = csvRows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "asset-register-report.csv";
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-function printReport(){
-  renderTable();
-  window.print();
-}
-
-function login(){
-  const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginPassword").value;
-
-  if (!email || !password) {
-    showLoginStatus("Email and password are required.");
-    return;
-  }
-
-  showLoginStatus("Checking Users sheet...");
-  apiPost({ action: "login", email, password })
-    .then(function(response){
-      if (response.status !== "success") throw new Error(response.message || "Login failed");
-      currentUser = response.user || { email };
-      sessionStorage.setItem("assetRegisterUser", JSON.stringify(currentUser));
-      document.getElementById("loginPanel").style.display = "none";
-      document.getElementById("appContainer").style.display = "block";
-      loadSheetHeadings();
-      loadAssets();
-    })
-    .catch(function(err){
-      console.error(err);
-      showLoginStatus("Login failed: " + err.message);
-    });
-}
-
-function logout(){
-  sessionStorage.removeItem("assetRegisterUser");
-  currentUser = null;
-  document.getElementById("appContainer").style.display = "none";
-  document.getElementById("loginPanel").style.display = "block";
-}
-
-document.getElementById("loginBtn").addEventListener("click", login);
-document.getElementById("logoutBtn").addEventListener("click", logout);
-document.getElementById("clearBtn").addEventListener("click", clearForm);
-document.getElementById("refreshBtn").addEventListener("click", loadAssets);
-document.getElementById("printBtn").addEventListener("click", printReport);
-document.getElementById("excelBtn").addEventListener("click", downloadExcelCsv);
-["searchInput","filterAssetClass","filterDept","filterPurchasedBy"].forEach(function(id){
-  document.getElementById(id).addEventListener("input", renderTable);
-  document.getElementById(id).addEventListener("change", renderTable);
-});
-
-document.addEventListener("DOMContentLoaded", function(){
-  try {
-    currentUser = JSON.parse(sessionStorage.getItem("assetRegisterUser") || "null");
-  } catch(e) {
-    currentUser = null;
-  }
-
-  if (currentUser) {
-    document.getElementById("loginPanel").style.display = "none";
-    document.getElementById("appContainer").style.display = "block";
-    loadSheetHeadings();
+  // ---- refresh dashboard ----
+  document.getElementById("refreshDashBtn").addEventListener("click", function(){
     loadAssets();
-  }
-});
+  });
+
+  // ---- print & csv (stubs from original) ----
+  document.getElementById("printBtn").addEventListener("click", function(){
+    renderTable(allAssets);
+    window.print();
+  });
+
+  document.getElementById("excelBtn").addEventListener("click", function(){
+    const rows = allAssets;
+    const headers = FIELD_IDS.map(id => id);
+    const csvRows = [headers, ...rows.map(row => FIELD_IDS.map(id => valueOrBlank(row[id])))];
+    const csv = csvRows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "asset-register-report.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // ---- init ----
+  document.addEventListener("DOMContentLoaded", function(){
+    loadAssets();
+  });
 </script>
 </body>
 </html>
