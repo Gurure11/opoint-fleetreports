@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OnpointBase · Approver — Tafadzwa Magejo</title>
+<title>OnpointBase Task Assessment App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -3586,6 +3586,109 @@ renderClosed=function(){
       return `<tr class="rowlink" data-ref="${esc(t.ref)}" data-ball="${ballOf(t)}" onclick="openTicket('${esc(t.ref)}')"><td class="t-ref">${esc(t.ref)}</td><td class="t-name">${esc(t.name)}</td><td>${esc(t.dept)}</td><td>${esc(t.owner)}</td>
       <td>${fmtD(t.due)}</td><td>${fmtD(t.closed)}</td><td><span class="st"><span class="dot ${ot?'closed':'late'}"></span>${ot?'Closed On Time':'Closed Late'}</span></td></tr>`;}).join('')}</tbody></table></div>`;
 };
+
+
+/* ================= FINAL CONSOLIDATION PATCH 2026-06-23 =================
+   Runs last, so these definitions win over every earlier patch.
+   Decisively delivers three requirements:
+     (1) Executive 2 scored/closed tickets never return to Executive 1.
+     (2) Clicking a ticket number ALWAYS opens the task drawer.
+     (3) Score buttons + Approve/Return ALWAYS show in the drawer for a
+         ticket that is awaiting the current executive.
+========================================================================= */
+(function(){
+  function _k(v){return String(v||'').trim().toLowerCase();}
+
+  // Resilient task lookup (matches ref / ticketNumber / rawTaskId).
+  function _findTask(ref){
+    if(typeof opotFindTaskByRef==='function'){const t=opotFindTaskByRef(ref); if(t)return t;}
+    const k=_k(ref);
+    return (Array.isArray(T)?T:[]).find(t=>_k(t.ref)===k||_k(t.ticketNumber)===k||_k(t.rawTaskId)===k)||null;
+  }
+  // Scoring record for a ref in the CURRENT executive's queue only.
+  function _scoringForCurrentExec(ref){
+    const k=_k(ref);
+    return (scoringQueue||[]).find(x=>_k(x.ref)===k||_k(x.id)===k)||null;
+  }
+  // Scoring record across all queues (used only to open an orphan drawer).
+  function _scoringAnywhere(ref){
+    const k=_k(ref);
+    return (scoringQueue||[]).find(x=>_k(x.ref)===k||_k(x.id)===k)
+      || (window.OPOT_ALL_SCORING_QUEUE||[]).find(x=>_k(x.ref)===k||_k(x.id)===k)
+      || null;
+  }
+
+  /* ---- (1) Exec 2 never returns to Exec 1 -------------------------------
+     A ticket whose task row is Closed is removed from EVERY scoring queue
+     after each recount, no matter which stale sheet row tries to revive it. */
+  function _refIsClosed(ref){
+    const t=_findTask(ref); if(!t)return false;
+    const s=[t.status,t.taskStatus,t.workflowStage,t.scoringStatus,t.approvalStatus,t.closed,t.closedDate]
+      .filter(Boolean).join(' ');
+    return /\bclosed\b/i.test(s);
+  }
+  const _prevRecount=(typeof opotRecountScoringQueues==='function')?opotRecountScoringQueues:null;
+  opotRecountScoringQueues=function(){
+    if(window.OPOT_ALL_SCORING_QUEUE)
+      window.OPOT_ALL_SCORING_QUEUE=window.OPOT_ALL_SCORING_QUEUE.filter(x=>x&&x.ref&&!_refIsClosed(x.ref));
+    if(_prevRecount)_prevRecount();
+    if(Array.isArray(scoringQueue))
+      scoringQueue=scoringQueue.filter(x=>x&&x.ref&&!_refIsClosed(x.ref));
+    // Recompute the Exec 1 / Exec 2 headline counts off the cleaned pool.
+    if(window.OPOT_ALL_SCORING_QUEUE && typeof opotScoringIsExec2==='function'){
+      const all=window.OPOT_ALL_SCORING_QUEUE;
+      window.OPOT_SCORING_COUNTS={
+        exec1:all.filter(x=>!opotScoringIsExec2(x)).length,
+        exec2:all.filter(x=>opotScoringIsExec2(x)).length,
+        total:all.length
+      };
+    }
+  };
+
+  /* ---- (2)+(3) Drawer always opens, with scoring/approval actions ------- */
+  const _prevOpenTicket=openTicket;
+  openTicket=function(ref,keepList){
+    let t=_findTask(ref);
+    // If the ref is a scoring-only row with no Tasks sheet record, synthesize a
+    // minimal task so the drawer renderer has something to show instead of bailing.
+    if(!t){
+      const a=_scoringAnywhere(ref);
+      if(a){
+        t={ref:a.ref||ref,name:a.item||ref,owner:a.by||a.assignee||'',dept:a.dept||'',
+           prio:'Medium',status:a.stage||'Awaiting review',due:a.due||'',created:a.submittedAt||'',
+           desc:a.detail||'',proofs:[],proofNames:[],_synthetic:true};
+        if(Array.isArray(T))T.push(t);
+      }
+    }
+    const useRef=t?t.ref:ref;
+    try{ _prevOpenTicket.call(this,useRef,keepList); }catch(e){ console.warn('openTicket base failed',e); }
+
+    // Guarantee the drawer is visible even if the base renderer returned early.
+    const dr=document.getElementById('drawer'), sc=document.getElementById('scrim');
+    if(dr && !dr.classList.contains('open')){
+      dr.classList.add('open'); if(sc)sc.classList.add('open');
+      const rf=document.getElementById('dw-ref'); if(rf&&t)rf.textContent=t.ref;
+    }
+
+    // (3) Show score + Approve/Return only when this ticket is awaiting the
+    // CURRENT executive in the scoring queue.
+    const a=_scoringForCurrentExec(useRef);
+    if(a && typeof opotRenderScoringDrawerActions==='function'){
+      opotRenderScoringDrawerActions(a,t||{});
+    }
+  };
+
+  // Make sure ticket-number clicks everywhere route through the resilient opener.
+  if(typeof opotOpenScoringTicket==='function'){
+    opotOpenScoringTicket=function(id){
+      const q=scoringQueue||[];
+      const a=q.find(x=>_k(x.id)===_k(id)||_k(x.ref)===_k(id));
+      const ref=a?a.ref:id;
+      if(a){state.drawerList=q.map(x=>x.ref).filter(Boolean);state.drawerIdx=state.drawerList.indexOf(ref);}
+      openTicket(ref,true);
+    };
+  }
+})();
 
 onpointEnhancedBoot().then(init).catch(function(e){console.warn(e);init();});
 </script>
