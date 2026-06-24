@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Distinct Infrastructure · Insurance Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    :root {
+      --primary-blue: #0b2f6b;
+      --deep-blue: #071f47;
+      --bright-blue: #1464d2;
+      --soft-blue: #eaf3ff;
+      --gold: #d4af37;
+      --gold-light: #ffe7a3;
+      --gold-deep: #9a7416;
+      --white: #ffffff;
+      --text: #12304f;
+      --muted: #6b7a90;
+      --line: rgba(20,68,126,0.16);
+      --shadow: 0 20px 60px rgba(7,31,71,0.18);
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+    body {
+      min-height:100vh;
+      background: radial-gradient(circle at top left, rgba(212,175,55,0.32), transparent 30%),
+                  linear-gradient(135deg, var(--deep-blue) 0%, var(--primary-blue) 45%, var(--bright-blue) 100%);
+      padding:24px;
+      color:var(--text);
+      overflow-x:hidden;
+    }
+    body::before {
+      content:"";
+      position:fixed;
+      inset:-30%;
+      background:linear-gradient(120deg, transparent, rgba(255,255,255,0.12), transparent);
+      animation:shine 8s linear infinite;
+      pointer-events:none;
+    }
+    @keyframes shine {
+      0%{transform:translateX(-40%) rotate(10deg)}
+      100%{transform:translateX(40%) rotate(10deg)}
+    }
+    .container {
+      max-width:1600px;
+      margin:auto;
+      background:rgba(255,255,255,0.96);
+      padding:28px;
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      border:1px solid rgba(255,255,255,0.5);
+      animation:pageIn 0.75s ease both;
+    }
+    @keyframes pageIn {
+      from{opacity:0; transform:translateY(18px)}
+      to{opacity:1; transform:translateY(0)}
+    }
+    .header {
+      text-align:center;
+      margin-bottom:28px;
+      padding:28px 20px;
+      border-radius:22px;
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+      color:white;
+      box-shadow:0 14px 35px rgba(11,47,107,0.28);
+      position:relative;
+      overflow:hidden;
+    }
+    .header::after {
+      content:"";
+      position:absolute;
+      width:180px;
+      height:180px;
+      border-radius:50%;
+      background:rgba(212,175,55,0.25);
+      right:-50px;
+      top:-70px;
+      animation:floatOrb 5s ease-in-out infinite alternate;
+    }
+    @keyframes floatOrb {
+      from{transform:translateY(0) scale(1)}
+      to{transform:translateY(22px) scale(1.08)}
+    }
+    .header h1 { color:white; margin-bottom:8px; font-size:clamp(26px, 4vw, 42px); letter-spacing:0.5px; }
+    .header p { color:#eef6ff; font-size:14px; line-height:1.5; position:relative; z-index:1; }
+    .header strong { color:var(--gold-light); }
+
+    /* Dashboard Cards */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px;
+      margin: 28px 0 24px 0;
+    }
+    .stat-card {
+      background: white;
+      padding: 18px 12px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(11,47,107,0.06);
+      text-align: center;
+      transition: transform var(--transition), box-shadow var(--transition);
+      background: rgba(255,255,255,0.85);
+    }
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 30px rgba(11,47,107,0.12);
+      border-color: var(--gold);
+    }
+    .stat-card i {
+      font-size: 28px;
+      color: var(--bright-blue);
+      background: var(--soft-blue);
+      padding: 10px;
+      border-radius: 50%;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+    .stat-card .count {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary-blue);
+      line-height: 1.2;
+    }
+    .stat-card .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .stat-card .sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+      font-weight: 600;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 0 22px 0;
+      gap: 12px;
+    }
+    .action-row .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+      color: #071f47;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 10px 24px rgba(154,116,22,0.28);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-gold:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px rgba(154,116,22,0.36);
+      filter: saturate(1.1);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary-blue);
+      color: var(--primary-blue);
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-outline:hover {
+      background: var(--primary-blue);
+      color: white;
+    }
+    .btn-success {
+      background: var(--success);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-success:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    .status {
+      margin-top:16px;
+      font-weight:bold;
+      color:var(--primary-blue);
+      background:rgba(212,175,55,0.16);
+      border-left:5px solid var(--gold);
+      padding:12px 14px;
+      border-radius:12px;
+      min-height:20px;
+    }
+    .status.error {
+      border-left-color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+    .status.success {
+      border-left-color: var(--success);
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--success);
+    }
+
+    .table-wrap {
+      width:100%;
+      overflow-x:auto;
+      border-radius:18px;
+      border:1px solid var(--line);
+      margin-top:28px;
+      box-shadow:0 10px 24px rgba(11,47,107,0.08);
+    }
+    table {
+      width:100%;
+      min-width:1200px;
+      border-collapse:collapse;
+      background:white;
+      font-size:13px;
+    }
+    th {
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+      color:white;
+      padding:12px 10px;
+      text-align:left;
+      font-size:12px;
+      white-space:nowrap;
+      border-bottom:3px solid var(--gold);
+      position:sticky;
+      top:0;
+      z-index:10;
+    }
+    td {
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      color:var(--text);
+      white-space:nowrap;
+      max-width:200px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    tr:hover { background:#f4f8ff; }
+    .hidden { display:none !important; }
+
+    .search-bar {
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:14px;
+      background:white;
+      padding:12px 18px;
+      border-radius:60px;
+      border:1px solid var(--line);
+      box-shadow:0 4px 12px rgba(0,0,0,0.03);
+      margin:16px 0 22px 0;
+    }
+    .search-bar input, .search-bar select {
+      border-radius:40px;
+      padding:10px 18px;
+      border:1px solid var(--line);
+      background:#fafcff;
+      font-size:13px;
+      min-width:160px;
+      flex:1 1 160px;
+    }
+    .search-bar input:focus, .search-bar select:focus {
+      border-color:var(--gold);
+      box-shadow:0 0 0 3px rgba(212,175,55,0.15);
+      outline:none;
+    }
+    .search-bar .filter-label {
+      font-weight:600;
+      color:var(--primary-blue);
+      font-size:13px;
+      margin-right:4px;
+    }
+
+    .status-badge {
+      display:inline-block;
+      padding:4px 12px;
+      border-radius:20px;
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+    }
+    .status-active { background:#dcfce7; color:#166534; }
+    .status-expired { background:#fee2e2; color:#991b1b; }
+    .status-warning { background:#fef3c7; color:#92400e; }
+    .status-none { background:#f3f4f6; color:#6b7280; }
+
+    @media (max-width: 768px) {
+      body { padding:12px; }
+      .container { padding:16px; border-radius:20px; }
+      .dashboard-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .action-row { flex-direction: column; align-items: stretch; }
+      .btn-gold, .btn-outline { justify-content: center; }
+      .search-bar { border-radius:30px; flex-direction:column; align-items:stretch; }
+      .search-bar input, .search-bar select { min-width:auto; }
+    }
+    @media print {
+      body { background:white; }
+      .header, .action-row, .search-bar, .status { display:none !important; }
+      .container { box-shadow:none; border:none; max-width:none; padding:0; }
+    }
+  </style>
+</head>
+<body>
+<div class="container" id="appContainer">
+  <div class="header">
+    <h1>Distinct Infrastructure</h1>
+    <p>Insurance Asset Register · Dashboard</p>
+    <p><strong>Google Sheet ID:</strong> 1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw · Tab: Insurance</p>
+  </div>
+
+  <!-- DASHBOARD CARDS -->
+  <div class="dashboard-grid" id="dashboardCards">
+    <div class="stat-card"><i class="fas fa-car"></i><div class="count" id="cntTotal">0</div><div class="label">Total Assets</div></div>
+    <div class="stat-card"><i class="fas fa-check-circle" style="color:var(--success);"></i><div class="count" id="cntInsured">0</div><div class="label">Insured</div></div>
+    <div class="stat-card"><i class="fas fa-exclamation-triangle" style="color:var(--warning);"></i><div class="count" id="cntExpiring">0</div><div class="label">Expiring Soon (30 days)</div></div>
+    <div class="stat-card"><i class="fas fa-times-circle" style="color:var(--danger);"></i><div class="count" id="cntExpired">0</div><div class="label">Expired</div></div>
+    <div class="stat-card"><i class="fas fa-building"></i><div class="count" id="cntInsurers">0</div><div class="label">Insurers</div></div>
+    <div class="stat-card"><i class="fas fa-rand"></i><div class="count" id="totalPremium">R0</div><div class="label">Total Annual Premium</div></div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div class="search-bar" id="searchBar">
+    <span class="filter-label"><i class="fas fa-search"></i> Search</span>
+    <input type="text" id="searchInput" placeholder="Registration, description, insurer..." />
+    <select id="searchInsurer"><option value="">All Insurers</option></select>
+    <select id="searchStatus"><option value="">All Status</option>
+      <option value="Active">Active</option>
+      <option value="Expiring Soon">Expiring Soon</option>
+      <option value="Expired">Expired</option>
+      <option value="Not Insured">Not Insured</option>
+    </select>
+    <button class="btn-outline" id="clearSearchBtn" style="padding:6px 18px;"><i class="fas fa-times"></i> Clear</button>
+  </div>
+
+  <!-- ACTION ROW -->
+  <div class="action-row">
+    <div class="btn-group">
+      <button class="btn-gold" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+      <button class="btn-outline" id="testConnectionBtn"><i class="fas fa-plug"></i> Test Connection</button>
+    </div>
+    <div class="btn-group">
+      <button class="btn-outline" id="printBtn"><i class="fas fa-print"></i> Print</button>
+      <button class="btn-outline" id="excelBtn"><i class="fas fa-file-excel"></i> CSV</button>
+    </div>
+  </div>
+
+  <div class="status" id="status">Loading insurance data...</div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table id="insuranceTable">
+      <thead>
+        <tr>
+          <th>Registration</th>
+          <th>Financed</th>
+          <th>Finance Agreement</th>
+          <th>Asset Description</th>
+          <th>VIN Number</th>
+          <th>Insurer</th>
+          <th>Policy Number</th>
+          <th>Cover Type</th>
+          <th>Annual Premium</th>
+          <th>Monthly Premium</th>
+          <th>Policy Expiry</th>
+          <th>Days to Expiry</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="13" style="text-align:center;padding:40px;">Loading data from Google Sheet...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // CONFIGURATION
+  // ============================================================
+  const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+  const SHEET_ID = "1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw";
+  const SHEET_TAB = "Insurance";
+
+  // Field mapping based on your data
+  const FIELD_IDS = [
+    "registrationNumber", "financedAsset", "financeAgreementNumber", "assetDescription",
+    "vinNumber", "insurer", "policyNumber", "coverType", "annualPremium",
+    "monthlyPremium", "policyExpiry", "daysToExpiry", "status"
+  ];
+
+  let allAssets = [];
+
+  // ============================================================
+  // HELPERS
+  // ============================================================
+  function valueOrBlank(v) { return (v === undefined || v === null) ? "" : v; }
+
+  function formatCurrency(amount) {
+    if (!amount || isNaN(amount)) return "R0";
+    return "R" + parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return "-";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('en-ZA');
+    } catch { return dateStr; }
+  }
+
+  function getStatusBadge(status) {
+    const statusMap = {
+      'Active': 'status-active',
+      'Expiring Soon': 'status-warning',
+      'Expired': 'status-expired',
+      'Not Insured': 'status-none'
+    };
+    const cls = statusMap[status] || 'status-none';
+    return `<span class="status-badge ${cls}">${status || 'Unknown'}</span>`;
+  }
+
+  function showStatus(msg, type = 'info') {
+    const el = document.getElementById("status");
+    el.textContent = msg;
+    el.className = 'status';
+    if (type === 'error') el.classList.add('error');
+    else if (type === 'success') el.classList.add('success');
+  }
+
+  // ============================================================
+  // API CALLS
+  // ============================================================
+  function fetchInsuranceData() {
+    const url = `${SCRIPT_URL}?action=list&sheetId=${SHEET_ID}&sheetTab=${SHEET_TAB}`;
+    showStatus("Loading insurance data from Google Sheet...", 'info');
+    
+    return fetch(url, { method: "GET", mode: 'cors' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data.status === "error") throw new Error(data.message);
+        allAssets = Array.isArray(data) ? data : [];
+        renderAll(allAssets);
+        showStatus(`Loaded ${allAssets.length} insurance records successfully.`, 'success');
+        return allAssets;
+      })
+      .catch(err => {
+        console.error("Fetch error:", err);
+        showStatus(`❌ Error: ${err.message}. Please check connection and try again.`, 'error');
+        document.getElementById("tableBody").innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--danger);">
+          <i class="fas fa-exclamation-circle" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+          Failed to load data: ${err.message}
+        </td></tr>`;
+        return [];
+      });
+  }
+
+  function testConnection() {
+    showStatus("Testing connection to Google Sheets...", 'info');
+    const url = `${SCRIPT_URL}?action=ping`;
+    
+    fetch(url, { method: "GET", mode: 'cors' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          showStatus(`✅ Connection successful! ${data.message || ''}`, 'success');
+        } else {
+          showStatus(`❌ Connection failed: ${data.message || 'Unknown error'}`, 'error');
+        }
+      })
+      .catch(err => {
+        showStatus(`❌ Connection failed: ${err.message}`, 'error');
+      });
+  }
+
+  // ============================================================
+  // RENDER FUNCTIONS
+  // ============================================================
+  function updateDashboard(assets) {
+    const total = assets.length;
+    const insured = assets.filter(a => a.insurer && a.insurer !== 'None' && a.insurer !== '').length;
+    const expiring = assets.filter(a => a.status === 'Expiring Soon').length;
+    const expired = assets.filter(a => a.status === 'Expired').length;
+    const insurers = new Set(assets.filter(a => a.insurer).map(a => a.insurer));
+    
+    let totalPremium = 0;
+    assets.forEach(a => {
+      const val = parseFloat(String(a.annualPremium).replace(/,/g, ''));
+      if (!isNaN(val)) totalPremium += val;
+    });
+
+    document.getElementById("cntTotal").textContent = total;
+    document.getElementById("cntInsured").textContent = insured;
+    document.getElementById("cntExpiring").textContent = expiring;
+    document.getElementById("cntExpired").textContent = expired;
+    document.getElementById("cntInsurers").textContent = insurers.size;
+    document.getElementById("totalPremium").textContent = formatCurrency(totalPremium);
+  }
+
+  function renderTable(assets) {
+    const tbody = document.getElementById("tableBody");
+    
+    if (!assets || assets.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--muted);">
+        <i class="fas fa-database" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+        No insurance records found.
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = assets.map((row, index) => `
+      <tr>
+        <td><strong>${valueOrBlank(row.registrationNumber)}</strong></td>
+        <td>${valueOrBlank(row.financedAsset) === 'Y' ? '✅ Yes' : '❌ No'}</td>
+        <td>${valueOrBlank(row.financeAgreementNumber) || '-'}</td>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;" title="${valueOrBlank(row.assetDescription)}">${valueOrBlank(row.assetDescription)}</td>
+        <td style="font-size:11px;font-family:monospace;">${valueOrBlank(row.vinNumber) || '-'}</td>
+        <td><strong>${valueOrBlank(row.insurer) || '-'}</strong></td>
+        <td>${valueOrBlank(row.policyNumber) || '-'}</td>
+        <td>${valueOrBlank(row.coverType) || '-'}</td>
+        <td style="font-weight:600;color:var(--primary-blue);">${formatCurrency(row.annualPremium)}</td>
+        <td>${formatCurrency(row.monthlyPremium)}</td>
+        <td>${formatDate(row.policyExpiry)}</td>
+        <td style="text-align:center;font-weight:600;">${valueOrBlank(row.daysToExpiry) || '-'}</td>
+        <td>${getStatusBadge(row.status)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function populateInsurerFilter(assets) {
+    const select = document.getElementById("searchInsurer");
+    const insurers = new Set(assets.filter(a => a.insurer).map(a => a.insurer));
+    select.innerHTML = `<option value="">All Insurers</option>`;
+    Array.from(insurers).sort().forEach(ins => {
+      select.innerHTML += `<option value="${ins}">${ins}</option>`;
+    });
+  }
+
+  function renderAll(assets) {
+    updateDashboard(assets);
+    populateInsurerFilter(assets);
+    applyFilters();
+  }
+
+  // ============================================================
+  // FILTERS
+  // ============================================================
+  function applyFilters() {
+    const searchTerm = document.getElementById("searchInput").value.toLowerCase().trim();
+    const insurerFilter = document.getElementById("searchInsurer").value;
+    const statusFilter = document.getElementById("searchStatus").value;
+
+    let filtered = allAssets.filter(row => {
+      let match = true;
+      
+      if (searchTerm) {
+        const searchFields = [
+          row.registrationNumber, row.assetDescription, row.insurer,
+          row.policyNumber, row.vinNumber
+        ].map(v => String(v || '').toLowerCase());
+        match = searchFields.some(f => f.includes(searchTerm));
+      }
+      
+      if (match && insurerFilter) {
+        match = (row.insurer || '') === insurerFilter;
+      }
+      
+      if (match && statusFilter) {
+        match = (row.status || '') === statusFilter;
+      }
+      
+      return match;
+    });
+
+    renderTable(filtered);
+  }
+
+  // ============================================================
+  // EXPORT FUNCTIONS
+  // ============================================================
+  function exportCSV() {
+    const headers = ['Registration Number', 'Financed', 'Finance Agreement', 'Asset Description',
+      'VIN Number', 'Insurer', 'Policy Number', 'Cover Type', 'Annual Premium',
+      'Monthly Premium', 'Policy Expiry', 'Days to Expiry', 'Status'];
+    
+    const rows = allAssets.map(row => [
+      row.registrationNumber, row.financedAsset, row.financeAgreementNumber,
+      row.assetDescription, row.vinNumber, row.insurer, row.policyNumber,
+      row.coverType, row.annualPremium, row.monthlyPremium,
+      row.policyExpiry, row.daysToExpiry, row.status
+    ]);
+    
+    const csvRows = [headers, ...rows];
+    const csv = csvRows.map(row => row.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+    
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `insurance-register-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ============================================================
+  // EVENT LISTENERS
+  // ============================================================
+  document.addEventListener("DOMContentLoaded", function() {
+    fetchInsuranceData();
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", fetchInsuranceData);
+  document.getElementById("testConnectionBtn").addEventListener("click", testConnection);
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+  document.getElementById("excelBtn").addEventListener("click", exportCSV);
+  document.getElementById("clearSearchBtn").addEventListener("click", function() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("searchInsurer").value = "";
+    document.getElementById("searchStatus").value = "";
+    applyFilters();
+  });
+
+  document.getElementById("searchInput").addEventListener("input", applyFilters);
+  document.getElementById("searchInsurer").addEventListener("change", applyFilters);
+  document.getElementById("searchStatus").addEventListener("change", applyFilters);
+</script>
+</body>
+</html>
