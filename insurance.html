@@ -476,7 +476,10 @@
         throw new Error(data.message || "Unknown server error");
     }
 
-    allAssets = data.records || [];
+    if (!Array.isArray(data.records))
+    throw new Error("No records returned from server.");
+
+allAssets = data.records;
 
     renderAll(allAssets);
 
