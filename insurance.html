@@ -467,12 +467,19 @@
         return res.json();
       })
       .then(data => {
-        if (data.status === "error") throw new Error(data.message);
-        allAssets = Array.isArray(data) ? data : [];
-        renderAll(allAssets);
-        showStatus(`Loaded ${allAssets.length} insurance records successfully.`, 'success');
-        return allAssets;
-      })
+
+    console.log("Response:", data);
+
+    if (data.status !== "success") {
+        throw new Error(data.message || "Unknown server error");
+    }
+
+    allAssets = data.records || [];
+
+    renderAll(allAssets);
+
+    showStatus(`Loaded ${allAssets.length} insurance records successfully.`, "success");
+})
       .catch(err => {
         console.error("Fetch error:", err);
         showStatus(`❌ Error: ${err.message}. Please check connection and try again.`, 'error');
