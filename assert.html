@@ -331,53 +331,67 @@
     }
     .table-wrap {
       width:100%;
-      overflow-x:auto;
+      overflow:auto;
       border-radius:18px;
       border:1px solid var(--line);
-      margin-top:28px;
+      margin-top:20px;
       box-shadow:0 10px 24px rgba(11,47,107,0.08);
+      max-height:72vh;
     }
     table {
       width:100%;
-      min-width:980px;
+      min-width:700px;
       border-collapse:collapse;
       background:white;
+      table-layout:auto;
     }
     th {
       background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
       color:white;
-      padding:13px;
+      padding:9px;
       text-align:left;
-      font-size:13px;
+      font-size:11px;
+      line-height:1.15;
       white-space:nowrap;
-      border-bottom:3px solid var(--gold);
+      border-bottom:2px solid var(--gold);
+      position:sticky;
+      top:0;
+      z-index:2;
     }
     td {
-      padding:11px 13px;
+      padding:8px 9px;
       border-bottom:1px solid var(--line);
-      font-size:13px;
+      font-size:11px;
+      line-height:1.15;
       color:var(--text);
       white-space:nowrap;
+      max-width:170px;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     tr:hover { background:#f4f8ff; }
     .hidden { display:none !important; }
     
     /* Actions column - moved to right */
     .action-col {
-      min-width: 160px;
+      min-width: 110px;
       text-align: right;
+      position:sticky;
+      right:0;
+      background:#fff;
+      z-index:1;
     }
     .action-col .row-actions {
       display: flex;
-      gap: 6px;
+      gap: 4px;
       justify-content: flex-end;
       flex-wrap: wrap;
     }
     .row-actions button {
-      padding: 6px 12px;
-      font-size: 12px;
+      padding: 4px 8px;
+      font-size: 10px;
       margin: 0;
-      border-radius: 20px;
+      border-radius: 14px;
     }
     .row-actions .btn-sm-edit { background: var(--bright-blue); color: white; }
     .row-actions .btn-sm-edit:hover { filter: brightness(1.1); }
@@ -386,7 +400,7 @@
     .row-actions .btn-sm-delete { background: #ef4444; color: white; }
 
     .regbook-link {
-      font-size: 12px;
+      font-size: 10px;
       white-space: nowrap;
     }
     .regbook-link a {
@@ -395,6 +409,21 @@
       border-bottom: 1px dotted var(--bright-blue);
     }
     .regbook-link a:hover { color: var(--gold-deep); }
+
+
+    th.action-col {
+      z-index:3;
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+    }
+    #assetTable td:nth-child(6),
+    #assetTable td:nth-child(11),
+    #assetTable td:nth-child(12),
+    #assetTable td:nth-child(17),
+    #assetTable td:nth-child(18),
+    #assetTable td:nth-child(19),
+    #assetTable td:nth-child(25) {
+      max-width:130px;
+    }
 
     .filter-active {
       border-color: var(--gold) !important;
@@ -458,11 +487,7 @@
       <span><i class="fas fa-pen-alt" style="color:var(--gold);"></i> New Asset Entry</span>
       <button class="btn-back" id="backToDashboardBtn"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
     </h2>
-      </button>
-                <button class="action-btn" onclick="window.location.href='insurance.html'">
-                    <span>🚛</span>
-                    Insurance Report
-                </button>
+      <button type="button" class="btn-outline" onclick="window.location.href='insurance.html'"><i class="fas fa-shield-alt"></i> Insurance Report</button>
     <form id="assetForm">
       <div class="form-grid">
         <div class="form-group"><label>Code</label><select id="code"><option value="">Select Code</option><option>73803</option><option>73802</option><option>73801</option><option>73800</option></select></div>
@@ -536,8 +561,11 @@
 <script>
   // ======================== CONFIG =========================
   const SHEET_ID = "1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw";
-  // REPLACE THIS URL WITH YOUR DEPLOYED APPS SCRIPT URL
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTyvOm30R1gNqOIjoOsVcVN3nnJ_wYnv_Td8DCt5np9uUN49bf2Z1H-IYLDBOs5BBi/exec";
+  const DRIVE_FOLDER_ID = "1wMxg8AdipSeDI5lmL8PNECzD_U3CVC8W";
+  const MAIN_SHEET_NAME = "Asssert Reg";
+  const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
+  const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwirRwCjWCZwdUABSvbTQEg5I-3V9GE41YhFdQXqnml_o8fSElRaNC99apNFRs5m7gI/exec";
 
   const FIELD_IDS = [
     "code","assetClass","purchaseDate","purchasedBy","financing","description",
@@ -548,8 +576,58 @@
     "monthlyDpn","year","monthsDpn","accumDpn","nbv","oustandingVaf","value"
   ];
 
+  const FIELD_ALIASES = {
+    code: ["code","Code"],
+    assetClass: ["assetClass","Asset Class","AssetClass"],
+    purchaseDate: ["purchaseDate","Purchase Date"],
+    purchasedBy: ["purchasedBy","Purchased by","Purchased By"],
+    financing: ["financing","Financing"],
+    description: ["description","Description"],
+    model: ["model","Model"],
+    makeOfVehicle: ["makeOfVehicle","Make of Vehicle","Make Of Vehicle"],
+    bodyType: ["bodyType","Body Type"],
+    registrationNo: ["registrationNo","Registration no","Registration No"],
+    engineNo: ["engineNo","Engine no","Engine No"],
+    vinNo: ["vinNo","Vin no","Vin No"],
+    cost: ["cost","Cost"],
+    marketValue: ["marketValue","Market Value"],
+    zoho: ["zoho","ZOHO"],
+    location: ["location","Location"],
+    driverOperator: ["driverOperator","Driver/Operator","Driver Operator"],
+    allocationDept: ["allocationDept","Allocation/Dept","Allocation Dept"],
+    registeredEntity: ["registeredEntity","Registered Entity"],
+    coveredBy: ["coveredBy","Covered by","Covered By"],
+    trackingCompany: ["trackingCompany","TRACKING COMPANY","Tracking Company"],
+    installmentAmount: ["installmentAmount","Installment Amount"],
+    lastInstallmentDate: ["lastInstallmentDate","Last Installment date","Last Installment Date"],
+    eTagToll: ["eTagToll","eTag Toll","ETag Toll"],
+    notes: ["notes","NOTES","Notes"],
+    regBoo: ["regBoo","Reg. Boo","Reg Book"],
+    usefulLife: ["usefulLife","Useful life","Useful Life"],
+    recharge: ["recharge","Recharge"],
+    monthlyDpn: ["monthlyDpn","Monthly dpn","Monthly Dpn"],
+    year: ["year","Year"],
+    monthsDpn: ["monthsDpn","Months Dpn"],
+    accumDpn: ["accumDpn","Accum dpn","Accum Dpn"],
+    nbv: ["nbv","NBV"],
+    oustandingVaf: ["oustandingVaf","Outstanding VAF","Outstanding Vaf"],
+    value: ["value","Value"],
+    vehicleRegBookLink: ["vehicleRegBookLink","Vehicle Reg Book","Vehicle Reg Book Link","regBookLink"],
+    trackingCertificateLink: ["trackingCertificateLink","Tracking Certificate","Tracking Certificate Link"]
+  };
+
+  let mainAssets = [];
+  let equipmentAssets = [];
   let allAssets = [];
   let currentFilter = null;
+
+  function getField(row, field) {
+    const aliases = FIELD_ALIASES[field] || [field];
+    for (const key of aliases) {
+      if (row && row[key] !== undefined && row[key] !== null && row[key] !== "") return row[key];
+    }
+    return "";
+  }
 
   function valueOrBlank(v) {
     if (v === undefined || v === null) return "";
@@ -558,6 +636,15 @@
       if (!isNaN(d)) return d.toISOString().split('T')[0];
     }
     return v;
+  }
+
+  function isEquipmentFilter(filter) {
+    return EQUIPMENT_FILTERS.some(f => f.toLowerCase() === String(filter || "").toLowerCase());
+  }
+
+  function sheetForAsset(asset) {
+    const cls = String(getField(asset, "assetClass") || "").toLowerCase();
+    return EQUIPMENT_FILTERS.some(f => cls.includes(f.toLowerCase())) ? EQUIPMENT_SHEET_NAME : MAIN_SHEET_NAME;
   }
 
   function apiPost(payload) {
@@ -586,15 +673,23 @@
     return link ? `<div class="regbook-link"><a href="${link}" target="_blank"><i class="fas fa-file-alt"></i> ${label || 'View'}</a></div>` : `<span style="color:#aaa;">—</span>`;
   }
 
+  function normaliseRows(response, sheetName) {
+    let rows = [];
+    if (Array.isArray(response)) rows = response;
+    else if (response && Array.isArray(response.data)) rows = response.data;
+    else if (response && Array.isArray(response.rows)) rows = response.rows;
+    else if (response && Array.isArray(response.assets)) rows = response.assets;
+    return rows.map(r => ({ ...r, _sheetName: r._sheetName || sheetName }));
+  }
+
   function showStatus(msg, isError = false) {
     const statusEl = document.getElementById("status");
-    statusEl.innerHTML = msg;
+    statusEl.innerHTML = msg || "";
     statusEl.style.borderLeftColor = isError ? "#ef4444" : "var(--gold)";
     statusEl.style.background = isError ? "rgba(239,68,68,0.1)" : "rgba(212,175,55,0.16)";
   }
 
-  // ---- dashboard update with click handlers ----
-  function updateDashboard(assets) {
+  function updateDashboard() {
     const classMap = {
       'Drilling': ['drilling', 'drilling plant'],
       'Yellow Plant': ['yellow plant', 'yellow', 'yellowplant'],
@@ -608,15 +703,15 @@
     };
     const counts = {};
     Object.keys(classMap).forEach(key => counts[key] = 0);
-    assets.forEach(a => {
-      const cls = String(a.assetClass || "").trim().toLowerCase();
-      Object.keys(classMap).forEach(key => {
-        const keywords = classMap[key];
-        if (keywords.some(kw => cls.includes(kw) || cls === kw)) {
-          counts[key]++;
-        }
+
+    Object.keys(classMap).forEach(key => {
+      const source = isEquipmentFilter(key) ? equipmentAssets : mainAssets;
+      source.forEach(a => {
+        const cls = String(getField(a, "assetClass")).trim().toLowerCase();
+        if (classMap[key].some(kw => cls.includes(kw) || cls === kw)) counts[key]++;
       });
     });
+
     document.getElementById("cntDrilling").textContent = counts['Drilling'];
     document.getElementById("cntYellow").textContent = counts['Yellow Plant'];
     document.getElementById("cntSmallPlant").textContent = counts['Small Plant'];
@@ -627,24 +722,19 @@
     document.getElementById("cntAdmin").textContent = counts['Admin'];
     document.getElementById("cntProjects").textContent = counts['Projects & Tender'];
 
-    // Update click handlers for cards
     document.querySelectorAll('.stat-card').forEach(card => {
       const filter = card.dataset.filter;
-      card.onclick = function() {
-        applyFilter(filter);
-      };
+      card.onclick = () => applyFilter(filter);
     });
   }
 
-  // ---- filtering ----
   function applyFilter(filter) {
     currentFilter = filter;
-    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('filter-active'));
-    document.querySelectorAll('.stat-card').forEach(c => {
-      if (c.dataset.filter === filter) c.classList.add('filter-active');
-    });
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('filter-active', c.dataset.filter === filter));
     document.getElementById('filterIndicator').textContent = `Filter: ${filter}`;
-    renderTable(allAssets, filter);
+
+    const source = isEquipmentFilter(filter) ? equipmentAssets : mainAssets;
+    renderTable(source, filter);
   }
 
   function clearFilter() {
@@ -654,16 +744,12 @@
     renderTable(allAssets);
   }
 
-  // ---- render table with filter ----
   function renderTable(assets, filter) {
     const tbody = document.querySelector("#assetTable tbody");
     let rows = assets || allAssets;
     if (filter) {
       const filterLower = filter.toLowerCase();
-      rows = rows.filter(a => {
-        const cls = String(a.assetClass || "").trim().toLowerCase();
-        return cls.includes(filterLower);
-      });
+      rows = rows.filter(a => String(getField(a, "assetClass")).trim().toLowerCase().includes(filterLower));
     }
     tbody.innerHTML = "";
     if (!rows.length) {
@@ -671,42 +757,29 @@
       tbody.innerHTML = `<tr><td colspan="${colCount}">No entries found${filter ? ' for filter: '+filter : ''}.</td></tr>`;
       return;
     }
-    rows.forEach(function(data, index){
-      const row = document.createElement("tr");
 
-      // Data cells (all except actions)
+    rows.forEach(function(data){
+      const row = document.createElement("tr");
       const displayFields = FIELD_IDS.filter(id => id !== "licenced" && id !== "typeOfLicence" && id !== "validityOfLicence");
       displayFields.forEach(field => {
         const td = document.createElement("td");
-        let val = valueOrBlank(data[field]);
-        if (field === "purchaseDate" || field === "lastInstallmentDate") {
-          if (val && val.includes("T")) {
-            const d = new Date(val);
-            if (!isNaN(d)) val = d.toISOString().split('T')[0];
-          }
-        }
-        td.textContent = val;
+        td.textContent = valueOrBlank(getField(data, field));
         row.appendChild(td);
       });
 
-      // Document links
       const regTd = document.createElement("td");
-      const regLink = data.vehicleRegBookLink || data.regBookLink || data["Vehicle Reg Book"] || "";
-      regTd.innerHTML = linkCell(regLink, "View Reg Book");
+      regTd.innerHTML = linkCell(getField(data, "vehicleRegBookLink"), "View Reg Book");
       row.appendChild(regTd);
 
       const trackingTd = document.createElement("td");
-      const trackingLink = data.trackingCertificateLink || data["Tracking Certificate"] || "";
-      trackingTd.innerHTML = linkCell(trackingLink, "View Tracking");
+      trackingTd.innerHTML = linkCell(getField(data, "trackingCertificateLink"), "View Tracking");
       row.appendChild(trackingTd);
 
-      // Action cell (right side)
       const actionCell = document.createElement("td");
       actionCell.className = "action-col";
       const actionDiv = document.createElement("div");
       actionDiv.className = "row-actions";
 
-      // Edit
       const editBtn = document.createElement("button");
       editBtn.className = "btn-sm-edit";
       editBtn.innerHTML = '<i class="fas fa-edit"></i>';
@@ -715,11 +788,11 @@
         e.stopPropagation();
         FIELD_IDS.forEach(id => {
           const el = document.getElementById(id);
-          if (el) el.value = valueOrBlank(data[id]);
+          if (el) el.value = valueOrBlank(getField(data, id));
         });
         document.getElementById("rowNumber").value = data.rowNumber || "";
-        document.getElementById("vehicleRegBookLink").value = data.vehicleRegBookLink || data.regBookLink || data["Vehicle Reg Book"] || "";
-        document.getElementById("trackingCertificateLink").value = data.trackingCertificateLink || data["Tracking Certificate"] || "";
+        document.getElementById("vehicleRegBookLink").value = getField(data, "vehicleRegBookLink") || "";
+        document.getElementById("trackingCertificateLink").value = getField(data, "trackingCertificateLink") || "";
         document.getElementById("regBookLink").value = data.regBookLink || "";
         document.getElementById("saveBtn").textContent = "Update Asset";
         document.getElementById("entrySection").classList.remove("hidden");
@@ -730,7 +803,7 @@
         const btn = document.createElement("button");
         btn.className = "btn-sm-upload";
         btn.innerHTML = '<i class="fas fa-upload"></i>';
-        btn.title = title;
+        btn.title = "Upload " + title;
         btn.addEventListener("click", function(e) {
           e.stopPropagation();
           const fileInput = document.createElement("input");
@@ -741,10 +814,19 @@
             if (!file) return showStatus("No file selected", true);
             showStatus("Uploading " + file.name + "...");
             fileToPayload(file).then(filePayload => {
-              return apiPost({ action: "uploadDocument", rowNumber: data.rowNumber, docType, sheetField: fieldName, sheetId: SHEET_ID, ...filePayload });
+              return apiPost({
+                action: "uploadDocument",
+                rowNumber: data.rowNumber,
+                docType,
+                sheetField: fieldName,
+                sheetId: SHEET_ID,
+                sheetName: data._sheetName || sheetForAsset(data),
+                folderId: DRIVE_FOLDER_ID,
+                ...filePayload
+              });
             }).then(res => {
               if (res.status === "success") {
-                showStatus("✅ " + title + " uploaded successfully!");
+                showStatus("✅ " + title + " uploaded and link posted to Google Sheet");
                 data[fieldName] = res.fileLink;
                 loadAssets();
               } else {
@@ -760,10 +842,9 @@
         return btn;
       }
 
-      const uploadBtn = makeUploadButton("Vehicle Reg Book", "Vehicle Reg Book", "vehicleRegBookLink");
+      const uploadRegBtn = makeUploadButton("Vehicle Reg Book", "Vehicle Reg Book", "vehicleRegBookLink");
       const uploadTrackingBtn = makeUploadButton("Tracking Certificate", "Tracking Certificate", "trackingCertificateLink");
 
-      // Delete
       const delBtn = document.createElement("button");
       delBtn.className = "btn-sm-delete";
       delBtn.innerHTML = '<i class="fas fa-trash"></i>';
@@ -771,59 +852,70 @@
       delBtn.addEventListener("click", function(e) {
         e.stopPropagation();
         if (!confirm("Delete this asset entry?")) return;
-        const payload = { action: "deleteAsset", rowNumber: data.rowNumber, sheetId: SHEET_ID };
-        apiPost(payload)
-          .then(res => {
-            if (res.status === "success") {
-              showStatus("✅ Deleted successfully");
-              loadAssets();
-            } else {
-              showStatus("❌ Delete failed: " + res.message, true);
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            showStatus("❌ Delete error: " + err.message, true);
-          });
+        apiPost({
+          action: "deleteAsset",
+          rowNumber: data.rowNumber,
+          sheetId: SHEET_ID,
+          sheetName: data._sheetName || sheetForAsset(data)
+        }).then(res => {
+          if (res.status === "success") {
+            showStatus("✅ Deleted successfully");
+            loadAssets();
+          } else {
+            showStatus("❌ Delete failed: " + res.message, true);
+          }
+        }).catch(err => showStatus("❌ Delete error: " + err.message, true));
       });
 
       actionDiv.appendChild(editBtn);
-      actionDiv.appendChild(uploadBtn);
+      actionDiv.appendChild(uploadRegBtn);
       actionDiv.appendChild(uploadTrackingBtn);
       actionDiv.appendChild(delBtn);
       actionCell.appendChild(actionDiv);
       row.appendChild(actionCell);
-
       tbody.appendChild(row);
     });
   }
 
-  // ---- load assets ----
-  function loadAssets() {
-    showStatus("Loading data...");
-    const url = `${SCRIPT_URL}?action=list&sheetId=${SHEET_ID}`;
+  function loadSheetAssets(sheetName) {
+    const url = `${SCRIPT_URL}?action=list&sheetId=${encodeURIComponent(SHEET_ID)}&sheetName=${encodeURIComponent(sheetName)}`;
     return fetch(url)
       .then(res => {
         if (!res.ok) throw new Error("Network response was not ok");
         return res.json();
       })
-      .then(rows => {
-        allAssets = Array.isArray(rows) ? rows : [];
-        if (currentFilter) {
-          renderTable(allAssets, currentFilter);
-        } else {
-          renderTable(allAssets);
-        }
-        updateDashboard(allAssets);
-        showStatus("✅ Loaded " + allAssets.length + " entries from Drilling_Equipment");
-      })
-      .catch(err => {
-        console.error(err);
-        showStatus("❌ Could not load data: " + err.message, true);
+      .then(response => {
+        if (response && response.status === "error") throw new Error(response.message || "Sheet load failed");
+        return normaliseRows(response, sheetName);
       });
   }
 
-  // ---- form submit ----
+  async function loadAssets() {
+    showStatus("Loading dashboard from Assert Reg and Drilling_Equipment...");
+    try {
+      const results = await Promise.allSettled([
+        loadSheetAssets(MAIN_SHEET_NAME),
+        loadSheetAssets(EQUIPMENT_SHEET_NAME)
+      ]);
+      mainAssets = results[0].status === "fulfilled" ? results[0].value : [];
+      equipmentAssets = results[1].status === "fulfilled" ? results[1].value : [];
+      allAssets = [...mainAssets, ...equipmentAssets];
+
+      updateDashboard();
+      if (currentFilter) applyFilter(currentFilter);
+      else renderTable(allAssets);
+
+      const failures = results.filter(r => r.status === "rejected").map(r => r.reason.message).join("; ");
+      if (failures) showStatus("⚠️ Loaded with warning: " + failures, true);
+      else showStatus(`✅ Loaded ${mainAssets.length} Assert Reg entries and ${equipmentAssets.length} Drilling_Equipment entries`);
+      return allAssets;
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ Could not load data: " + err.message, true);
+      return [];
+    }
+  }
+
   document.getElementById("assetForm").addEventListener("submit", async function(e){
     e.preventDefault();
     const data = {};
@@ -835,6 +927,8 @@
     data.regBookLink = document.getElementById("regBookLink").value || "";
     data.action = "saveAsset";
     data.sheetId = SHEET_ID;
+    data.sheetName = sheetForAsset(data);
+    data.folderId = DRIVE_FOLDER_ID;
 
     try {
       showStatus("Saving asset and documents...");
@@ -856,7 +950,6 @@
     }
   });
 
-  // ---- clear form ----
   document.getElementById("clearBtn").addEventListener("click", function(){
     document.getElementById("assetForm").reset();
     document.getElementById("rowNumber").value = "";
@@ -867,7 +960,6 @@
     showStatus("Form cleared.");
   });
 
-  // ---- new entry ----
   document.getElementById("newEntryBtn").addEventListener("click", function(){
     document.getElementById("entrySection").classList.remove("hidden");
     document.getElementById("assetForm").reset();
@@ -879,7 +971,6 @@
     window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
   });
 
-  // ---- back to dashboard ----
   document.getElementById("backToDashboardBtn").addEventListener("click", function(){
     document.getElementById("entrySection").classList.add("hidden");
     document.getElementById("assetForm").reset();
@@ -890,14 +981,9 @@
     document.getElementById("saveBtn").textContent = "Save Asset";
     showStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-    if (currentFilter) {
-      renderTable(allAssets, currentFilter);
-    } else {
-      renderTable(allAssets);
-    }
+    if (currentFilter) applyFilter(currentFilter); else renderTable(allAssets);
   });
 
-  // ---- cancel ----
   document.getElementById("cancelEntryBtn").addEventListener("click", function(){
     document.getElementById("entrySection").classList.add("hidden");
     document.getElementById("assetForm").reset();
@@ -907,40 +993,24 @@
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     showStatus("");
-    if (currentFilter) {
-      renderTable(allAssets, currentFilter);
-    } else {
-      renderTable(allAssets);
-    }
+    if (currentFilter) applyFilter(currentFilter); else renderTable(allAssets);
   });
 
-  // ---- refresh ----
-  document.getElementById("refreshDashBtn").addEventListener("click", function(){
-    loadAssets();
-  });
+  document.getElementById("refreshDashBtn").addEventListener("click", loadAssets);
+  document.getElementById("clearFilterBtn").addEventListener("click", clearFilter);
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
 
-  // ---- clear filter ----
-  document.getElementById("clearFilterBtn").addEventListener("click", function(){
-    clearFilter();
-  });
-
-  // ---- print ----
-  document.getElementById("printBtn").addEventListener("click", function(){
-    window.print();
-  });
-
-  // ---- CSV ----
   document.getElementById("excelBtn").addEventListener("click", function(){
-    const rows = currentFilter ? allAssets.filter(a => {
-      const cls = String(a.assetClass || "").trim().toLowerCase();
-      return cls.includes(currentFilter.toLowerCase());
-    }) : allAssets;
+    let rows = allAssets;
+    if (currentFilter) {
+      rows = (isEquipmentFilter(currentFilter) ? equipmentAssets : mainAssets).filter(a => String(getField(a, "assetClass")).toLowerCase().includes(currentFilter.toLowerCase()));
+    }
     const displayFields = FIELD_IDS.filter(id => id !== "licenced" && id !== "typeOfLicence" && id !== "validityOfLicence");
     const headers = [...displayFields, "vehicleRegBookLink", "trackingCertificateLink"];
     const csvRows = [headers, ...rows.map(row => {
-      const vals = displayFields.map(id => valueOrBlank(row[id]));
-      vals.push(row.vehicleRegBookLink || row.regBookLink || "");
-      vals.push(row.trackingCertificateLink || "");
+      const vals = displayFields.map(id => valueOrBlank(getField(row, id)));
+      vals.push(getField(row, "vehicleRegBookLink"));
+      vals.push(getField(row, "trackingCertificateLink"));
       return vals;
     })];
     const csv = csvRows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -953,10 +1023,7 @@
     URL.revokeObjectURL(url);
   });
 
-  // ---- init ----
-  document.addEventListener("DOMContentLoaded", function(){
-    loadAssets();
-  });
+  document.addEventListener("DOMContentLoaded", loadAssets);
 </script>
 </body>
 </html>
