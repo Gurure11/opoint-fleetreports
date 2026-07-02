@@ -500,7 +500,11 @@
         <div class="form-group"><label>NBV</label><input type="number" id="nbv"></div>
         <div class="form-group"><label>Outstanding VAF</label><input type="number" id="oustandingVaf"></div>
         <div class="form-group"><label>Value</label><input type="number" id="value"></div>
+        <div class="form-group"><label>Vehicle Reg Book Upload</label><input type="file" id="vehicleRegBookFile" accept="image/*,application/pdf,.doc,.docx"></div>
+        <div class="form-group"><label>Tracking Certificate Upload</label><input type="file" id="trackingCertificateFile" accept="image/*,application/pdf,.doc,.docx"></div>
         <input type="hidden" id="rowNumber">
+        <input type="hidden" id="vehicleRegBookLink">
+        <input type="hidden" id="trackingCertificateLink">
         <input type="hidden" id="regBookLink">
       </div>
       <div class="form-actions">
@@ -521,7 +525,7 @@
     <table id="assetTable">
       <thead><tr>
         <th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th>
-        <th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Reg Book</th>
+        <th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th>
         <th class="action-col">Actions</th>
       </tr></thead>
       <tbody></tbody>
@@ -533,7 +537,7 @@
   // ======================== CONFIG =========================
   const SHEET_ID = "1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw";
   // REPLACE THIS URL WITH YOUR DEPLOYED APPS SCRIPT URL
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyT2nPsL4X2J1Yx6qO2yGGr4XINdltY1sH3s_lsUxvl4uM59bOucxZKv9XXZmGSjz8boQ/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTyvOm30R1gNqOIjoOsVcVN3nnJ_wYnv_Td8DCt5np9uUN49bf2Z1H-IYLDBOs5BBi/exec";
 
   const FIELD_IDS = [
     "code","assetClass","purchaseDate","purchasedBy","financing","description",
@@ -562,6 +566,24 @@
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     }).then(res => res.json());
+  }
+
+  function fileToPayload(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = ev => resolve({
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        fileData: String(ev.target.result).split(',')[1]
+      });
+      reader.onerror = () => reject(new Error("Could not read file: " + file.name));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function linkCell(link, label) {
+    return link ? `<div class="regbook-link"><a href="${link}" target="_blank"><i class="fas fa-file-alt"></i> ${label || 'View'}</a></div>` : `<span style="color:#aaa;">—</span>`;
   }
 
   function showStatus(msg, isError = false) {
@@ -667,15 +689,16 @@
         row.appendChild(td);
       });
 
-      // Reg Book link
+      // Document links
       const regTd = document.createElement("td");
-      const link = data.regBookLink || "";
-      if (link) {
-        regTd.innerHTML = `<div class="regbook-link"><a href="${link}" target="_blank"><i class="fas fa-file-alt"></i> View</a></div>`;
-      } else {
-        regTd.innerHTML = `<span style="color:#aaa;">—</span>`;
-      }
+      const regLink = data.vehicleRegBookLink || data.regBookLink || data["Vehicle Reg Book"] || "";
+      regTd.innerHTML = linkCell(regLink, "View Reg Book");
       row.appendChild(regTd);
+
+      const trackingTd = document.createElement("td");
+      const trackingLink = data.trackingCertificateLink || data["Tracking Certificate"] || "";
+      trackingTd.innerHTML = linkCell(trackingLink, "View Tracking");
+      row.appendChild(trackingTd);
 
       // Action cell (right side)
       const actionCell = document.createElement("td");
@@ -695,70 +718,50 @@
           if (el) el.value = valueOrBlank(data[id]);
         });
         document.getElementById("rowNumber").value = data.rowNumber || "";
+        document.getElementById("vehicleRegBookLink").value = data.vehicleRegBookLink || data.regBookLink || data["Vehicle Reg Book"] || "";
+        document.getElementById("trackingCertificateLink").value = data.trackingCertificateLink || data["Tracking Certificate"] || "";
         document.getElementById("regBookLink").value = data.regBookLink || "";
         document.getElementById("saveBtn").textContent = "Update Asset";
         document.getElementById("entrySection").classList.remove("hidden");
         window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
       });
 
-      // Upload Reg Book
-      const uploadBtn = document.createElement("button");
-      uploadBtn.className = "btn-sm-upload";
-      uploadBtn.innerHTML = '<i class="fas fa-upload"></i>';
-      uploadBtn.title = "Upload Reg Book";
-      uploadBtn.addEventListener("click", function(e) {
-        e.stopPropagation();
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.accept = "image/*,application/pdf";
-        fileInput.onchange = function(ev) {
-          const file = ev.target.files[0];
-          if (!file) {
-            showStatus("No file selected", true);
-            return;
-          }
-          
-          showStatus("Uploading " + file.name + "...");
-          
-          const reader = new FileReader();
-          reader.onload = function(ev2) {
-            try {
-              const base64 = ev2.target.result.split(',')[1];
-              
-              const payload = {
-                action: "uploadRegBook",
-                rowNumber: data.rowNumber,
-                fileName: file.name,
-                fileData: base64,
-                sheetId: SHEET_ID
-              };
-              
-              apiPost(payload)
-                .then(res => {
-                  if (res.status === "success") {
-                    showStatus("✅ Reg book uploaded successfully!");
-                    data.regBookLink = res.fileLink;
-                    renderTable(allAssets, currentFilter);
-                  } else {
-                    showStatus("❌ Upload failed: " + (res.message || "unknown error"), true);
-                  }
-                })
-                .catch(err => {
-                  console.error(err);
-                  showStatus("❌ Upload error: " + err.message, true);
-                });
-            } catch (error) {
-              console.error(error);
-              showStatus("❌ Error processing file: " + error.message, true);
-            }
+      function makeUploadButton(docType, title, fieldName) {
+        const btn = document.createElement("button");
+        btn.className = "btn-sm-upload";
+        btn.innerHTML = '<i class="fas fa-upload"></i>';
+        btn.title = title;
+        btn.addEventListener("click", function(e) {
+          e.stopPropagation();
+          const fileInput = document.createElement("input");
+          fileInput.type = "file";
+          fileInput.accept = "image/*,application/pdf,.doc,.docx";
+          fileInput.onchange = function(ev) {
+            const file = ev.target.files[0];
+            if (!file) return showStatus("No file selected", true);
+            showStatus("Uploading " + file.name + "...");
+            fileToPayload(file).then(filePayload => {
+              return apiPost({ action: "uploadDocument", rowNumber: data.rowNumber, docType, sheetField: fieldName, sheetId: SHEET_ID, ...filePayload });
+            }).then(res => {
+              if (res.status === "success") {
+                showStatus("✅ " + title + " uploaded successfully!");
+                data[fieldName] = res.fileLink;
+                loadAssets();
+              } else {
+                showStatus("❌ Upload failed: " + (res.message || "unknown error"), true);
+              }
+            }).catch(err => {
+              console.error(err);
+              showStatus("❌ Upload error: " + err.message, true);
+            });
           };
-          reader.onerror = function() {
-            showStatus("❌ Error reading file", true);
-          };
-          reader.readAsDataURL(file);
-        };
-        fileInput.click();
-      });
+          fileInput.click();
+        });
+        return btn;
+      }
+
+      const uploadBtn = makeUploadButton("Vehicle Reg Book", "Vehicle Reg Book", "vehicleRegBookLink");
+      const uploadTrackingBtn = makeUploadButton("Tracking Certificate", "Tracking Certificate", "trackingCertificateLink");
 
       // Delete
       const delBtn = document.createElement("button");
@@ -786,6 +789,7 @@
 
       actionDiv.appendChild(editBtn);
       actionDiv.appendChild(uploadBtn);
+      actionDiv.appendChild(uploadTrackingBtn);
       actionDiv.appendChild(delBtn);
       actionCell.appendChild(actionDiv);
       row.appendChild(actionCell);
@@ -820,36 +824,44 @@
   }
 
   // ---- form submit ----
-  document.getElementById("assetForm").addEventListener("submit", function(e){
+  document.getElementById("assetForm").addEventListener("submit", async function(e){
     e.preventDefault();
     const data = {};
     FIELD_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
     const rowNum = document.getElementById("rowNumber").value;
     if (rowNum) data.rowNumber = rowNum;
+    data.vehicleRegBookLink = document.getElementById("vehicleRegBookLink").value || "";
+    data.trackingCertificateLink = document.getElementById("trackingCertificateLink").value || "";
+    data.regBookLink = document.getElementById("regBookLink").value || "";
     data.action = "saveAsset";
     data.sheetId = SHEET_ID;
 
-    showStatus("Saving...");
-    apiPost(data)
-      .then(response => {
-        if (response.status !== "success") throw new Error(response.message || "Save failed");
-        showStatus(rowNum ? "✅ Asset Updated Successfully" : "✅ Asset Saved Successfully");
-        document.getElementById("assetForm").reset();
-        document.getElementById("rowNumber").value = "";
-        document.getElementById("regBookLink").value = "";
-        document.getElementById("saveBtn").textContent = "Save Asset";
-        return loadAssets();
-      })
-      .catch(err => {
-        console.error(err);
-        showStatus("❌ Error Saving Asset: " + err.message, true);
-      });
+    try {
+      showStatus("Saving asset and documents...");
+      data.vehicleRegBookFile = await fileToPayload(document.getElementById("vehicleRegBookFile").files[0]);
+      data.trackingCertificateFile = await fileToPayload(document.getElementById("trackingCertificateFile").files[0]);
+      const response = await apiPost(data);
+      if (response.status !== "success") throw new Error(response.message || "Save failed");
+      showStatus(rowNum ? "✅ Asset Updated Successfully" : "✅ Asset Saved Successfully");
+      document.getElementById("assetForm").reset();
+      document.getElementById("rowNumber").value = "";
+      document.getElementById("vehicleRegBookLink").value = "";
+      document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("regBookLink").value = "";
+      document.getElementById("saveBtn").textContent = "Save Asset";
+      await loadAssets();
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ Error Saving Asset: " + err.message, true);
+    }
   });
 
   // ---- clear form ----
   document.getElementById("clearBtn").addEventListener("click", function(){
     document.getElementById("assetForm").reset();
     document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     showStatus("Form cleared.");
@@ -860,6 +872,8 @@
     document.getElementById("entrySection").classList.remove("hidden");
     document.getElementById("assetForm").reset();
     document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
@@ -870,6 +884,8 @@
     document.getElementById("entrySection").classList.add("hidden");
     document.getElementById("assetForm").reset();
     document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     showStatus("");
@@ -886,6 +902,8 @@
     document.getElementById("entrySection").classList.add("hidden");
     document.getElementById("assetForm").reset();
     document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     showStatus("");
@@ -918,10 +936,11 @@
       return cls.includes(currentFilter.toLowerCase());
     }) : allAssets;
     const displayFields = FIELD_IDS.filter(id => id !== "licenced" && id !== "typeOfLicence" && id !== "validityOfLicence");
-    const headers = [...displayFields, "regBookLink"];
+    const headers = [...displayFields, "vehicleRegBookLink", "trackingCertificateLink"];
     const csvRows = [headers, ...rows.map(row => {
       const vals = displayFields.map(id => valueOrBlank(row[id]));
-      vals.push(row.regBookLink || "");
+      vals.push(row.vehicleRegBookLink || row.regBookLink || "");
+      vals.push(row.trackingCertificateLink || "");
       return vals;
     })];
     const csv = csvRows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
