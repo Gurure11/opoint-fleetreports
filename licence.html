@@ -431,7 +431,7 @@
       Replace this with your deployed Apps Script Web App URL after pasting the fixed Apps Script code.
       Example: https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
     */
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyeOwD9_sbIYM-ZNByIiVpjeCGNoex2xPXolyj5R3p9bGNx0E06bJSjdH4-5jROXwJkaA/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxojAd813-H0O2sOTSTxCu_1gD60Hn9dr3yNYTitJPeTXsu7jJ4PYmUgsegzmTFGd7D_A/exec';
     let editingRowNumber = null;
     let editingExistingLicenceFileLink = '';
     let transactionLicenceRecords = [];
@@ -505,8 +505,9 @@
 
     function loadTransactions() {
       callServer('searchLicences', '')
-        .then(function(results) {
+        .then(function(response) {
           const body = document.getElementById('transactionsBody');
+          const results = normalizeLicenceList(response);
 
           if (!results || results.length === 0) {
             transactionLicenceRecords = [];
@@ -552,7 +553,9 @@
 
     function loadStatus() {
       callServer('getLicenceStatus')
-        .then(renderStatus)
+        .then(function(response) {
+          renderStatus(normalizeStatusResponse(response));
+        })
         .catch(function() {
           document.getElementById('aboutToExpireBox').innerHTML = '<div class="empty">Could not load status.</div>';
           document.getElementById('expiredBox').innerHTML = '<div class="empty">Could not load status.</div>';
@@ -571,8 +574,8 @@
       box.innerHTML = 'Searching...';
 
       callServer('searchLicences', query)
-        .then(function(results) {
-          renderSearchResults(results || []);
+        .then(function(response) {
+          renderSearchResults(normalizeLicenceList(response));
         })
         .catch(function(error) {
           box.innerHTML = '<div class="empty">' + escapeHtml((error && error.message) || 'Could not search records.') + '</div>';
@@ -624,6 +627,46 @@
         throw new Error('Server error: ' + response.status);
       }
       return response.json();
+    }
+
+    function normalizeLicenceList(response) {
+      if (Array.isArray(response)) {
+        return response;
+      }
+
+      if (response && Array.isArray(response.records)) {
+        return response.records;
+      }
+
+      if (response && Array.isArray(response.data)) {
+        return response.data;
+      }
+
+      if (response && Array.isArray(response.results)) {
+        return response.results;
+      }
+
+      if (response && response.success === false) {
+        throw new Error(response.message || 'Server returned an error.');
+      }
+
+      return [];
+    }
+
+    function normalizeStatusResponse(response) {
+      if (!response) {
+        return { aboutToExpire: [], expired: [] };
+      }
+
+      if (response.success === false) {
+        throw new Error(response.message || 'Could not load status.');
+      }
+
+      if (response.data) {
+        return response.data;
+      }
+
+      return response;
     }
 
     function renderStatus(data) {
@@ -746,6 +789,7 @@
 
     function renderSearchResults(results) {
       const box = document.getElementById('searchResultsBox');
+      results = normalizeLicenceList(results);
 
       if (!results || results.length === 0) {
         box.innerHTML = '<div class="empty">No matching licence details found.</div>';
