@@ -1,1273 +1,1029 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>OnPoint Fleet · accident report + cost center</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Distinct Infrastructure · Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    :root {
+      --primary-blue: #0b2f6b;
+      --deep-blue: #071f47;
+      --bright-blue: #1464d2;
+      --soft-blue: #eaf3ff;
+      --gold: #d4af37;
+      --gold-light: #ffe7a3;
+      --gold-deep: #9a7416;
+      --white: #ffffff;
+      --text: #12304f;
+      --muted: #6b7a90;
+      --line: rgba(20,68,126,0.16);
+      --shadow: 0 20px 60px rgba(7,31,71,0.18);
+      --card-radius: 22px;
+      --transition: 0.2s ease;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+    body {
+      min-height:100vh;
+      background: radial-gradient(circle at top left, rgba(212,175,55,0.32), transparent 30%),
+                  linear-gradient(135deg, var(--deep-blue) 0%, var(--primary-blue) 45%, var(--bright-blue) 100%);
+      padding:24px;
+      color:var(--text);
+      overflow-x:hidden;
+    }
+    body::before {
+      content:"";
+      position:fixed;
+      inset:-30%;
+      background:linear-gradient(120deg, transparent, rgba(255,255,255,0.12), transparent);
+      animation:shine 8s linear infinite;
+      pointer-events:none;
+    }
+    @keyframes shine {
+      0%{transform:translateX(-40%) rotate(10deg)}
+      100%{transform:translateX(40%) rotate(10deg)}
+    }
+    .container {
+      max-width:1400px;
+      margin:auto;
+      background:rgba(255,255,255,0.96);
+      padding:28px;
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      border:1px solid rgba(255,255,255,0.5);
+      animation:pageIn 0.75s ease both;
+    }
+    @keyframes pageIn {
+      from{opacity:0; transform:translateY(18px)}
+      to{opacity:1; transform:translateY(0)}
+    }
+    .header {
+      text-align:center;
+      margin-bottom:28px;
+      padding:28px 20px;
+      border-radius:22px;
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+      color:white;
+      box-shadow:0 14px 35px rgba(11,47,107,0.28);
+      position:relative;
+      overflow:hidden;
+    }
+    .header::after {
+      content:"";
+      position:absolute;
+      width:180px;
+      height:180px;
+      border-radius:50%;
+      background:rgba(212,175,55,0.25);
+      right:-50px;
+      top:-70px;
+      animation:floatOrb 5s ease-in-out infinite alternate;
+    }
+    @keyframes floatOrb {
+      from{transform:translateY(0) scale(1)}
+      to{transform:translateY(22px) scale(1.08)}
+    }
+    .header h1 { color:white; margin-bottom:8px; font-size:clamp(26px, 4vw, 42px); letter-spacing:0.5px; }
+    .header p { color:#eef6ff; font-size:14px; line-height:1.5; position:relative; z-index:1; }
+    .header strong { color:var(--gold-light); }
 
-        body {
-            background: #f0f4fc;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
-            position: relative;
-        }
+    /* ----- DASHBOARD CARDS (clickable) ----- */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 18px;
+      margin: 28px 0 24px 0;
+    }
+    .stat-card {
+      background: white;
+      padding: 18px 12px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(11,47,107,0.06);
+      text-align: center;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      backdrop-filter: blur(2px);
+      background: rgba(255,255,255,0.85);
+      cursor: pointer;
+      position: relative;
+    }
+    .stat-card:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 18px 30px rgba(11,47,107,0.18);
+      border-color: var(--gold);
+    }
+    .stat-card:active {
+      transform: scale(0.96);
+    }
+    .stat-card i {
+      font-size: 28px;
+      color: var(--bright-blue);
+      background: var(--soft-blue);
+      padding: 10px;
+      border-radius: 50%;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+    .stat-card .count {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary-blue);
+      line-height: 1.2;
+    }
+    .stat-card .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .stat-card .sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .stat-card .filter-badge {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 10px;
+      background: var(--gold);
+      color: #071f47;
+      padding: 2px 8px;
+      border-radius: 10px;
+      opacity: 0.7;
+    }
 
-        /* floating WA – royal blue */
-        .floating-wa {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 1100;
-            background: #25D366;
-            color: white;
-            width: 68px;
-            height: 68px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-            border: 2px solid white;
-            text-decoration: none;
-            transition: 0.15s ease;
-        }
-        .floating-wa:hover {
-            transform: scale(1.04);
-            box-shadow: 0 16px 36px rgba(37, 211, 102, 0.3);
-        }
-        .floating-wa svg {
-            width: 38px;
-            height: 38px;
-            fill: white;
-        }
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 0 22px 0;
+      gap: 12px;
+    }
+    .action-row .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+      color: #071f47;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 10px 24px rgba(154,116,22,0.28);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-gold:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px rgba(154,116,22,0.36);
+      filter: saturate(1.1);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary-blue);
+      color: var(--primary-blue);
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-outline:hover {
+      background: var(--primary-blue);
+      color: white;
+    }
+    .btn-back {
+      background: linear-gradient(135deg, #6c7a8a, #4a5568);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-back:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+    }
 
-        /* counter pill – white/royal */
-        .counter-pill {
-            position: fixed;
-            top: 24px;
-            right: 24px;
-            z-index: 1100;
-            background: white;
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            border-radius: 80px;
-            padding: 14px 26px;
-            border: 1px solid #d0ddee;
-            box-shadow: 0 12px 28px rgba(0, 40, 100, 0.08);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-        .counter-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: #0a2540;
-        }
-        .counter-badge {
-            background: #1a4b8c;
-            color: white;
-            font-weight: 800;
-            font-size: 1.3rem;
-            padding: 2px 18px;
-            border-radius: 40px;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 12px rgba(26, 75, 140, 0.2);
-        }
-        .incident-label {
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #1a4b8c;
-            background: rgba(26, 75, 140, 0.06);
-            padding: 4px 18px;
-            border-radius: 40px;
-            border: 1px solid rgba(26, 75, 140, 0.1);
-        }
-        .incident-label i {
-            margin-right: 6px;
-            color: #1a4b8c;
-        }
+    /* form section */
+    #entrySection {
+      margin-top: 28px;
+      border-top: 2px dashed var(--line);
+      padding-top: 20px;
+    }
+    #entrySection h2 {
+      color: var(--primary-blue);
+      margin-bottom: 16px;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
 
-        /* main card – white / royal */
-        .report-card {
-            max-width: 820px;
-            width: 100%;
-            background: white;
-            border-radius: 48px;
-            padding: 2.2rem 2.2rem 2rem;
-            box-shadow: 0 30px 60px -20px rgba(0, 40, 80, 0.15), 0 8px 24px rgba(0, 40, 80, 0.04);
-            border: 1px solid #e9eff6;
-            position: relative;
-            z-index: 5;
-            transition: all 0.15s;
-        }
+    .form-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap:16px;
+      margin-bottom:22px;
+    }
+    .form-group {
+      display:flex;
+      flex-direction:column;
+      padding:14px;
+      background:linear-gradient(180deg, #ffffff, var(--soft-blue));
+      border:1px solid var(--line);
+      border-radius:18px;
+      transition:transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      animation:cardIn 0.45s ease both;
+    }
+    .form-group:hover {
+      transform:translateY(-3px);
+      box-shadow:0 14px 28px rgba(11,47,107,0.12);
+      border-color:rgba(212,175,55,0.7);
+    }
+    @keyframes cardIn {
+      from{opacity:0; transform:translateY(10px)}
+      to{opacity:1; transform:translateY(0)}
+    }
+    label {
+      margin-bottom:7px;
+      font-weight:bold;
+      color:var(--primary-blue);
+      font-size:13px;
+    }
+    input, select, textarea {
+      width:100%;
+      padding:12px 13px;
+      border:1px solid rgba(11,47,107,0.22);
+      border-radius:12px;
+      font-size:14px;
+      background:white;
+      color:var(--text);
+      transition:border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline:none;
+      border-color:var(--gold);
+      box-shadow:0 0 0 4px rgba(212,175,55,0.2);
+      transform:translateY(-1px);
+    }
+    textarea { min-height:44px; resize:vertical; }
+    .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    button {
+      background:linear-gradient(135deg, var(--gold), var(--gold-deep));
+      color:#071f47;
+      border:none;
+      padding:14px 30px;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:15px;
+      font-weight:800;
+      box-shadow:0 12px 26px rgba(154,116,22,0.28);
+      transition:transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    }
+    button:hover {
+      transform:translateY(-3px);
+      box-shadow:0 18px 34px rgba(154,116,22,0.36);
+      filter:saturate(1.1);
+    }
+    .btn-blue {
+      background:linear-gradient(135deg, var(--bright-blue), var(--primary-blue));
+      color:white;
+    }
+    .btn-danger {
+      background:linear-gradient(135deg, #ef4444, #991b1b);
+      color:white;
+    }
+    .status {
+      margin-top:16px;
+      font-weight:bold;
+      color:var(--primary-blue);
+      background:rgba(212,175,55,0.16);
+      border-left:5px solid var(--gold);
+      padding:12px 14px;
+      border-radius:12px;
+      min-height:20px;
+    }
+    .table-wrap {
+      width:100%;
+      overflow:auto;
+      border-radius:18px;
+      border:1px solid var(--line);
+      margin-top:20px;
+      box-shadow:0 10px 24px rgba(11,47,107,0.08);
+      max-height:72vh;
+    }
+    table {
+      width:100%;
+      min-width:700px;
+      border-collapse:collapse;
+      background:white;
+      table-layout:auto;
+    }
+    th {
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+      color:white;
+      padding:9px;
+      text-align:left;
+      font-size:11px;
+      line-height:1.15;
+      white-space:nowrap;
+      border-bottom:2px solid var(--gold);
+      position:sticky;
+      top:0;
+      z-index:2;
+    }
+    td {
+      padding:8px 9px;
+      border-bottom:1px solid var(--line);
+      font-size:11px;
+      line-height:1.15;
+      color:var(--text);
+      white-space:nowrap;
+      max-width:170px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    tr:hover { background:#f4f8ff; }
+    .hidden { display:none !important; }
+    
+    /* Actions column - moved to right */
+    .action-col {
+      min-width: 110px;
+      text-align: right;
+      position:sticky;
+      right:0;
+      background:#fff;
+      z-index:1;
+    }
+    .action-col .row-actions {
+      display: flex;
+      gap: 4px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .row-actions button {
+      padding: 4px 8px;
+      font-size: 10px;
+      margin: 0;
+      border-radius: 14px;
+    }
+    .row-actions .btn-sm-edit { background: var(--bright-blue); color: white; }
+    .row-actions .btn-sm-edit:hover { filter: brightness(1.1); }
+    .row-actions .btn-sm-upload { background: var(--gold); color: #071f47; }
+    .row-actions .btn-sm-upload:hover { filter: brightness(1.1); }
+    .row-actions .btn-sm-delete { background: #ef4444; color: white; }
 
-        .logo-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 1rem;
-        }
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .logo-image {
-            width: 64px;
-            height: 64px;
-            background: white;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 8px 20px rgba(0, 40, 80, 0.08);
-            border: 2px solid #1a4b8c;
-            overflow: hidden;
-        }
-        .logo-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-        }
-        .logo-text {
-            font-weight: 800;
-            font-size: 2rem;
-            letter-spacing: -0.02em;
-            color: #0a2540;
-            line-height: 1.1;
-        }
-        .logo-text small {
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #4a6f9e;
-            display: block;
-            letter-spacing: 0.3px;
-        }
-        .address-badge {
-            background: #f0f4fc;
-            border-radius: 60px;
-            padding: 10px 22px;
-            font-weight: 600;
-            color: #0a2540;
-            border: 1px solid #d0ddee;
-            font-size: 0.85rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-        }
-        .address-badge i {
-            color: #1a4b8c;
-        }
+    .regbook-link {
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .regbook-link a {
+      color: var(--bright-blue);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--bright-blue);
+    }
+    .regbook-link a:hover { color: var(--gold-deep); }
 
-        .subhead {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin: 0 0 1.8rem 0;
-            padding: 12px 20px;
-            background: #f8faff;
-            border-radius: 60px;
-            border-left: 4px solid #1a4b8c;
-            color: #1a3a5c;
-            font-weight: 500;
-        }
-        .subhead i {
-            color: #1a4b8c;
-            margin-right: 6px;
-        }
-        .map-mini-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: white;
-            border-radius: 40px;
-            padding: 6px 16px 6px 12px;
-            margin-left: auto;
-            border: 1px solid #d0ddee;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-        }
-        .map-mini-container a {
-            color: #1a4b8c;
-            font-weight: 600;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        .map-mini-container i {
-            color: #1a4b8c;
-        }
 
-        /* no animations */
-        .live-characters {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-bottom: 16px;
-            height: 50px;
-        }
-        .character {
-            width: 50px;
-            height: 50px;
-            background: #d0ddee;
-            border-radius: 50% 50% 20px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.6rem;
-            box-shadow: 0 6px 0 #8aa3c4, 0 8px 16px rgba(0,0,0,0.04);
-            border: 2px solid white;
-            color: #0a2540;
-        }
-        .character:nth-child(2) { background: #b8cce6; box-shadow: 0 6px 0 #6f8db0; }
-        .character:nth-child(3) { background: #a7c957; box-shadow: 0 6px 0 #6b8e4c; color: white; }
+    th.action-col {
+      z-index:3;
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+    }
+    #assetTable td:nth-child(6),
+    #assetTable td:nth-child(11),
+    #assetTable td:nth-child(12),
+    #assetTable td:nth-child(17),
+    #assetTable td:nth-child(18),
+    #assetTable td:nth-child(19),
+    #assetTable td:nth-child(25) {
+      max-width:130px;
+    }
 
-        /* app download row – royal */
-        .app-download-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 16px;
-            background: #f8faff;
-            border-radius: 60px;
-            padding: 12px 24px;
-            margin: 1rem 0 1.2rem;
-            border: 1px solid #d0ddee;
-        }
-        .qr-container {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        #qrCanvas {
-            width: 68px;
-            height: 68px;
-            border-radius: 20px;
-            background: white;
-            padding: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-            border: 2px solid #1a4b8c;
-        }
-        .app-link {
-            background: #1a4b8c;
-            color: white;
-            padding: 12px 28px;
-            border-radius: 60px;
-            font-weight: 700;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            transition: 0.15s;
-            border: 1px solid #2a5f9e;
-            box-shadow: 0 6px 16px rgba(26, 75, 140, 0.15);
-        }
-        .app-link:hover {
-            background: #0f3a6e;
-            transform: scale(1.01);
-        }
-        .scan-note {
-            color: #4a6f9e;
-            font-weight: 500;
-            font-size: 0.8rem;
-        }
+    .filter-active {
+      border-color: var(--gold) !important;
+      box-shadow: 0 0 0 3px rgba(212,175,55,0.3) !important;
+    }
 
-        /* action links – royal */
-        .action-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            margin-bottom: 24px;
-        }
-        .action-card {
-            background: white;
-            border-radius: 40px;
-            padding: 14px 28px;
-            display: inline-flex;
-            align-items: center;
-            gap: 16px;
-            text-decoration: none;
-            color: #0a2540;
-            font-weight: 700;
-            border: 1px solid #d0ddee;
-            backdrop-filter: blur(4px);
-            transition: 0.15s;
-            flex: 1 1 auto;
-            box-shadow: 0 4px 12px rgba(0, 40, 80, 0.02);
-        }
-        .action-card i {
-            font-size: 1.8rem;
-            color: #1a4b8c;
-        }
-        .action-card:hover {
-            background: #f0f6ff;
-            border-color: #1a4b8c;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(26, 75, 140, 0.08);
-        }
-        .action-text small {
-            font-weight: 400;
-            font-size: 0.7rem;
-            color: #4a6f9e;
-        }
-
-        /* form */
-        .form-grid { display: flex; flex-direction: column; gap: 1.5rem; }
-        .two-cols { display: flex; flex-wrap: wrap; gap: 1rem; }
-        .two-cols > div { flex: 1 1 200px; }
-        .input-field { display: flex; flex-direction: column; gap: 6px; }
-        .input-field label {
-            font-weight: 600;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #1a3a5c;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .input-field label i { color: #1a4b8c; width: 20px; }
-        .input-field input, .input-field select, .input-field textarea {
-            background: white;
-            border: 1.5px solid #d0ddee;
-            border-radius: 30px;
-            padding: 16px 22px;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #0a2540;
-            outline: none;
-            transition: 0.15s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.01);
-        }
-        .input-field input:focus, .input-field select:focus, .input-field textarea:focus {
-            border-color: #1a4b8c;
-            box-shadow: 0 0 0 4px rgba(26, 75, 140, 0.06);
-        }
-        .input-field input::placeholder, .input-field textarea::placeholder {
-            color: #8aa3c4;
-        }
-        .input-field select option { background: white; color: #0a2540; }
-
-        .yes-no-group {
-            display: flex;
-            gap: 28px;
-            align-items: center;
-            background: #f8faff;
-            border-radius: 40px;
-            padding: 10px 24px;
-            border: 1px solid #d0ddee;
-        }
-        .yes-no-group label {
-            color: #0a2540;
-            font-weight: 500;
-            text-transform: none;
-            font-size: 0.95rem;
-            gap: 6px;
-        }
-        .yes-no-group input[type="radio"] { accent-color: #1a4b8c; width: 18px; height: 18px; margin-right: 6px; }
-
-        .photo-upload-area {
-            background: #f8faff;
-            border-radius: 40px;
-            padding: 2rem 1.5rem;
-            border: 2px dashed #b8cce6;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.15s;
-            position: relative;
-        }
-        .photo-upload-area:hover { background: #f0f6ff; border-color: #1a4b8c; }
-        .photo-upload-area i { font-size: 3rem; color: #1a4b8c; opacity: 0.6; margin-bottom: 0.5rem; }
-        .photo-upload-area .upload-text { font-weight: 700; font-size: 1.1rem; color: #0a2540; }
-        .photo-upload-area .upload-hint { font-size: 0.8rem; color: #4a6f9e; margin-top: 6px; }
-        #fileInput { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
-
-        .image-preview-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            margin-top: 16px;
-            align-items: center;
-        }
-        .preview-thumb { width: 80px; height: 80px; border-radius: 24px; object-fit: cover; border: 3px solid #1a4b8c; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-        .file-name-badge {
-            background: #f0f4fc;
-            border-radius: 40px;
-            padding: 8px 20px;
-            font-weight: 500;
-            color: #0a2540;
-            border: 1px solid #d0ddee;
-        }
-        .attachment-badge {
-            background: #f0f6ff;
-            border-radius: 40px;
-            padding: 8px 18px;
-            font-size: 0.8rem;
-            color: #1a4b8c;
-            border: 1px solid #b8cce6;
-        }
-
-        .add-save-btn {
-            margin-top: 6px;
-            border: 0;
-            border-radius: 40px;
-            background: #1a4b8c;
-            color: white;
-            font-weight: 700;
-            padding: 10px 18px;
-            cursor: pointer;
-            transition: 0.15s;
-            font-size: 0.85rem;
-            box-shadow: 0 4px 12px rgba(26, 75, 140, 0.08);
-        }
-        .add-save-btn:hover { background: #0f3a6e; transform: translateY(-2px); }
-
-        .submit-btn {
-            background: #1a4b8c;
-            border: none;
-            border-radius: 60px;
-            padding: 1.3rem 1.8rem;
-            color: white;
-            font-weight: 800;
-            font-size: 1.2rem;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            cursor: pointer;
-            transition: 0.15s;
-            margin: 2rem 0 1rem;
-            border: 1px solid #2a5f9e;
-            box-shadow: 0 12px 32px rgba(26, 75, 140, 0.15);
-        }
-        .submit-btn:hover {
-            background: #0f3a6e;
-            transform: scale(1.01);
-            box-shadow: 0 16px 40px rgba(26, 75, 140, 0.2);
-        }
-        .submit-btn i { font-size: 1.6rem; }
-
-        .info-note {
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: #f8faff;
-            border-radius: 40px;
-            padding: 14px 22px;
-            color: #1a3a5c;
-            border: 1px solid #d0ddee;
-        }
-        .info-note i { color: #1a4b8c; }
-
-        hr { border: 1px solid #d0ddee; margin: 0.5rem 0 1rem; }
-
-        footer {
-            text-align: center;
-            margin-top: 24px;
-            color: #4a6f9e;
-            font-weight: 400;
-            font-size: 0.85rem;
-        }
-
-        .datetime-row { display: flex; flex-wrap: wrap; gap: 1rem; }
-        .datetime-row .input-field { flex: 1 1 160px; }
-
-        @media (max-width: 520px) {
-            .report-card { padding: 1.5rem 1.2rem; border-radius: 32px; }
-            .logo-text { font-size: 1.4rem; }
-            .counter-pill { top: 12px; right: 12px; padding: 10px 16px; }
-            .floating-wa { width: 56px; height: 56px; bottom: 20px; right: 20px; }
-            .app-download-row { flex-direction: column; align-items: flex-start; }
-            .action-links { flex-direction: column; }
-            .action-card { justify-content: center; }
-            .subhead { flex-direction: column; align-items: flex-start; }
-            .map-mini-container { margin-left: 0; width: 100%; justify-content: center; }
-        }
-    </style>
+    @media (max-width: 768px) {
+      body { padding:12px; }
+      .container { padding:16px; border-radius:20px; }
+      .dashboard-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .action-row { flex-direction: column; align-items: stretch; }
+      .btn-gold, .btn-outline { justify-content: center; }
+      .form-actions { flex-direction: column; }
+      .form-actions button { width: 100%; justify-content: center; }
+      .action-col .row-actions { justify-content: center; }
+    }
+    @media print {
+      body { background:white; }
+      .header, .action-row, #entrySection, .toolbar, .connection-panel, .status, .btn-gold, .btn-outline { display:none !important; }
+      .container { box-shadow:none; border:none; max-width:none; padding:0; }
+    }
+  </style>
 </head>
 <body>
+<div class="container" id="appContainer">
+  <div class="header">
+    <h1>Distinct Infrastructure</h1>
+    <p>Vehicle & Asset Register · Dashboard</p>
+    <p><strong>Google Storage:</strong> Asset Register O/a Distinct Infrastructure</p>
+  </div>
 
-    <!-- Floating WhatsApp -->
-    <a href="https://wa.me/27672557297" class="floating-wa" target="_blank" rel="noopener noreferrer">
-        <svg viewBox="0 0 32 32"><path d="M16.04 3.2c-7.05 0-12.78 5.7-12.78 12.72 0 2.24.59 4.43 1.71 6.36L3.2 28.8l6.69-1.75a12.8 12.8 0 0 0 6.15 1.56h.01c7.04 0 12.77-5.7 12.77-12.72S23.09 3.2 16.04 3.2Zm0 23.25h-.01a10.6 10.6 0 0 1-5.39-1.47l-.39-.23-3.97 1.04 1.06-3.86-.25-.4a10.48 10.48 0 0 1-1.62-5.61c0-5.83 4.74-10.56 10.57-10.56 2.82 0 5.48 1.1 7.47 3.09a10.47 10.47 0 0 1 3.1 7.44c0 5.83-4.74 10.56-10.57 10.56Zm5.8-7.9c-.32-.16-1.88-.92-2.17-1.03-.29-.11-.5-.16-.72.16-.21.32-.82 1.03-1.01 1.24-.19.21-.37.24-.69.08-.32-.16-1.34-.49-2.55-1.56-.94-.84-1.58-1.88-1.76-2.2-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.72-1.73-.98-2.37-.26-.62-.52-.54-.72-.55h-.61c-.21 0-.56.08-.85.4-.29.32-1.12 1.09-1.12 2.66s1.15 3.09 1.31 3.3c.16.21 2.26 3.45 5.48 4.84.77.33 1.37.53 1.84.68.77.24 1.47.21 2.03.13.62-.09 1.88-.77 2.14-1.51.27-.75.27-1.39.19-1.52-.08-.13-.29-.21-.61-.37Z"/></svg>
-    </a>
+  <!-- DASHBOARD CARDS (clickable) - Focus on Drilling, Yellow, and Small Plant -->
+  <div class="dashboard-grid" id="dashboardCards">
+    <div class="stat-card" data-filter="Drilling"><i class="fas fa-oil-can"></i><div class="count" id="cntDrilling">0</div><div class="label">Drilling Plant</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-filter="Yellow Plant"><i class="fas fa-digging"></i><div class="count" id="cntYellow">0</div><div class="label">Yellow Plant</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-filter="Small Plant"><i class="fas fa-th-list"></i><div class="count" id="cntSmallPlant">0</div><div class="label">Small Plant</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-filter="Trucks"><i class="fas fa-truck"></i><div class="count" id="cntTrucks">0</div><div class="label">Trucks</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-filter="Trailers"><i class="fas fa-trailer"></i><div class="count" id="cntTrailers">0</div><div class="label">Trailers</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-filter="Executive"><i class="fas fa-car"></i><div class="count" id="cntExecutive">0</div><div class="label">Executive Cars</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-filter="Bowser"><i class="fas fa-gas-pump"></i><div class="count" id="cntBowser">0</div><div class="label">Bowsers</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-filter="Admin"><i class="fas fa-building"></i><div class="count" id="cntAdmin">0</div><div class="label">Admin</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-filter="Projects &amp; Tender"><i class="fas fa-briefcase"></i><div class="count" id="cntProjects">0</div><div class="label">Projects &amp; Tender</div><span class="filter-badge">click</span></div>
+  </div>
 
-    <!-- Counter -->
-    <div class="counter-pill">
-        <div class="counter-item">
-            <span class="counter-badge" id="localVisitCounter">0</span>
-        </div>
-        <div class="incident-label"><i class="fas fa-car-crash"></i> App Visit 2026</div>
+  <!-- ACTION ROW -->
+  <div class="action-row">
+    <div class="btn-group">
+      <button class="btn-gold" id="newEntryBtn"><i class="fas fa-plus-circle"></i> New Entry</button>
+      <button class="btn-outline" id="refreshDashBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+      <button class="btn-outline" id="clearFilterBtn"><i class="fas fa-times-circle"></i> Clear Filter</button>
     </div>
-
-    <div class="report-card">
-
-        <!-- header -->
-        <div class="logo-header">
-            <div class="logo-area">
-                <div class="logo-image">
-                    <img src="images/logo.png" alt="OnPoint logo" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fas fa-truck\' style=\'font-size:2.5rem; color:#1a4b8c;\'></i>';">
-                </div>
-                <div class="logo-text">
-                    OnPoint onTime <small>fleet & logistics</small>
-                </div>
-            </div>
-            <div class="address-badge">
-                <i class="fas fa-map-marker-alt"></i> 71 Pretorius Rd, President Park, Midrand
-            </div>
-        </div>
-
-        <div class="live-characters">
-            <div class="character"><i class="fas fa-smile"></i></div>
-            <div class="character"><i class="fas fa-truck"></i></div>
-            <div class="character"><i class="fas fa-shield-alt"></i></div>
-        </div>
-
-        <div class="subhead">
-            <span><i class="fas fa-clipboard-list"></i> complete accident report (auto‑location + stamped photo)</span>
-            <div class="map-mini-container" id="liveMapLink">
-                <i class="fas fa-map-marked-alt"></i>
-                <a href="#" id="dynamicMapLink" target="_blank" title="open live map – auto updates">obtaining location...</a>
-                <i class="fas fa-external-link-alt" style="font-size:0.7rem; opacity:0.6;"></i>
-            </div>
-        </div>
-
-        <!-- app download -->
-        <div class="app-download-row" id="appQrRow">
-            <div class="qr-container">
-                <img id="qrCanvas" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcgAAAHIAQAAAADi2kdHAAAEWklEQVR4nO1ca4/bMAwjh/z/v8x9ECm7wLC73R61Z6f3aJoQjSBIpinZFL54fPsq8CIv8iI/eTwA650AEBAoioAogBCBegPUJ757LztPQT4oT4Kg2D4VQRBS+S+OpPruzew8Ckk66vofBShhCYASlPd194Z2HoZkHCradxQdms63/NPfeZF/Fvm8nCkBSbES7LggKtH6m995kX8P+QCIl8T6E79VRNYAWvQI09172XkKEhpu+twrsL3sPAXJKYOOwbMDksnBFEbg/uZ3XuTfQ0KSOkgr/uRP67J/65UA1Y3PhZECUQ6UfwgUxyUF0tS2RlUJuvPPRZFs7QdQKwrWDMxqZanBuZnA1YcWRlIiKEzyULQgVijGh2P2og3tPAUplsAX17EcWk6mR1RVBiai7O5n5xFIjtQ68u0suyOpGDO55c23ayIf1OBIiJbzBvXpVKsI8Ryywl52noTsuaUnoOU5p1uOU4ewxfv97DwGSapYLGpuAohy0n0RhTAl4w3tPABZ+m0VyDxCjjpoaipyidt8V2972ov86HBYZkKSJgQN185T0tAnXT60KDJ6QusKzXVLTYjUAKfhlNN2s/MgZNU5SaoL156flLRAZN7Zo+rV+5ZHplWoB9OQIEZQUISGuripnQcgJUqkUNI7IhNVGnbdLHNSELd/aF1kie1zNDqdJlwBpGkBL9L8XnaegmS0WkxsZ1KHMCjRJDi862kv8qOj+m/LZ/EcUD7NWY+gcGs1eOtlKyPTWeIusCpvoyPUp2mUt4M3tPMMpAadZXtwEKBSb5so1WzmfU97kT89st5hhOIYI9O+2W25bsq9+u3SyApKZQKqYrKEO8FMmVLcVj7fzs5jkHJRJYpBSQehuhk+mwN7XcR+dp6AzHqHKZ3O05V0gdEiIHtI3czOg5CpoDCNttbiXQ2Nl3tBodX77ew8AvlYEnJ9E3gpuYywtCdzw9WHFkXC7fFqnd3d8nK0pkM+Z3Vy16+si6SXM0TDDbctZlS+7S6wZrn72XkKssqeXQ7j+ASWAYEuans+c/ntosiRTqepJeY2sE65ybnOyXvZeRySvQC7F3pSTXZ7rYNYzHdbO/9/ZPeXyMqtKLbb8s+F7Orwu/OVVZGPlaGXrvgsVtHoA5tW9fJ9T3uRn0DKOdTdJk11rSJAobfpFrvrP9dFPo5Hz02mHoRBdWW5yPVuve9pL/LDQyavM43NJSjXB+GN6nD57ZLINLy7Fd5k9mXJoPu/RnvY7R9aFzntb9Krr13HdnZNW/xYGlrX9rLzFOS8v6Zl9yzJ7rWCvoPZJoOXDy2LnPbXHMXPSH5jIA1hGqshNrPzFOQDRJvNipWarEgc/k0TGNNT9KanvchfQfYGGOzmhGkHXJoHpxDz7qe9yA+QtJLA5rw9QxlR2U3z737ai/zhMe2vKS/FVkqiDJ+dnOxIvePnoshpf80k0t6mT5h6FEbN7NbLFkbO+2v+q++8yIu8yM8d3wFbfscIg4d5dQAAAABJRU5ErkJggg==" alt="QR code to download OnPoint driver app">
-                <div>
-                    <div style="font-weight:700; color:#1a4b8c;">📲 OnPoint driver app</div>
-                    <span class="scan-note"><i class="fas fa-camera"></i> scan QR to download APK</span>
-                </div>
-            </div>
-            <a href="https://drive.google.com/file/d/1myhSxGUZt5mQRdsH_yRk6duo-ejA3LdW/view?usp=drive_link" class="app-link" target="_blank" rel="noopener noreferrer">
-                <i class="fas fa-download"></i> Download App
-            </a>
-        </div>
-
-        <!-- action links -->
-        <div class="action-links">
-            <a href="details.html" class="action-card">
-                <i class="fas fa-gas-pump"></i>
-                <span class="action-text">
-                    <span>Fuel Log</span>
-                    <small>record fuel fill-ups</small>
-                </span>
-            </a>
-            <a href="contacts.html" class="action-card">
-                <i class="fas fa-truck-moving"></i>
-                <span class="action-text">
-                    <span>Vehicle Handover</span>
-                    <small>swap vehicles</small>
-                </span>
-            </a>
-            <a href="https://gurure11.github.io/distinct-maintenance-sheduler/" class="action-card" target="_blank" rel="noopener noreferrer">
-                <i class="fas fa-tools"></i>
-                <span class="action-text">
-                    <span>Maintenance Schedule</span>
-                    <small>vehicle maintenance planner</small>
-                </span>
-            </a>
-        </div>
-
-        <!-- form -->
-        <form id="accidentForm" class="form-grid">
-            <div class="datetime-row">
-                <div class="input-field">
-                    <label><i class="fas fa-calendar-alt"></i> Date</label>
-                    <input type="date" id="accidentDate" name="accidentDate" required>
-                </div>
-                <div class="input-field">
-                    <label><i class="fas fa-clock"></i> Time</label>
-                    <input type="time" id="accidentTime" name="accidentTime" value="14:30" required>
-                </div>
-            </div>
-
-            <div class="two-cols">
-                <div class="input-field">
-                    <label><i class="fas fa-car"></i> Vehicle reg.</label>
-                    <select id="vehicleReg" name="vehicleReg" required>
-                        <option value="" disabled selected>– select vehicle registration –</option>
-                        <option value="">Select Vehicle...</option>
-                        <option value="LH83NTGP">LH83NTGP</option>
-                        <option value="HZ00XWGP">HZ00XWGP</option>
-                        <option value="HK60TXGP">HK60TXGP</option>
-                        <option value="HK60TRGP">HK60TRGP</option>
-                        <option value="HN03JZGP">HN03JZGP</option>
-                        <option value="LD72VRGP">LD72VRGP</option>
-                        <option value="LD72VKGP">LD72VKGP</option>
-                        <option value="KZ14DYGP">KZ14DYGP</option>
-                        <option value="MJ53VVGP">MJ53VVGP</option>
-                        <option value="MF72JPGP">MF72JPGP</option>
-                        <option value="MH18HLGP">MH18HLGP</option>
-                        <option value="MH18HPGP">MH18HPGP</option>
-                        <option value="MJ22MJGP">MJ22MJGP</option>
-                        <option value="JD12LMGP">JD12LMGP</option>
-                        <option value="JV09TWGP">JV09TWGP</option>
-                        <option value="LD45TFGP">LD45TFGP</option>
-                        <option value="MG47YRGP">MG47YRGP</option>
-                        <option value="CW15XZGP">CW15XZGP</option>
-                        <option value="YBR245GP">YBR245GP</option>
-                        <option value="LN30PNGP">LN30PNGP</option>
-                        <option value="LX67YSGP">LX67YSGP</option>
-                        <option value="LD27RXGP">LD27RXGP</option>
-                        <option value="JN01DGGP">JN01DGGP</option>
-                        <option value="LW46XCGP">LW46XCGP</option>
-                        <option value="LP17TVGP">LP17TVGP</option>
-                        <option value="BZ89VHGP">BZ89VHGP</option>
-                        <option value="DZ53XBGP">DZ53XBGP</option>
-                        <option value="KP98PDGP">KP98PDGP</option>
-                        <option value="KL60NJGP">KL60NJGP</option>
-                        <option value="JP41CHGP">JP41CHGP</option>
-                        <option value="JB41MPGP">JB41MPGP</option>
-                        <option value="LS77SJGP">LS77SJGP</option>
-                        <option value="MH47SRGP">MH47SRGP</option>
-                        <option value="HX96RVGP">HX96RVGP</option>
-                        <option value="KK19DDGP">KK19DDGP</option>
-                        <option value="KR76PYGP">KR76PYGP</option>
-                        <option value="KT74WDGP">KT74WDGP</option>
-                        <option value="KP56BVGP">KP56BVGP</option>
-                        <option value="RTH651GP">RTH651GP</option>
-                        <option value="JX95DNGP">JX95DNGP</option>
-                        <option value="HN23FWGP">HN23FWGP</option>
-                        <option value="LP28LYGP">LP28LYGP</option>
-                        <option value="KJ96FZGP">KJ96FZGP</option>
-                        <option value="HV09VKGP">HV09VKGP</option>
-                        <option value="JD95XGGP">JD95XGGP</option>
-                        <option value="JT31YRGP">JT31YRGP</option>
-                        <option value="KP33HDGP">KP33HDGP</option>
-                        <option value="JF10CSGP">JF10CSGP</option>
-                        <option value="HP34WKGP">HP34WKGP</option>
-                        <option value="KN47CFGP">KN47CFGP</option>
-                        <option value="LS85RVGP">LS85RVGP</option>
-                        <option value="LP00HKGP">LP00HKGP</option>
-                        <option value="FY37DDGP">FY37DDGP</option>
-                        <option value="FW95WXGP">FW95WXGP</option>
-                        <option value="LM52NWGP">LM52NWGP</option>
-                        <option value="HM80WZGP">HM80WZGP</option>
-                        <option value="KK57HSGP">KK57HSGP</option>
-                        <option value="HG00HPGP">HG00HPGP</option>
-                        <option value="JJ42MZGP">JJ42MZGP</option>
-                        <option value="LN12MTGP">LN12MTGP</option>
-                        <option value="HG00JMGP">HG00JMGP</option>
-                        <option value="HM68TLGP">HM68TLGP</option>
-                        <option value="KP18GMGP">KP18GMGP</option>
-                        <option value="LF33HXGP">LF33HXGP</option>
-                        <option value="FN34BVGP">FN34BVGP</option>
-                        <option value="HK67KZGP">HK67KZGP</option>
-                        <option value="HK67LDGP">HK67LDGP</option>
-                        <option value="KK68RFGP">KK68RFGP</option>
-                        <option value="HH32LSGP">HH32LSGP</option>
-                        <option value="KD94SSGP">KD94SSGP</option>
-                        <option value="KF60VWGP">KF60VWGP</option>
-                        <option value="KT41KTGP">KT41KTGP</option>
-                        <option value="KT53WZGP">KT53WZGP</option>
-                        <option value="HG75GMGP">HG75GMGP</option>
-                        <option value="LK76BGGP">LK76BGGP</option>
-                        <option value="MK85PWGP">MK85PWGP</option>
-                        <option value="MY81TYGP">MY81TYGP</option>
-                        <option value="MV12KLGP">MV12KLGP</option>
-                        <option value="MV12KGGP">MV12KGGP</option>
-                        <option value="MS43DXGP">MS43DXGP</option>
-                        <option value="MS41ZHGP">MS41ZHGP</option>
-                        <option value="MY73KHGP">MY73KHGP</option>
-                        <option value="MY73JWGP">MY73JWGP</option>
-                        <option value="MY73JYGP">MY73JYGP</option>
-                        <option value="MT69BXGP">MT69BXGP</option>
-                        <option value="D20Sub">D20 Sub</option>
-                    </select>
-                    <button type="button" class="add-save-btn" onclick="addAndSaveOption('vehicleReg', 'Enter new vehicle registration:', true)">+ Add Vehicle Reg. & Save</button>
-                </div>
-                <div class="input-field">
-                    <label><i class="fas fa-map-pin"></i> Location / street</label>
-                    <input type="text" id="location" name="location" placeholder="Enter address or use GPS detect" value="" required>
-                    <button type="button" id="useLocationBtn" style="margin-top:8px;border:0;border-radius:40px;background:#1a4b8c;color:white;padding:12px 20px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(26,75,140,0.15);">Use current location</button>
-                </div>
-            </div>
-
-            <div class="two-cols">
-                <div class="input-field">
-                    <label><i class="fas fa-tag"></i> Accident type</label>
-                    <select id="accidentType" name="accidentType" required>
-                        <option value="" disabled>– select –</option>
-                        <option value="Rear-end" selected>Rear-end collision</option>
-                        <option value="Side-impact">Side-impact / T-bone</option>
-                        <option value="Rollover">Rollover / jackknife</option>
-                        <option value="Single-vehicle">Single vehicle</option>
-                        <option value="Other">Other / pedestrian</option>
-                    </select>
-                </div>
-                <div class="input-field">
-                    <label><i class="fas fa-users"></i> Department</label>
-                    <select id="department" name="department" required>
-                        <option value="" disabled>– select department –</option>
-                        <option value="Admin">Admin</option>
-                        <option value="Business Development">Business Development</option>
-                        <option value="Finance & IT">Finance & IT</option>
-                        <option value="Fleet" selected>Fleet</option>
-                        <option value="Human Resource">Human Resource</option>
-                        <option value="Operations">Operations</option>
-                        <option value="Procurements">Procurements</option>
-                        <option value="Sales">Sales</option>
-                        <option value="SHEQ">SHEQ</option>
-                        <option value="Tendering">Tendering</option>
-                        <option value="Warehouse">Warehouse</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="input-field">
-                <label><i class="fas fa-building"></i> Cost Center</label>
-                <select id="costCenter" name="costCenter" required>
-                    <option value="" disabled selected>– select cost center –</option>
-                    <option value="Onpoint Group HQ">Onpoint Group HQ</option>
-                    <option value="DI Solutions">DI Solutions</option>
-                    <option value="Aqua Telecoms">Aqua Telecoms</option>
-                    <option value="Nkanyezi Projects">Nkanyezi Projects</option>
-                    <option value="Onpoint Ontime Solutions">Onpoint Ontime Solutions</option>
-                </select>
-            </div>
-
-            <div class="two-cols">
-                <div class="input-field">
-                    <label><i class="fas fa-user"></i> Driver's name *</label>
-                    <select id="driverName" name="driverName" required>
-                        <option value="" disabled selected>– select driver –</option>
-                        <option value="Retselisitsoe Mohapi">Retselisitsoe Mohapi</option>
-                        <option value="George Rusere">George Rusere</option>
-                        <option value="Nyasha Marira">Nyasha Marira</option>
-                        <option value="Trymore Mtizwa">Trymore Mtizwa</option>
-                        <option value="Brian Mugiya">Brian Mugiya</option>
-                        <option value="Peter Nong">Peter Nong</option>
-                        <option value="Nicholas Dambiranwa">Nicholas Dambiranwa</option>
-                        <option value="Curious Sixpense">Curious Sixpense</option>
-                        <option value="Clifonce Matewe">Clifonce Matewe</option>
-                        <option value="Moeketsi Tshabalala">Moeketsi Tshabalala</option>
-                        <option value="Elias Mashiane">Elias Mashiane</option>
-                        <option value="Leah Phiri">Leah Phiri</option>
-                        <option value="Lungile Soni">Lungile Soni</option>
-                        <option value="Washington Musiiwa">Washington Musiiwa</option>
-                        <option value="Donald Tawengwa">Donald Tawengwa</option>
-                        <option value="Washington Madauka">Washington Madauka</option>
-                        <option value="Before Simonne">Before Simonne</option>
-                        <option value="Happison Mupanedengu">Happison Mupanedengu</option>
-                        <option value="William Mahlo">William Mahlo</option>
-                        <option value="Pride Nyoni">Pride Nyoni</option>
-                        <option value="Petros Mosekidi">Petros Mosekidi</option>
-                        <option value="Tonderai Matsikire">Tonderai Matsikire</option>
-                        <option value="Adelaide Dimingo">Adelaide Dimingo</option>
-                        <option value="Tumelo Mhlongo">Tumelo Mhlongo</option>
-                        <option value="Sabelo Zulu">Sabelo Zulu</option>
-                        <option value="Tsitsi Dube">Tsitsi Dube</option>
-                        <option value="Starnley Vaningwa">Starnley Vaningwa</option>
-                        <option value="Philip Shambare">Philip Shambare</option>
-                        <option value="Graham Tsuro">Graham Tsuro</option>
-                        <option value="Meshellum Mugabe">Meshellum Mugabe</option>
-                        <option value="Tafadzwa Magejo">Tafadzwa Magejo</option>
-                        <option value="Trust Bhila">Trust Bhila</option>
-                        <option value="Moses Magutse">Moses Magutse</option>
-                        <option value="Kudakwashe Madzikangava">Kudakwashe Madzikangava</option>
-                        <option value="Andrew Moloisane">Andrew Moloisane</option>
-                        <option value="Zivai Magwaza">Zivai Magwaza</option>
-                        <option value="Brian Nkomo">Brian Nkomo</option>
-                        <option value="Joshuwa Paradzai">Joshuwa Paradzai</option>
-                        <option value="Goodwill Rakgoko">Goodwill Rakgoko</option>
-                        <option value="Johanne Hendriks">Johanne Hendriks</option>
-                        <option value="Claudius Gomo">Claudius Gomo</option>
-                        <option value="Patience Chipundo">Patience Chipundo</option>
-                        <option value="Siyanda Dlamini">Siyanda Dlamini</option>
-                        <option value="Vusi Mabena">Vusi Mabena</option>
-                        <option value="Ronald Musengwa">Ronald Musengwa</option>
-                        <option value="Neo Mogatusi">Neo Mogatusi</option>
-                        <option value="Mqondisi Ndlovu">Mqondisi Ndlovu</option>
-                        <option value="Govern Paradzai">Govern Paradzai</option>
-                        <option value="Dickens Magwaza">Dickens Magwaza</option>
-                        <option value="Kgomotso Letsoalo">Kgomotso Letsoalo</option>
-                        <option value="Nametso Bokoane">Nametso Bokoane</option>
-                        <option value="Phumzile Cindi">Phumzile Cindi</option>
-                        <option value="Sydney Ngwenya">Sydney Ngwenya</option>
-                        <option value="Bheki Makhwanazi">Bheki Makhwanazi</option>
-                        <option value="Ntsako Mathe">Ntsako Mathe</option>
-                        <option value="Bongile Cuba">Bongile Cuba</option>
-                        <option value="Moses Mashatola">Moses Mashatola</option>
-                        <option value="Tony Takabvakure">Tony Takabvakure</option>
-                        <option value="Timothy Wadzema">Timothy Wadzema</option>
-                        <option value="Yvette van Rooyen">Yvette van Rooyen</option>
-                        <option value="Brighton Mhande">Brighton Mhande</option>
-                        <option value="Tafadzwa Magejo">Tafadzwa Magejo</option>
-                        <option value="Lameck Chindove">Lameck Chindove</option>
-                        <option value="Rayman Mugaramanja">Rayman Mugaramanja</option>
-                    </select>
-                    <button type="button" class="add-save-btn" onclick="addAndSaveOption('driverName', 'Enter new driver name:', false)">+ Add Driver & Save</button>
-                </div>
-                <div class="input-field">
-                    <label><i class="fas fa-phone-alt"></i> Driver phone</label>
-                    <input type="tel" id="driverPhone" name="driverPhone" placeholder="+27 72 555 7890" required>
-                </div>
-            </div>
-
-            <div class="input-field">
-                <label><i class="fas fa-file-signature"></i> Description</label>
-                <textarea id="description" name="description" required placeholder="Front bumper crushed, airbags deployed. Slight rain. Other driver exchanged info."></textarea>
-            </div>
-
-            <div class="input-field">
-                <label><i class="fas fa-car-crash"></i> Other parties involved</label>
-                <input type="text" id="otherParties" name="otherParties" placeholder="Honda CR-V, plate 7GHJ432">
-            </div>
-
-            <hr>
-            <div style="font-weight: 600; color: #1a4b8c; margin-bottom: 8px;"><i class="fas fa-gavel" style="margin-right: 8px;"></i>OFFICIAL / POLICE INFORMATION</div>
-
-            <div class="input-field">
-                <label><i class="fas fa-building"></i> Reported to Metro</label>
-                <div class="yes-no-group">
-                    <label><input type="radio" name="reportedMetro" value="Yes" checked> Yes</label>
-                    <label><input type="radio" name="reportedMetro" value="No"> No</label>
-                </div>
-            </div>
-
-            <div class="two-cols">
-                <div class="input-field">
-                    <label><i class="fas fa-user-shield"></i> Officer name</label>
-                    <input type="text" id="officerName" name="officerName" placeholder="Officer M. Davis">
-                </div>
-                <div class="input-field">
-                    <label><i class="fas fa-mobile-alt"></i> Officer cell</label>
-                    <input type="tel" id="officerPhone" name="officerPhone" placeholder="082 555 9876">
-                </div>
-            </div>
-
-            <div class="input-field">
-                <label><i class="fas fa-wine-bottle"></i> Drunken driving involved</label>
-                <div class="yes-no-group">
-                    <label><input type="radio" name="drunkenDriving" value="Yes"> Yes</label>
-                    <label><input type="radio" name="drunkenDriving" value="No" checked> No</label>
-                </div>
-            </div>
-
-            <div class="input-field">
-                <label><i class="fas fa-hashtag"></i> Incident police report #</label>
-                <input type="text" id="policeReportNo" name="policeReportNo" placeholder="PD-2309-452">
-            </div>
-
-            <div class="input-field">
-                <label><i class="fas fa-balance-scale"></i> Officer's judgement (are you at fault?)</label>
-                <div class="yes-no-group">
-                    <label><input type="radio" name="atFault" value="Yes"> Yes, at fault</label>
-                    <label><input type="radio" name="atFault" value="No" checked> No, not at fault</label>
-                </div>
-            </div>
-
-            <hr>
-            <div class="photo-upload-area" id="dropZone">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <div class="upload-text">attach accident image with GPS & date stamp</div>
-                <div class="upload-hint">tap to browse — overlay will be added automatically</div>
-                <input type="file" id="fileInput" accept="image/*" capture="environment">
-            </div>
-
-            <div id="previewContainer" class="image-preview-row" style="display: none;">
-                <img id="imagePreview" class="preview-thumb" src="#" alt="stamped preview">
-                <span id="fileNameDisplay" class="file-name-badge"><i class="far fa-image"></i> accident.jpg</span>
-                <div class="attachment-badge">
-                    <i class="fas fa-map-marker-alt"></i> <span id="stampLocation">locating…</span>
-                </div>
-                <button type="button" id="clearImageBtn" style="background: none; border:none; color:#b00; font-size:1.8rem; cursor:pointer;"><i class="fas fa-times-circle"></i></button>
-            </div>
-
-            <input type="hidden" id="imageBase64" value="">
-            <input type="hidden" id="imageFileName" value="">
-            <input type="hidden" id="imageFileType" value="">
-            <input type="hidden" id="capturedLat" value="">
-            <input type="hidden" id="capturedLon" value="">
-            <input type="hidden" id="capturedGeoUrl" value="">
-
-            <button type="button" id="submitToGAS" class="submit-btn">
-                <i class="fas fa-cloud-upload-alt"></i> Submit to Google Sheets
-            </button>
-
-            <div class="info-note" style="margin-top: 10px;" id="attachmentStatus">
-                <i class="fas fa-info-circle"></i> No image — detecting address…
-            </div>
-            <div class="info-note" style="background: #f0f6ff; border-color: #b8cce6;">
-                <i class="fas fa-lightbulb" style="color: #1a4b8c;"></i>
-                <strong>Live map + address:</strong> street address can be typed or auto‑filled. <i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp button bottom right.
-            </div>
-        </form>
-        <footer>
-            <i class="fas fa-check-circle" style="color: #a7c957;"></i> OnPoint fleet – safety first · 71 Pretorius Rd, President Park, Midrand
-        </footer>
+    <div class="btn-group">
+      <button class="btn-outline" id="printBtn"><i class="fas fa-print"></i> Print</button>
+      <button class="btn-outline" id="excelBtn"><i class="fas fa-file-excel"></i> CSV</button>
     </div>
+  </div>
 
-    <script>
-        (function() {
-            const GAS_URL = 'https://script.google.com/macros/s/AKfycbz1tH13Rj66_T1F1uesDzia1dbn8eIuB9fnyn6XP9-y56WFaW8M2cXQky8NiiULqkk3/exec';
-            const SHEET_ID = '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI';
-            const DRIVE_FOLDER_ID = '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM';
+  <!-- ENTRY SECTION -->
+  <div id="entrySection" class="hidden">
+    <h2>
+      <span><i class="fas fa-pen-alt" style="color:var(--gold);"></i> New Asset Entry</span>
+      <button class="btn-back" id="backToDashboardBtn"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+    </h2>
+      <button type="button" class="btn-outline" onclick="window.location.href='insurance.html'"><i class="fas fa-shield-alt"></i> Insurance Report</button>
+    <form id="assetForm">
+      <div class="form-grid">
+        <div class="form-group"><label>Code</label><select id="code"><option value="">Select Code</option><option>73803</option><option>73802</option><option>73801</option><option>73800</option></select></div>
+        <div class="form-group"><label>Asset Class</label><select id="assetClass"><option value="">Select Asset Class</option><option>Admin</option><option>Bowser</option><option>Drilling</option><option>Executive</option><option>Projects &amp; Tender</option><option>Small Plant</option><option>Trailers</option><option>Trucks</option><option>Yellow Plant</option></select></div>
+        <div class="form-group"><label>Purchase Date</label><input type="date" id="purchaseDate"></div>
+        <div class="form-group"><label>Purchased by</label><select id="purchasedBy"><option value="">Select Purchased By</option><option>Onpoint</option><option>Aqua Telecoms</option><option>Nkanyezi</option><option>Distinct</option></select></div>
+        <div class="form-group"><label>Financing</label><input type="text" id="financing"></div>
+        <div class="form-group"><label>Description</label><input type="text" id="description"></div>
+        <div class="form-group"><label>Model</label><select id="model"><option value="">Select Model Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
+        <div class="form-group"><label>Make of Vehicle</label><select id="makeOfVehicle"><option value="">Select Make</option><option>Toyota</option><option>Faw</option><option>Ford</option><option>Foton</option><option>Mahindra</option><option>Isuzu</option><option>Mercedes Benz</option><option>VW</option><option>Nissan</option></select></div>
+        <div class="form-group"><label>Body Type</label><select id="bodyType"><option value="">Select Body Type</option><option>Sedan</option><option>Hatchback</option><option>Truck</option><option>Minibus</option><option>SUV</option><option>Bakkie</option><option>Lorry</option></select></div>
+        <div class="form-group"><label>Registration no</label><input type="text" id="registrationNo"></div>
+        <div class="form-group"><label>Engine no</label><input type="text" id="engineNo"></div>
+        <div class="form-group"><label>Vin no</label><input type="text" id="vinNo"></div>
+        <div class="form-group"><label>Cost</label><input type="number" id="cost"></div>
+        <div class="form-group"><label>Market Value</label><input type="number" id="marketValue"></div>
+        <div class="form-group"><label>ZOHO</label><select id="zoho"><option value="">Select ZOHO</option><option>Yes</option><option>No</option></select></div>
+        <div class="form-group"><label>Location</label><input type="text" id="location"></div>
+        <div class="form-group"><label>Driver/Operator</label><input type="text" id="driverOperator"></div>
+        <div class="form-group"><label>Allocation/Dept</label><input type="text" id="allocationDept"></div>
+        <div class="form-group"><label>Registered Entity</label><input type="text" id="registeredEntity"></div>
+        <div class="form-group"><label>Covered by</label><select id="coveredBy"><option value="">Select Insurance</option><option>Outsurance</option><option>Auto General</option><option>Standard Bank</option><option>Other</option></select></div>
+        <div class="form-group"><label>TRACKING COMPANY</label><select id="trackingCompany"><option value="">Select Tracking</option><option>Netstar</option><option>Car Tracker</option><option>The Both(Car Tracker & Netstar)</option></select></div>
+        <div class="form-group"><label>Installment Amount</label><input type="number" id="installmentAmount"></div>
+        <div class="form-group"><label>Last Installment date</label><input type="date" id="lastInstallmentDate"></div>
+        <div class="form-group"><label>eTag Toll</label><select id="eTagToll"><option value="">Select eTag</option><option>Yes</option><option>No</option></select></div>
+        <div class="form-group"><label>NOTES</label><textarea id="notes"></textarea></div>
+        <div class="form-group"><label>Reg. Boo</label><input type="text" id="regBoo"></div>
+        <div class="form-group"><label>Useful life</label><input type="number" id="usefulLife"></div>
+        <div class="form-group"><label>Recharge</label><input type="number" id="recharge"></div>
+        <div class="form-group"><label>Monthly dpn</label><input type="number" id="monthlyDpn"></div>
+        <div class="form-group"><label>Year</label><select id="year"><option value="">Select Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
+        <div class="form-group"><label>Months Dpn</label><input type="number" id="monthsDpn"></div>
+        <div class="form-group"><label>Accum dpn</label><input type="number" id="accumDpn"></div>
+        <div class="form-group"><label>NBV</label><input type="number" id="nbv"></div>
+        <div class="form-group"><label>Outstanding VAF</label><input type="number" id="oustandingVaf"></div>
+        <div class="form-group"><label>Value</label><input type="number" id="value"></div>
+        <div class="form-group"><label>Vehicle Reg Book Upload</label><input type="file" id="vehicleRegBookFile" accept="image/*,application/pdf,.doc,.docx"></div>
+        <div class="form-group"><label>Tracking Certificate Upload</label><input type="file" id="trackingCertificateFile" accept="image/*,application/pdf,.doc,.docx"></div>
+        <input type="hidden" id="rowNumber">
+        <input type="hidden" id="vehicleRegBookLink">
+        <input type="hidden" id="trackingCertificateLink">
+        <input type="hidden" id="regBookLink">
+      </div>
+      <div class="form-actions">
+        <button type="submit" id="saveBtn">Save Asset</button>
+        <button type="button" class="btn-blue" id="clearBtn">Clear Form</button>
+        <button type="button" class="btn-outline" id="cancelEntryBtn">Cancel</button>
+      </div>
+    </form>
+    <div class="status" id="status"></div>
+  </div>
 
-            function getCurrentCounts() {
-                const now = new Date();
-                const currentMonth = now.getMonth();
-                const currentYear = now.getFullYear();
-                let monthly = parseInt(localStorage.getItem('onpoint_monthly') || '0');
-                let yearly = parseInt(localStorage.getItem('onpoint_yearly') || '0');
-                let storedMonth = parseInt(localStorage.getItem('onpoint_month') || currentMonth);
-                let storedYear = parseInt(localStorage.getItem('onpoint_year') || currentYear);
-                if (storedYear !== currentYear) return { monthly: 0, yearly: 0, shouldResetMonthly: true, shouldResetYearly: true, currentMonth, currentYear };
-                if (storedMonth !== currentMonth) return { monthly: 0, yearly, shouldResetMonthly: true, shouldResetYearly: false, currentMonth, currentYear };
-                return { monthly, yearly, shouldResetMonthly: false, shouldResetYearly: false, currentMonth, currentYear };
-            }
-            function incrementCounters() {
-                const counts = getCurrentCounts();
-                const now = new Date();
-                let monthly = counts.shouldResetMonthly ? 1 : counts.monthly + 1;
-                let yearly = counts.shouldResetYearly ? 1 : counts.yearly + 1;
-                localStorage.setItem('onpoint_monthly', monthly);
-                localStorage.setItem('onpoint_yearly', yearly);
-                localStorage.setItem('onpoint_month', now.getMonth());
-                localStorage.setItem('onpoint_year', now.getFullYear());
-            }
+  <!-- transaction journal -->
+  <div class="table-wrap">
+    <h2 style="color:var(--primary-blue);margin-top:28px;margin-bottom:10px;">
+      Transaction Journal
+      <span id="filterIndicator" style="font-size:14px;font-weight:normal;color:var(--muted);margin-left:12px;"></span>
+    </h2>
+    <table id="assetTable">
+      <thead><tr>
+        <th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th>
+        <th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th>
+        <th class="action-col">Actions</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
 
-            const fileInput = document.getElementById('fileInput');
-            const dropZone = document.getElementById('dropZone');
-            const previewContainer = document.getElementById('previewContainer');
-            const imagePreview = document.getElementById('imagePreview');
-            const fileNameDisplay = document.getElementById('fileNameDisplay');
-            const stampLocationSpan = document.getElementById('stampLocation');
-            const clearImageBtn = document.getElementById('clearImageBtn');
-            const imageBase64Hidden = document.getElementById('imageBase64');
-            const imageFileNameHidden = document.getElementById('imageFileName');
-            const imageFileTypeHidden = document.getElementById('imageFileType');
-            const capturedLat = document.getElementById('capturedLat');
-            const capturedLon = document.getElementById('capturedLon');
-            const capturedGeoUrl = document.getElementById('capturedGeoUrl');
-            const attachmentStatus = document.getElementById('attachmentStatus');
-            const dynamicMapLink = document.getElementById('dynamicMapLink');
-            const locationInput = document.getElementById('location');
-            const submitBtn = document.getElementById('submitToGAS');
+<script>
+  // ======================== CONFIG =========================
+  const SHEET_ID = "1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw";
+  const DRIVE_FOLDER_ID = "1wMxg8AdipSeDI5lmL8PNECzD_U3CVC8W";
+  const MAIN_SHEET_NAME = "Asssert Reg";
+  const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
+  const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwirRwCjWCZwdUABSvbTQEg5I-3V9GE41YhFdQXqnml_o8fSElRaNC99apNFRs5m7gI/exec";
 
-            let selectedFile = null;
-            let currentBase64 = '';
-            let gpsCoords = { lat: null, lon: null, accuracy: null };
+  const FIELD_IDS = [
+    "code","assetClass","purchaseDate","purchasedBy","financing","description",
+    "model","makeOfVehicle","bodyType","registrationNo","engineNo","vinNo","cost","marketValue",
+    "zoho","location","driverOperator",
+    "allocationDept","registeredEntity","coveredBy","trackingCompany","installmentAmount",
+    "lastInstallmentDate","eTagToll","notes","regBoo","usefulLife","recharge",
+    "monthlyDpn","year","monthsDpn","accumDpn","nbv","oustandingVaf","value"
+  ];
 
-            function getSavedOptions(key) {
-                try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
-            }
-            function saveOptionValue(key, value) {
-                const clean = String(value || '').trim();
-                if (!clean) return;
-                const values = getSavedOptions(key);
-                if (!values.some(item => item.toUpperCase() === clean.toUpperCase())) {
-                    values.push(clean);
-                    localStorage.setItem(key, JSON.stringify(values));
-                }
-            }
-            function loadSavedOptions(selectId, storageKey) {
-                const select = document.getElementById(selectId);
-                if (!select) return;
-                getSavedOptions(storageKey).forEach(value => {
-                    if (!Array.from(select.options).some(o => o.value.toUpperCase() === value.toUpperCase())) {
-                        const opt = document.createElement('option');
-                        opt.value = value;
-                        opt.text = value;
-                        select.appendChild(opt);
-                    }
-                });
-            }
-            window.addAndSaveOption = function(selectId, promptText, uppercase) {
-                const select = document.getElementById(selectId);
-                if (!select) return;
-                const newValue = prompt(promptText);
-                if (!newValue || !newValue.trim()) return;
-                const cleanValue = uppercase ? newValue.trim().toUpperCase() : newValue.trim();
-                const storageKey = selectId === 'vehicleReg' ? 'onpoint_saved_vehicle_regs' : 'onpoint_saved_driver_names';
-                if (!Array.from(select.options).some(o => o.value.toUpperCase() === cleanValue.toUpperCase())) {
-                    const opt = document.createElement('option');
-                    opt.value = cleanValue;
-                    opt.text = cleanValue;
-                    select.appendChild(opt);
-                }
-                select.value = cleanValue;
-                saveOptionValue(storageKey, cleanValue);
-                alert('Saved: ' + cleanValue);
-            };
+  const FIELD_ALIASES = {
+    code: ["code","Code"],
+    assetClass: ["assetClass","Asset Class","AssetClass"],
+    purchaseDate: ["purchaseDate","Purchase Date"],
+    purchasedBy: ["purchasedBy","Purchased by","Purchased By"],
+    financing: ["financing","Financing"],
+    description: ["description","Description"],
+    model: ["model","Model"],
+    makeOfVehicle: ["makeOfVehicle","Make of Vehicle","Make Of Vehicle"],
+    bodyType: ["bodyType","Body Type"],
+    registrationNo: ["registrationNo","Registration no","Registration No"],
+    engineNo: ["engineNo","Engine no","Engine No"],
+    vinNo: ["vinNo","Vin no","Vin No"],
+    cost: ["cost","Cost"],
+    marketValue: ["marketValue","Market Value"],
+    zoho: ["zoho","ZOHO"],
+    location: ["location","Location"],
+    driverOperator: ["driverOperator","Driver/Operator","Driver Operator"],
+    allocationDept: ["allocationDept","Allocation/Dept","Allocation Dept"],
+    registeredEntity: ["registeredEntity","Registered Entity"],
+    coveredBy: ["coveredBy","Covered by","Covered By"],
+    trackingCompany: ["trackingCompany","TRACKING COMPANY","Tracking Company"],
+    installmentAmount: ["installmentAmount","Installment Amount"],
+    lastInstallmentDate: ["lastInstallmentDate","Last Installment date","Last Installment Date"],
+    eTagToll: ["eTagToll","eTag Toll","ETag Toll"],
+    notes: ["notes","NOTES","Notes"],
+    regBoo: ["regBoo","Reg. Boo","Reg Book"],
+    usefulLife: ["usefulLife","Useful life","Useful Life"],
+    recharge: ["recharge","Recharge"],
+    monthlyDpn: ["monthlyDpn","Monthly dpn","Monthly Dpn"],
+    year: ["year","Year"],
+    monthsDpn: ["monthsDpn","Months Dpn"],
+    accumDpn: ["accumDpn","Accum dpn","Accum Dpn"],
+    nbv: ["nbv","NBV"],
+    oustandingVaf: ["oustandingVaf","Outstanding VAF","Outstanding Vaf"],
+    value: ["value","Value"],
+    vehicleRegBookLink: ["vehicleRegBookLink","Vehicle Reg Book","Vehicle Reg Book Link","regBookLink"],
+    trackingCertificateLink: ["trackingCertificateLink","Tracking Certificate","Tracking Certificate Link"]
+  };
 
-            function applyFaintDefaults() {
-                const fields = [
-                    document.getElementById('location'),
-                    document.getElementById('driverPhone'),
-                    document.getElementById('description'),
-                    document.getElementById('otherParties'),
-                    document.getElementById('officerName'),
-                    document.getElementById('officerPhone'),
-                    document.getElementById('policeReportNo')
-                ].filter(Boolean);
-                fields.forEach(f => {
-                    if (f.value) f.classList.add('faint-default');
-                    f.addEventListener('focus', function() { this.classList.remove('faint-default'); });
-                    f.addEventListener('input', function() { this.classList.remove('faint-default'); });
-                });
-            }
+  let mainAssets = [];
+  let equipmentAssets = [];
+  let allAssets = [];
+  let currentFilter = null;
 
-            function clearDataEntryFields() {
-                const form = document.getElementById('accidentForm');
-                if (!form) return;
-                form.reset();
-                document.getElementById('accidentDate').value = new Date().toISOString().split('T')[0];
-                loadSavedOptions('vehicleReg', 'onpoint_saved_vehicle_regs');
-                loadSavedOptions('driverName', 'onpoint_saved_driver_names');
-                applyFaintDefaults();
-                const now = new Date();
-                document.getElementById('accidentTime').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                currentBase64 = '';
-                selectedFile = null;
-                if (fileInput) fileInput.value = '';
-                imageBase64Hidden.value = '';
-                imageFileNameHidden.value = '';
-                imageFileTypeHidden.value = '';
-                if (previewContainer) previewContainer.style.display = 'none';
-                if (imagePreview) imagePreview.src = '#';
-                if (stampLocationSpan) stampLocationSpan.innerText = 'locating…';
-                if (attachmentStatus) attachmentStatus.innerHTML = '<i class="fas fa-info-circle"></i> No image — detecting address…';
-                applyFaintDefaults();
-                requestDriverLocation();
-            }
+  function getField(row, field) {
+    const aliases = FIELD_ALIASES[field] || [field];
+    for (const key of aliases) {
+      if (row && row[key] !== undefined && row[key] !== null && row[key] !== "") return row[key];
+    }
+    return "";
+  }
 
-            document.getElementById('accidentDate').value = new Date().toISOString().split('T')[0];
+  function valueOrBlank(v) {
+    if (v === undefined || v === null) return "";
+    if (typeof v === "string" && v.includes("T")) {
+      const d = new Date(v);
+      if (!isNaN(d)) return d.toISOString().split('T')[0];
+    }
+    return v;
+  }
 
-            function updateMapLink() {
-                if (gpsCoords.lat && gpsCoords.lon) {
-                    const lat = gpsCoords.lat.toFixed(6);
-                    const lon = gpsCoords.lon.toFixed(6);
-                    const localGeoText = `${lat}, ${lon}`;
-                    capturedLat.value = lat;
-                    capturedLon.value = lon;
-                    capturedGeoUrl.value = localGeoText;
-                    dynamicMapLink.href = '#';
-                    dynamicMapLink.removeAttribute('target');
-                    dynamicMapLink.innerHTML = `${localGeoText} · GPS captured`;
-                    locationInput.value = `GPS ${localGeoText}`;
-                    attachmentStatus.innerHTML = `<i class="fas fa-check-circle"></i> Location captured: ${localGeoText}`;
-                } else {
-                    dynamicMapLink.href = '#';
-                    dynamicMapLink.innerHTML = 'waiting for GPS …';
-                }
-            }
+  function isEquipmentFilter(filter) {
+    return EQUIPMENT_FILTERS.some(f => f.toLowerCase() === String(filter || "").toLowerCase());
+  }
 
-            function requestDriverLocation() {
-                if (!navigator.geolocation) {
-                    gpsCoords.lat = -25.9989;
-                    gpsCoords.lon = 28.1213;
-                    updateMapLink();
-                    locationInput.value = 'GPS not supported - default Midrand location';
-                    attachmentStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> GPS not supported – using default';
-                    return;
-                }
-                attachmentStatus.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> requesting driver location...';
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        gpsCoords.lat = pos.coords.latitude;
-                        gpsCoords.lon = pos.coords.longitude;
-                        gpsCoords.accuracy = pos.coords.accuracy;
-                        updateMapLink();
-                    },
-                    () => {
-                        gpsCoords.lat = -25.9989;
-                        gpsCoords.lon = 28.1213;
-                        updateMapLink();
-                        locationInput.value = '71 Pretorius Rd, President Park, Midrand (default)';
-                        attachmentStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> GPS denied – using default Midrand address';
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-                );
-            }
+  function sheetForAsset(asset) {
+    const cls = String(getField(asset, "assetClass") || "").toLowerCase();
+    return EQUIPMENT_FILTERS.some(f => cls.includes(f.toLowerCase())) ? EQUIPMENT_SHEET_NAME : MAIN_SHEET_NAME;
+  }
 
-            document.getElementById('useLocationBtn').addEventListener('click', requestDriverLocation);
-            requestDriverLocation();
+  function apiPost(payload) {
+    return fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(res => res.json());
+  }
 
-            function stampImageWithOverlay(file) {
-                return new Promise((resolve, reject) => {
-                    if (!file) return reject('no file');
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0);
-                            const barHeight = 60;
-                            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                            ctx.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
-                            ctx.font = 'bold 22px "Inter", Arial, sans-serif';
-                            ctx.fillStyle = '#ffffff';
-                            ctx.shadowColor = '#000';
-                            ctx.shadowBlur = 8;
-                            const now = new Date();
-                            const dateStr = now.toLocaleDateString('en-ZA') + ' ' + now.toLocaleTimeString('en-ZA', {hour12: false});
-                            const locationStr = (gpsCoords.lat && gpsCoords.lon) ? `${gpsCoords.lat.toFixed(5)}, ${gpsCoords.lon.toFixed(5)}` : 'location pending';
-                            ctx.fillText(`📅 ${dateStr}`, 20, canvas.height - 32);
-                            ctx.fillText(`📍 ${locationStr}`, 20, canvas.height - 8);
-                            const stampedBase64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
-                            const previewUrl = canvas.toDataURL('image/jpeg', 0.8);
-                            resolve({ stampedBase64, previewUrl, fileName: `stamped_${file.name.replace(/\.[^/.]+$/, '')}.jpg`, locationText: locationStr });
-                        };
-                        img.src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
+  function fileToPayload(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = ev => resolve({
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        fileData: String(ev.target.result).split(',')[1]
+      });
+      reader.onerror = () => reject(new Error("Could not read file: " + file.name));
+      reader.readAsDataURL(file);
+    });
+  }
 
-            async function handleFileSelect(file) {
-                if (!file) return;
-                requestDriverLocation();
-                if (!file.type.startsWith('image/')) { alert('Please select an image'); return; }
-                try {
-                    attachmentStatus.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> stamping image with location & time...';
-                    const stamped = await stampImageWithOverlay(file);
-                    currentBase64 = stamped.stampedBase64;
-                    imageBase64Hidden.value = currentBase64;
-                    imageFileNameHidden.value = stamped.fileName;
-                    imageFileTypeHidden.value = 'image/jpeg';
-                    imagePreview.src = stamped.previewUrl;
-                    fileNameDisplay.innerHTML = `<i class="far fa-file-image"></i> ${stamped.fileName}`;
-                    stampLocationSpan.innerText = stamped.locationText;
-                    previewContainer.style.display = 'flex';
-                    attachmentStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#1a4b8c;"></i> stamped ready – ${stamped.fileName}`;
-                } catch (err) {
-                    alert('Error processing image');
-                    console.error(err);
-                }
-            }
+  function linkCell(link, label) {
+    return link ? `<div class="regbook-link"><a href="${link}" target="_blank"><i class="fas fa-file-alt"></i> ${label || 'View'}</a></div>` : `<span style="color:#aaa;">—</span>`;
+  }
 
-            fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleFileSelect(e.target.files[0]); });
-            dropZone.addEventListener('dragover', (e) => e.preventDefault());
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
+  function normaliseRows(response, sheetName) {
+    let rows = [];
+    if (Array.isArray(response)) rows = response;
+    else if (response && Array.isArray(response.data)) rows = response.data;
+    else if (response && Array.isArray(response.rows)) rows = response.rows;
+    else if (response && Array.isArray(response.assets)) rows = response.assets;
+    return rows.map(r => ({ ...r, _sheetName: r._sheetName || sheetName }));
+  }
+
+  function showStatus(msg, isError = false) {
+    const statusEl = document.getElementById("status");
+    statusEl.innerHTML = msg || "";
+    statusEl.style.borderLeftColor = isError ? "#ef4444" : "var(--gold)";
+    statusEl.style.background = isError ? "rgba(239,68,68,0.1)" : "rgba(212,175,55,0.16)";
+  }
+
+  function updateDashboard() {
+    const classMap = {
+      'Drilling': ['drilling', 'drilling plant'],
+      'Yellow Plant': ['yellow plant', 'yellow', 'yellowplant'],
+      'Small Plant': ['small plant', 'smallplant', 'small'],
+      'Trucks': ['truck', 'trucks'],
+      'Trailers': ['trailer', 'trailers'],
+      'Executive': ['executive', 'executive cars', 'exec'],
+      'Bowser': ['bowser', 'bowsers'],
+      'Admin': ['admin', 'administration'],
+      'Projects & Tender': ['projects', 'projects & tender', 'projects and tender', 'project & tender', 'project and tender', 'tender']
+    };
+    const counts = {};
+    Object.keys(classMap).forEach(key => counts[key] = 0);
+
+    Object.keys(classMap).forEach(key => {
+      const source = isEquipmentFilter(key) ? equipmentAssets : mainAssets;
+      source.forEach(a => {
+        const cls = String(getField(a, "assetClass")).trim().toLowerCase();
+        if (classMap[key].some(kw => cls.includes(kw) || cls === kw)) counts[key]++;
+      });
+    });
+
+    document.getElementById("cntDrilling").textContent = counts['Drilling'];
+    document.getElementById("cntYellow").textContent = counts['Yellow Plant'];
+    document.getElementById("cntSmallPlant").textContent = counts['Small Plant'];
+    document.getElementById("cntTrucks").textContent = counts['Trucks'];
+    document.getElementById("cntTrailers").textContent = counts['Trailers'];
+    document.getElementById("cntExecutive").textContent = counts['Executive'];
+    document.getElementById("cntBowser").textContent = counts['Bowser'];
+    document.getElementById("cntAdmin").textContent = counts['Admin'];
+    document.getElementById("cntProjects").textContent = counts['Projects & Tender'];
+
+    document.querySelectorAll('.stat-card').forEach(card => {
+      const filter = card.dataset.filter;
+      card.onclick = () => applyFilter(filter);
+    });
+  }
+
+  function applyFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('filter-active', c.dataset.filter === filter));
+    document.getElementById('filterIndicator').textContent = `Filter: ${filter}`;
+
+    const source = isEquipmentFilter(filter) ? equipmentAssets : mainAssets;
+    renderTable(source, filter);
+  }
+
+  function clearFilter() {
+    currentFilter = null;
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('filter-active'));
+    document.getElementById('filterIndicator').textContent = '';
+    renderTable(mainAssets);
+  }
+
+  function renderTable(assets, filter) {
+    const tbody = document.querySelector("#assetTable tbody");
+    let rows = assets || mainAssets;
+    if (filter) {
+      const filterLower = filter.toLowerCase();
+      rows = rows.filter(a => String(getField(a, "assetClass")).trim().toLowerCase().includes(filterLower));
+    }
+    tbody.innerHTML = "";
+    if (!rows.length) {
+      const colCount = document.querySelector("#assetTable thead tr").children.length;
+      tbody.innerHTML = `<tr><td colspan="${colCount}">No entries found${filter ? ' for filter: '+filter : ''}.</td></tr>`;
+      return;
+    }
+
+    rows.forEach(function(data){
+      const row = document.createElement("tr");
+      const displayFields = FIELD_IDS.filter(id => id !== "licenced" && id !== "typeOfLicence" && id !== "validityOfLicence");
+      displayFields.forEach(field => {
+        const td = document.createElement("td");
+        td.textContent = valueOrBlank(getField(data, field));
+        row.appendChild(td);
+      });
+
+      const regTd = document.createElement("td");
+      regTd.innerHTML = linkCell(getField(data, "vehicleRegBookLink"), "View Reg Book");
+      row.appendChild(regTd);
+
+      const trackingTd = document.createElement("td");
+      trackingTd.innerHTML = linkCell(getField(data, "trackingCertificateLink"), "View Tracking");
+      row.appendChild(trackingTd);
+
+      const actionCell = document.createElement("td");
+      actionCell.className = "action-col";
+      const actionDiv = document.createElement("div");
+      actionDiv.className = "row-actions";
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn-sm-edit";
+      editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+      editBtn.title = "Edit row";
+      editBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        FIELD_IDS.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = valueOrBlank(getField(data, id));
+        });
+        document.getElementById("rowNumber").value = data.rowNumber || "";
+        document.getElementById("vehicleRegBookLink").value = getField(data, "vehicleRegBookLink") || "";
+        document.getElementById("trackingCertificateLink").value = getField(data, "trackingCertificateLink") || "";
+        document.getElementById("regBookLink").value = data.regBookLink || "";
+        document.getElementById("saveBtn").textContent = "Update Asset";
+        document.getElementById("entrySection").classList.remove("hidden");
+        window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
+      });
+
+      function makeUploadButton(docType, title, fieldName) {
+        const btn = document.createElement("button");
+        btn.className = "btn-sm-upload";
+        btn.innerHTML = '<i class="fas fa-upload"></i>';
+        btn.title = "Upload " + title;
+        btn.addEventListener("click", function(e) {
+          e.stopPropagation();
+          const fileInput = document.createElement("input");
+          fileInput.type = "file";
+          fileInput.accept = "image/*,application/pdf,.doc,.docx";
+          fileInput.onchange = function(ev) {
+            const file = ev.target.files[0];
+            if (!file) return showStatus("No file selected", true);
+            showStatus("Uploading " + file.name + "...");
+            fileToPayload(file).then(filePayload => {
+              return apiPost({
+                action: "uploadDocument",
+                rowNumber: data.rowNumber,
+                docType,
+                sheetField: fieldName,
+                sheetId: SHEET_ID,
+                sheetName: data._sheetName || sheetForAsset(data),
+                folderId: DRIVE_FOLDER_ID,
+                ...filePayload
+              });
+            }).then(res => {
+              if (res.status === "success") {
+                showStatus("✅ " + title + " uploaded and link posted to Google Sheet");
+                data[fieldName] = res.fileLink;
+                loadAssets();
+              } else {
+                showStatus("❌ Upload failed: " + (res.message || "unknown error"), true);
+              }
+            }).catch(err => {
+              console.error(err);
+              showStatus("❌ Upload error: " + err.message, true);
             });
-            clearImageBtn.addEventListener('click', () => {
-                selectedFile = null;
-                fileInput.value = '';
-                imageBase64Hidden.value = '';
-                imageFileNameHidden.value = '';
-                imageFileTypeHidden.value = '';
-                currentBase64 = '';
-                previewContainer.style.display = 'none';
-                attachmentStatus.innerHTML = 'No image — GPS will be fetched live';
-                stampLocationSpan.innerText = 'locating…';
-            });
+          };
+          fileInput.click();
+        });
+        return btn;
+      }
 
-            function getFormData() {
-                const reported = document.querySelector('input[name="reportedMetro"]:checked');
-                const drunken = document.querySelector('input[name="drunkenDriving"]:checked');
-                const atFault = document.querySelector('input[name="atFault"]:checked');
-                return {
-                    timestamp: new Date().toISOString(),
-                    date: document.getElementById('accidentDate').value,
-                    time: document.getElementById('accidentTime').value,
-                    vehicleReg: document.getElementById('vehicleReg').value,
-                    location: document.getElementById('location').value,
-                    accidentType: document.getElementById('accidentType').value,
-                    department: document.getElementById('department').value,
-                    costCenter: document.getElementById('costCenter').value,
-                    driverName: document.getElementById('driverName').value,
-                    driverPhone: document.getElementById('driverPhone').value,
-                    description: document.getElementById('description').value,
-                    otherParties: document.getElementById('otherParties').value,
-                    reportedMetro: reported ? reported.value : 'Not specified',
-                    officerName: document.getElementById('officerName').value || 'N/A',
-                    officerPhone: document.getElementById('officerPhone').value || 'N/A',
-                    drunkenDriving: drunken ? drunken.value : 'Not specified',
-                    policeReportNo: document.getElementById('policeReportNo').value || 'N/A',
-                    atFault: atFault ? atFault.value : 'Not specified',
-                    lat: capturedLat.value || 'unknown',
-                    lon: capturedLon.value || 'unknown',
-                    geoUrl: capturedGeoUrl.value || '',
-                    imageFileName: imageFileNameHidden.value || '',
-                    imageBase64: currentBase64 || '',
-                    sheetId: SHEET_ID,
-                    driveFolderId: DRIVE_FOLDER_ID
-                };
-            }
+      const uploadRegBtn = makeUploadButton("Vehicle Reg Book", "Vehicle Reg Book", "vehicleRegBookLink");
+      const uploadTrackingBtn = makeUploadButton("Tracking Certificate", "Tracking Certificate", "trackingCertificateLink");
 
-            function validateForm(data) {
-                const required = [
-                    data.date, data.time, data.vehicleReg, data.location,
-                    data.accidentType, data.department, data.costCenter,
-                    data.driverName, data.driverPhone, data.description
-                ];
-                if (required.some(f => !f)) {
-                    alert('Please fill all required fields including Cost Center and Driver Name');
-                    return false;
-                }
-                return true;
-            }
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn-sm-delete";
+      delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+      delBtn.title = "Delete row";
+      delBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        if (!confirm("Delete this asset entry?")) return;
+        apiPost({
+          action: "deleteAsset",
+          rowNumber: data.rowNumber,
+          sheetId: SHEET_ID,
+          sheetName: data._sheetName || sheetForAsset(data)
+        }).then(res => {
+          if (res.status === "success") {
+            showStatus("✅ Deleted successfully");
+            loadAssets();
+          } else {
+            showStatus("❌ Delete failed: " + res.message, true);
+          }
+        }).catch(err => showStatus("❌ Delete error: " + err.message, true));
+      });
 
-            async function submitToGoogleAppsScript() {
-                const data = getFormData();
-                if (!validateForm(data)) return;
-                const originalText = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Submitting...';
-                submitBtn.disabled = true;
-                attachmentStatus.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending to Google Sheets...';
-                try {
-                    await fetch(GAS_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams(data)
-                    });
-                    incrementCounters();
-                    attachmentStatus.innerHTML = '<i class="fas fa-check-circle" style="color:#1a4b8c;"></i> Report submitted successfully to Google Sheets!';
-                    alert('✅ Accident report submitted successfully!\n\nData saved to Google Sheets.\nImage uploaded to Google Drive (if attached).');
-                    clearDataEntryFields();
-                } catch (error) {
-                    console.error('Submission error:', error);
-                    attachmentStatus.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#b00;"></i> Error submitting report. Please try again.';
-                    alert('❌ Error submitting report. Please check your connection and try again.');
-                } finally {
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-            }
+      actionDiv.appendChild(editBtn);
+      actionDiv.appendChild(uploadRegBtn);
+      actionDiv.appendChild(uploadTrackingBtn);
+      actionDiv.appendChild(delBtn);
+      actionCell.appendChild(actionDiv);
+      row.appendChild(actionCell);
+      tbody.appendChild(row);
+    });
+  }
 
-            submitBtn.addEventListener('click', submitToGoogleAppsScript);
+  function loadSheetAssets(sheetName) {
+    const url = `${SCRIPT_URL}?action=list&sheetId=${encodeURIComponent(SHEET_ID)}&sheetName=${encodeURIComponent(sheetName)}`;
+    return fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
+      .then(response => {
+        if (response && response.status === "error") throw new Error(response.message || "Sheet load failed");
+        return normaliseRows(response, sheetName);
+      });
+  }
 
-            const counterEl = document.getElementById('localVisitCounter');
-            if (counterEl) {
-                const visits = Number(localStorage.getItem('onpoint_app_visits') || '0') + 1;
-                localStorage.setItem('onpoint_app_visits', String(visits));
-                counterEl.textContent = String(visits);
-            }
+  async function loadAssets() {
+    showStatus("Loading dashboard from Assert Reg and Drilling_Equipment...");
+    try {
+      const results = await Promise.allSettled([
+        loadSheetAssets(MAIN_SHEET_NAME),
+        loadSheetAssets(EQUIPMENT_SHEET_NAME)
+      ]);
+      mainAssets = results[0].status === "fulfilled" ? results[0].value : [];
+      equipmentAssets = results[1].status === "fulfilled" ? results[1].value : [];
+      allAssets = [...mainAssets, ...equipmentAssets];
 
-            loadSavedOptions('vehicleReg', 'onpoint_saved_vehicle_regs');
-            loadSavedOptions('driverName', 'onpoint_saved_driver_names');
-            applyFaintDefaults();
-        })();
-    </script>
+      updateDashboard();
+      if (currentFilter) applyFilter(currentFilter);
+      else renderTable(mainAssets);
+
+      const failures = results.filter(r => r.status === "rejected").map(r => r.reason.message).join("; ");
+      if (failures) showStatus("⚠️ Loaded with warning: " + failures, true);
+      else showStatus(`✅ Loaded ${mainAssets.length} Assert Reg entries and ${equipmentAssets.length} Drilling_Equipment entries`);
+      return allAssets;
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ Could not load data: " + err.message, true);
+      return [];
+    }
+  }
+
+  document.getElementById("assetForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    const data = {};
+    FIELD_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
+    const rowNum = document.getElementById("rowNumber").value;
+    if (rowNum) data.rowNumber = rowNum;
+    data.vehicleRegBookLink = document.getElementById("vehicleRegBookLink").value || "";
+    data.trackingCertificateLink = document.getElementById("trackingCertificateLink").value || "";
+    data.regBookLink = document.getElementById("regBookLink").value || "";
+    data.action = "saveAsset";
+    data.sheetId = SHEET_ID;
+    data.sheetName = sheetForAsset(data);
+    data.folderId = DRIVE_FOLDER_ID;
+
+    try {
+      showStatus("Saving asset and documents...");
+      data.vehicleRegBookFile = await fileToPayload(document.getElementById("vehicleRegBookFile").files[0]);
+      data.trackingCertificateFile = await fileToPayload(document.getElementById("trackingCertificateFile").files[0]);
+      const response = await apiPost(data);
+      if (response.status !== "success") throw new Error(response.message || "Save failed");
+      showStatus(rowNum ? "✅ Asset Updated Successfully" : "✅ Asset Saved Successfully");
+      document.getElementById("assetForm").reset();
+      document.getElementById("rowNumber").value = "";
+      document.getElementById("vehicleRegBookLink").value = "";
+      document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("regBookLink").value = "";
+      document.getElementById("saveBtn").textContent = "Save Asset";
+      await loadAssets();
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ Error Saving Asset: " + err.message, true);
+    }
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", function(){
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
+    document.getElementById("regBookLink").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    showStatus("Form cleared.");
+  });
+
+  document.getElementById("newEntryBtn").addEventListener("click", function(){
+    document.getElementById("entrySection").classList.remove("hidden");
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
+    document.getElementById("regBookLink").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
+  });
+
+  document.getElementById("backToDashboardBtn").addEventListener("click", function(){
+    document.getElementById("entrySection").classList.add("hidden");
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
+    document.getElementById("regBookLink").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    showStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (currentFilter) applyFilter(currentFilter); else renderTable(mainAssets);
+  });
+
+  document.getElementById("cancelEntryBtn").addEventListener("click", function(){
+    document.getElementById("entrySection").classList.add("hidden");
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
+    document.getElementById("regBookLink").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    showStatus("");
+    if (currentFilter) applyFilter(currentFilter); else renderTable(mainAssets);
+  });
+
+  document.getElementById("refreshDashBtn").addEventListener("click", loadAssets);
+  document.getElementById("clearFilterBtn").addEventListener("click", clearFilter);
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+  document.getElementById("excelBtn").addEventListener("click", function(){
+    let rows = mainAssets;
+    if (currentFilter) {
+      rows = (isEquipmentFilter(currentFilter) ? equipmentAssets : mainAssets).filter(a => String(getField(a, "assetClass")).toLowerCase().includes(currentFilter.toLowerCase()));
+    }
+    const displayFields = FIELD_IDS.filter(id => id !== "licenced" && id !== "typeOfLicence" && id !== "validityOfLicence");
+    const headers = [...displayFields, "vehicleRegBookLink", "trackingCertificateLink"];
+    const csvRows = [headers, ...rows.map(row => {
+      const vals = displayFields.map(id => valueOrBlank(getField(row, id)));
+      vals.push(getField(row, "vehicleRegBookLink"));
+      vals.push(getField(row, "trackingCertificateLink"));
+      return vals;
+    })];
+    const csv = csvRows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "asset-register-report.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.addEventListener("DOMContentLoaded", loadAssets);
+</script>
 </body>
 </html>
