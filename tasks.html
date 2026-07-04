@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfuZ1q775SG3nBXnMkiIOvSXQeGvYCR-hSEhJtbfDcre8e1tX-Sb0N99T6Lkva80YH/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxRAS5rqesHm8-4ZiRtJej0GhTtfU_XVGionLJOrFPkIaRexOlZEDNBip23YMmusNOM/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
@@ -152,13 +152,16 @@ function api(action, data={}){
 async function postApi(action, data={}){
   if(!SCRIPT_URL || SCRIPT_URL.includes('PASTE_')) throw new Error('Replace SCRIPT_URL with your Apps Script Web App URL.');
   showSync('Synchronising '+action+'...');
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), 65000);
   try{
     const payload = JSON.stringify({...data, action});
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: {'Content-Type':'text/plain;charset=utf-8'},
       body: payload,
-      redirect: 'follow'
+      redirect: 'follow',
+      signal: controller.signal
     });
     const txt = await res.text();
     let json;
@@ -168,18 +171,20 @@ async function postApi(action, data={}){
     markSynced();
     return json.data;
   }catch(err){
-    throw new Error(err.message || 'Upload failed. Check Apps Script deployment permissions and Drive folder access.');
+    if(err && err.name === 'AbortError') throw new Error(action+' timed out. Redeploy the fixed Apps Script as a New version and run Repair / Setup Sheets once.');
+    throw new Error(err.message || 'Request failed. Check Apps Script deployment permissions and Drive folder access.');
   }finally{
+    clearTimeout(timer);
     hideSync();
   }
 }
 
 function initDates(){const d=new Date(); const iso=d.toISOString().slice(0,10); ['ntIssue','ntDue','rtStart'].forEach(id=>{const el=document.getElementById(id); if(el) el.value=iso;});}
 function login(){document.getElementById('loginErr').textContent='Synchronising login...';postApi('login',{username:loginUser.value.trim(),password:loginPass.value.trim()}).then(u=>{USER=u;localStorage.setItem('ob_user',JSON.stringify(u));start();alert('Login successful.');}).catch(e=>loginErr.textContent=e.message);}
-function setupNow(){document.getElementById('loginErr').textContent='Repairing sheets...';postApi('setup',{}).then(()=>{loginErr.textContent='Sheets repaired. Try login again. Your Users tab headings now match: UserID, Name, Email, Phone, WhatsApp, Username, Password, Role, Department, IsActive, CreatedAt, LastLogin, Cost Center. Try login again. If Users tab was empty use admin / admin123.';}).catch(e=>loginErr.textContent=e.message);}
+function setupNow(){document.getElementById('loginErr').textContent='Repairing sheets...';postApi('setup',{}).then(()=>{loginErr.textContent='Sheets repaired. Try login again. This setup only fixes tabs/headings; heavy score repair is no longer run during setup/login.';}).catch(e=>loginErr.textContent=e.message);}
 function logout(){showSync('Synchronising logout...');localStorage.removeItem('ob_user');alert('Logout successful.');location.reload();}
 function start(){document.getElementById('login').classList.add('hide');document.getElementById('app').classList.remove('hide');userPill.textContent=USER.Name+' · '+USER.Role;initDates();applyRoleVisibility();refresh();}
-function refresh(){postApi('bootstrap',{userId:USER.UserID}).then(data=>{STATE=data;fillLists();applyRoleVisibility();render();}).catch(alertErr);}
+function refresh(){postApi('bootstrap',{userId:USER.UserID,max:120}).then(data=>{STATE=data;fillLists();applyRoleVisibility();render();}).catch(e=>{hideSync(); alert('Bootstrap loading failed: '+(e.message||e)+'\n\nDeploy the matching FAST LAZY BULLETPROOF Apps Script as a NEW VERSION, then refresh. If it still fails, check the Apps Script error shown above.');});}
 function loadTicketsView(view, max){
   if(!USER) return;
   postApi('getTicketsByView',{userId:USER.UserID,view:view||'all',max:max||300}).then(data=>{
@@ -230,6 +235,14 @@ function openTicketWhatsApp(){const t=DETAIL.ticket;const phone=cleanPhone(t.Ass
 function copyTicketWhatsApp(){copyText(DETAIL.ticket.WhatsAppMessage||ticketWhatsAppText(DETAIL.ticket));}
 function ticketWhatsAppText(t){return `ONPOINT-BASE TASK ${t.TicketID}\n\nAssigned to: ${t.AssignedToName}\nDepartment: ${t.Department||''}\nCost Center: ${t.CostCenter||''}\nTitle: ${t.Title}\nPriority: ${t.Priority}\nIssue Date: ${fmt(t.IssueDate)}\nDue: ${fmt(t.DueDate)}\nStatus: ${t.Status}\nTime lapse: ${t.TimeRemainingText||''}\n\nDescription:\n${t.Description||''}`;}
 function userRoleKey(){return String(USER?.Role||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+function identityKey(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ').replace(/[^a-z0-9@.]+/g,'');}
+function nameKey(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ').replace(/[^a-z0-9]+/g,'');}
+function emailKey(v){return String(v||'').trim().toLowerCase();}
+function userMatch(a,b){const aa=identityKey(a),bb=identityKey(b);return aa!==''&&bb!==''&&aa===bb;}
+function emailMatch(a,b){const aa=emailKey(a),bb=emailKey(b);return aa!==''&&bb!==''&&aa===bb;}
+function nameMatch(a,b){const aa=nameKey(a),bb=nameKey(b);return aa!==''&&bb!==''&&aa===bb;}
+function isMineAsCreator(t){return userMatch(t.CreatedByUserID,USER.UserID)||emailMatch(t.CreatedByEmail,USER.Email)||nameMatch(t.CreatedByName,USER.Name);}
+function isMineAsAssignee(t){return userMatch(t.AssignedToUserID,USER.UserID)||emailMatch(t.AssignedToEmail,USER.Email)||nameMatch(t.AssignedToName,USER.Name);}
 function isExecutiveUser(){const r=userRoleKey();return r==='admin'||r==='adminmanager'||r==='executive1'||r==='exec1'||r==='executive2'||r==='exec2';}
 function isReviewAllowed(kind){
   const r=userRoleKey();
@@ -246,21 +259,21 @@ function applyRoleVisibility(){
 function myTickets(){
   const tickets=STATE.tickets||[];
   if(isExecutiveUser()){
-    return tickets.filter(t=>String(t.CreatedByUserID)===String(USER.UserID) && String(t.AssignedToUserID)!==String(USER.UserID) && t.Status!=='Closed');
+    return tickets.filter(t=>(isMineAsCreator(t)||isMineAsAssignee(t)||t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2') && t.Status!=='Closed');
   }
-  return tickets.filter(t=>String(t.AssignedToUserID)===String(USER.UserID) && t.Status!=='Closed');
+  return tickets.filter(t=>(isMineAsAssignee(t)||isMineAsCreator(t)) && t.Status!=='Closed');
 }
 function isLate(t){return String(t.TimeRemainingText||'').toLowerCase().includes('late') || String(t.ClosedTiming||'').toLowerCase().includes('late');}
 function isOpenOnTime(t){return t.Status!=='Closed' && !isLate(t) && (t.CurrentBasket==='Assignee'||t.Status==='Open');}
 function filterTickets(kind){
   const tickets=STATE.tickets||[];
-  if(kind==='critical') return tickets.filter(t=>String(t.Priority)==='Critical' && t.Status!=='Closed' && (isExecutiveUser() || String(t.AssignedToUserID)===String(USER.UserID)));
-  if(kind==='openOnTime') return tickets.filter(t=>isOpenOnTime(t) && (isExecutiveUser() || String(t.AssignedToUserID)===String(USER.UserID)));
-  if(kind==='openLate') return tickets.filter(t=>t.Status!=='Closed' && isLate(t) && (isExecutiveUser() || String(t.AssignedToUserID)===String(USER.UserID)));
+  if(kind==='critical') return tickets.filter(t=>String(t.Priority)==='Critical' && t.Status!=='Closed' && (isExecutiveUser() || isMineAsAssignee(t)));
+  if(kind==='openOnTime') return tickets.filter(t=>isOpenOnTime(t) && (isExecutiveUser() || isMineAsAssignee(t)));
+  if(kind==='openLate') return tickets.filter(t=>t.Status!=='Closed' && isLate(t) && (isExecutiveUser() || isMineAsAssignee(t)));
   if(kind==='review1') return isReviewAllowed('review1') ? tickets.filter(t=>t.CurrentBasket==='Executive1') : [];
-  if(kind==='review2') return isReviewAllowed('review2') ? tickets.filter(t=>t.CurrentBasket==='Executive2'||t.CurrentBasket==='HiringApprovalExecutive2') : [];
+  if(kind==='review2') return isReviewAllowed('review2') ? tickets.filter(t=>t.CurrentBasket==='Executive2') : [];
   if(kind==='closed') return tickets.filter(t=>t.Status==='Closed' || t.CurrentBasket==='Closed');
-  if(kind==='assigned') return tickets.filter(t=>t.CurrentBasket==='Assignee' && t.Status!=='Closed' && (isExecutiveUser() || String(t.AssignedToUserID)===String(USER.UserID)));
+  if(kind==='assigned') return tickets.filter(t=>t.CurrentBasket==='Assignee' && t.Status!=='Closed' && (isExecutiveUser() || isMineAsAssignee(t)));
   return myTickets();
 }
 function openTicketWindow(kind){
@@ -273,12 +286,12 @@ function openTicketWindow(kind){
   loadTicketsView(kind==='all'?'task':kind,300);
   const el=document.getElementById('taskRows'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
-function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=STATE.tickets||[];const sum={critical:0,openOnTime:0,e1:0,e2:0,closed:0,late:0};tickets.forEach(t=>{if(String(t.Priority)==='Critical'&&t.Status!=='Closed')sum.critical++; if(isOpenOnTime(t))sum.openOnTime++; if(t.CurrentBasket==='Executive1')sum.e1++; if(t.CurrentBasket==='Executive2'||t.CurrentBasket==='HiringApprovalExecutive2')sum.e2++; if(t.Status==='Closed'||t.CurrentBasket==='Closed')sum.closed++; if(t.Status!=='Closed'&&isLate(t))sum.late++;});const srv=STATE.summary||{}; if(srv.critical!==undefined)sum.critical=srv.critical; if(srv.openOnTime!==undefined)sum.openOnTime=srv.openOnTime; if(srv.review1!==undefined)sum.e1=srv.review1; if(srv.review2!==undefined)sum.e2=srv.review2; if(srv.closed!==undefined)sum.closed=srv.closed; if(srv.late!==undefined)sum.late=srv.late;
+function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=STATE.tickets||[];const sum={critical:0,openOnTime:0,e1:0,e2:0,closed:0,late:0};tickets.forEach(t=>{if(String(t.Priority)==='Critical'&&t.Status!=='Closed')sum.critical++; if(isOpenOnTime(t))sum.openOnTime++; if(t.CurrentBasket==='Executive1')sum.e1++; if(t.CurrentBasket==='Executive2')sum.e2++; if(t.Status==='Closed'||t.CurrentBasket==='Closed')sum.closed++; if(t.Status!=='Closed'&&isLate(t))sum.late++;});const srv=STATE.summary||{}; if(srv.critical!==undefined)sum.critical=srv.critical; if(srv.openOnTime!==undefined)sum.openOnTime=srv.openOnTime; if(srv.review1!==undefined)sum.e1=srv.review1; if(srv.review2!==undefined)sum.e2=srv.review2; if(srv.closed!==undefined)sum.closed=srv.closed; if(srv.late!==undefined)sum.late=srv.late;
   if(document.getElementById('stCritical'))stCritical.textContent=sum.critical; if(document.getElementById('stOpenOnTime'))stOpenOnTime.textContent=sum.openOnTime; stE1.textContent=sum.e1;stE2.textContent=sum.e2;stClosed.textContent=sum.closed;stLate.textContent=sum.late; renderDashboard(tickets,sum); buildPerfOptions(); renderPerformance();
   const filtered=filterTickets(CURRENT_FILTER).filter(t=>(t.Title+t.TicketID+t.AssignedToName+t.Department+t.CostCenter).toLowerCase().includes(s));
   taskRows.innerHTML=(`<tr><td colspan="8" class="filterTitle">Showing: ${esc(filterLabel(CURRENT_FILTER))}</td></tr>`)+ (filtered.map(rowTask).join('')||empty(8));
-  review1Rows.innerHTML=isReviewAllowed('review1')?(tickets.filter(t=>t.CurrentBasket==='Executive1').map(rowReview1).join('')||empty(6)):empty(6);
-  review2Rows.innerHTML=isReviewAllowed('review2')?(tickets.filter(t=>t.CurrentBasket==='Executive2'||t.CurrentBasket==='HiringApprovalExecutive2').map(rowReview2).join('')||empty(6)):empty(6);
+  review1Rows.innerHTML=isReviewAllowed('review1')?(tickets.filter(t=>t.CurrentBasket==='Executive1' && t.Status!=='Closed').map(rowReview1).join('')||empty(6)):empty(6);
+  review2Rows.innerHTML=isReviewAllowed('review2')?(tickets.filter(t=>t.CurrentBasket==='Executive2' && t.Status!=='Closed').map(rowReview2).join('')||empty(6)):empty(6);
   closedRows.innerHTML=tickets.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed').map(rowClosed).join('')||empty(8);
 }
 function filterLabel(k){return ({critical:'Critical Tickets',openOnTime:'Open & Ontime Tickets',openLate:'Open and Late Tickets',review1:'Executive1 Review Basket',review2:'Executive2 Review Basket',closed:'Closed Tickets',assigned:'Assigned Tickets',all:isExecutiveUser()?'Tickets I Assigned':'My Assigned Tickets'})[k]||k;}
@@ -334,7 +347,7 @@ function rowTask(t){return `<tr><td><a class="ticket-link" onclick="openTicket('
 function rowReview1(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${fmt(t.SubmittedAt)}</td><td>${score(t.SystemScore)}</td><td>${esc(t.AssignedToName)}</td><td><button class="btn primary" onclick="openTicket('${t.TicketID}')">Review</button></td></tr>`}
 function rowReview2(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${score(t.SystemScore)}</td><td>${score(t.Executive1Score)}</td><td>${esc(t.TimeRemainingText)}</td><td><button class="btn primary" onclick="openTicket('${t.TicketID}')">Review</button></td></tr>`}
 function rowClosed(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${fmt(t.ClosedAt)}</td><td>${esc(t.ClosedTiming)}</td><td>${score(t.SystemScore)}</td><td>${score(t.Executive1Score)}</td><td>${score(t.Executive2Score)}</td><td>${finalScore(computedFinalNumber(t))}</td></tr>`}
-function status(t){const cls=t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'||t.CurrentBasket==='HiringApprovalExecutive2'?'s-review':String(t.TimeRemainingText).includes('late')?'s-late':'s-open';return `<span class="status ${cls}">${esc(t.Status)}</span>`}
+function status(t){const cls=t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'?'s-review':String(t.TimeRemainingText).includes('late')?'s-late':'s-open';return `<span class="status ${cls}">${esc(t.Status)}</span>`}
 function score(v){const n=Number(v);return (v===''||v==null||isNaN(n))?'—':`${Math.round(n)}%`}
 function finalScoreClass(v){const n=Number(v); if(isNaN(n))return ''; if(n<50)return 'score-final-red'; if(n>=90)return 'score-final-black'; if(n>=75)return 'score-final-blue'; return 'score-final-green';}
 function finalScore(v){const n=Number(v);return (v===''||v==null||isNaN(n))?'—':`<span class="${finalScoreClass(n)}">${Math.round(n)}%</span>`}
@@ -347,9 +360,20 @@ function createTicket(){newErr.textContent='';newMsg.textContent='';const mode=d
 let DETAIL=null;
 function openTicket(id){postApi('getTicketDetail',{userId:USER.UserID,ticketId:id}).then(d=>{DETAIL=d;drawDrawer();drawer.classList.add('open');scrim.classList.add('open');}).catch(alertErr);}
 function closeDrawer(){drawer.classList.remove('open');scrim.classList.remove('open');}
-function drawDrawer(){const t=DETAIL.ticket;dRef.textContent=t.TicketID;dStatus.outerHTML=`<span id="dStatus" class="status ${t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'||t.CurrentBasket==='HiringApprovalExecutive2'?'s-review':'s-open'}">${esc(t.Status)}</span>`;dBody.innerHTML=`<h2>${esc(t.Title)}</h2><p class="muted">${esc(t.Description||'No description')}</p><div class="kv"><div><small>Created by</small><b>${esc(t.CreatedByName)}</b></div><div><small>Assigned to</small><b>${esc(t.AssignedToName)}</b></div><div><small>Assignee Email</small><b>${esc(t.AssignedToEmail||'')}</b></div><div><small>Assignee WhatsApp</small><b>${esc(t.AssignedToWhatsApp||'')}</b></div><div><small>Department</small><b>${esc(t.Department||'')}</b></div><div><small>Cost Center</small><b>${esc(t.CostCenter||'')}</b></div><div><small>Due Date</small><b>${fmt(t.DueDate)}</b></div><div><small>Submission Date</small><b>${fmt(t.SubmittedAt)}</b></div><div><small>Time lapse</small><b>${esc(t.TimeRemainingText)}</b></div><div><small>System Score</small><b>${score(t.SystemScore)}</b></div><div><small>Final Score</small><b>${finalScore(computedFinalNumber(t))}</b></div><div><small>Executive1</small><b>${score(t.Executive1Score)} ${esc(t.Executive1Name||'')}</b></div><div><small>Executive2</small><b>${score(t.Executive2Score)} ${esc(t.Executive2Name||'')}</b></div></div><div class="copybar"><button class="btn" onclick="copyTicketWhatsApp()">Copy Task to WhatsApp</button><button class="btn good" onclick="openTicketWhatsApp()">Open WhatsApp to Assignee</button></div><h3>Attachments</h3>${(DETAIL.attachments.map(a=>`<div class="fileline"><a target="_blank" href="${a.DriveUrl}">${esc(a.FileName)}</a></div>`).join('') + linkListFromUploadAttachment(t.UploadAttachment)) || '<p class="muted">No attachments.</p>'}<div class="f"><label>Upload Attachment / File</label><input type="file" id="fileUp"><button class="btn" onclick="uploadFile()">Upload File</button></div><h3>Comments</h3><div class="comments">${DETAIL.comments.map(c=>`<div class="comment"><div class="meta">${esc(c.UserName)} · ${esc(c.Role)} · ${fmt(c.CreatedAt)}</div>${esc(c.Comment)}${c.DriveUrl?`<div class="fileline"><a target="_blank" href="${c.DriveUrl}">${esc(c.FileName||'View upload')}</a></div>`:''}</div>`).join('')||'<p class="muted">No comments.</p>'}</div><div class="f"><label>Add Comment</label><textarea id="commentTxt"></textarea><button class="btn" onclick="addComment()">Post Comment</button></div><h3>More Time Requests</h3><div class="comments">${(DETAIL.timeRequests||[]).map(r=>`<div class="comment"><div class="meta">${esc(r.RequestedByName)} · ${fmt(r.CreatedAt)} · ${esc(r.Status)}</div>Requested date: <b>${esc(r.RequestedDueDate)}</b><br>${esc(r.Reason||'')}</div>`).join('')||'<p class="muted">No time extension requests.</p>'}</div>`;drawActions(t);}
+function drawDrawer(){const t=DETAIL.ticket;dRef.textContent=t.TicketID;dStatus.outerHTML=`<span id="dStatus" class="status ${t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'?'s-review':'s-open'}">${esc(t.Status)}</span>`;dBody.innerHTML=`<h2>${esc(t.Title)}</h2><p class="muted">${esc(t.Description||'No description')}</p><div class="kv"><div><small>Created by</small><b>${esc(t.CreatedByName)}</b></div><div><small>Assigned to</small><b>${esc(t.AssignedToName)}</b></div><div><small>Assignee Email</small><b>${esc(t.AssignedToEmail||'')}</b></div><div><small>Assignee WhatsApp</small><b>${esc(t.AssignedToWhatsApp||'')}</b></div><div><small>Department</small><b>${esc(t.Department||'')}</b></div><div><small>Cost Center</small><b>${esc(t.CostCenter||'')}</b></div><div><small>Due Date</small><b>${fmt(t.DueDate)}</b></div><div><small>Submission Date</small><b>${fmt(t.SubmittedAt)}</b></div><div><small>Time lapse</small><b>${esc(t.TimeRemainingText)}</b></div><div><small>System Score</small><b>${score(t.SystemScore)}</b></div><div><small>Final Score</small><b>${finalScore(computedFinalNumber(t))}</b></div><div><small>Executive1</small><b>${score(t.Executive1Score)} ${esc(t.Executive1Name||'')}</b></div><div><small>Executive2</small><b>${score(t.Executive2Score)} ${esc(t.Executive2Name||'')}</b></div></div><div class="copybar"><button class="btn" onclick="copyTicketWhatsApp()">Copy Task to WhatsApp</button><button class="btn good" onclick="openTicketWhatsApp()">Open WhatsApp to Assignee</button></div><h3>Attachments</h3>${(DETAIL.attachments.map(a=>`<div class="fileline"><a target="_blank" href="${a.DriveUrl}">${esc(a.FileName)}</a></div>`).join('') + linkListFromUploadAttachment(t.UploadAttachment)) || '<p class="muted">No attachments.</p>'}<div class="f"><label>Upload Attachment / File</label><input type="file" id="fileUp"><button class="btn" onclick="uploadFile()">Upload File</button></div><h3>Comments</h3><div class="comments">${DETAIL.comments.map(c=>`<div class="comment"><div class="meta">${esc(c.UserName)} · ${esc(c.Role)} · ${fmt(c.CreatedAt)}</div>${esc(c.Comment)}${c.DriveUrl?`<div class="fileline"><a target="_blank" href="${c.DriveUrl}">${esc(c.FileName||'View upload')}</a></div>`:''}</div>`).join('')||'<p class="muted">No comments.</p>'}</div><div class="f"><label>Add Comment</label><textarea id="commentTxt"></textarea><button class="btn" onclick="addComment()">Post Comment</button></div><h3>More Time Requests</h3><div class="comments">${(DETAIL.timeRequests||[]).map(r=>`<div class="comment"><div class="meta">${esc(r.RequestedByName)} · ${fmt(r.CreatedAt)} · ${esc(r.Status)}</div>Requested date: <b>${esc(r.RequestedDueDate)}</b><br>${esc(r.Reason||'')}</div>`).join('')||'<p class="muted">No time extension requests.</p>'}</div>`;drawActions(t);}
 function hasPendingTimeRequest(){return (DETAIL.timeRequests||[]).some(r=>String(r.Status||'').indexOf('Approved')<0 && String(r.Status||'').indexOf('Rejected')<0);}
-function drawActions(t){let html='';if(t.CurrentBasket==='Assignee'&&(t.AssignedToUserID===USER.UserID||t.CreatedByUserID===USER.UserID||USER.Role==='Admin'))html+=`<button class="btn primary" onclick="submitTicket()">Submit Ticket to Executive1</button><div class="scorebox"><label>Request more time</label><input id="moreTimeDate" type="date"><input id="moreTimeReason" placeholder="Reason for more time"><button class="btn" onclick="requestMoreTime()">Send Request</button></div>`;if(hasPendingTimeRequest()&&(t.CreatedByUserID===USER.UserID||USER.Role==='Executive1'||USER.Role==='Admin'))html+=`<button class="btn good" onclick="approveMoreTime()">Approve More Time Request</button>`;if(t.CurrentBasket==='Executive1'&&(USER.Role==='Executive1'||USER.Role==='Admin'))html+=`<div class="scorebox"><label>Executive1 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Approval / return comment"><button class="btn primary" onclick="approve1()">Approve to Executive2</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;if((t.CurrentBasket==='Executive2'||t.CurrentBasket==='HiringApprovalExecutive2')&&(USER.Role==='Executive2'||USER.Role==='Admin'))html+=`<div class="scorebox"><span class="pill">System Score: ${score(t.SystemScore)}</span><label>Executive2 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Closing / return comment"><button class="btn primary" onclick="approve2()">Approve & Close</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;dActions.innerHTML=html||'<span class="muted">No action available for your role on this ticket.</span>';const rd=document.getElementById('returnDue');if(rd){const d=new Date();d.setDate(d.getDate()+1);rd.value=d.toISOString().slice(0,10);}const md=document.getElementById('moreTimeDate');if(md){const d=new Date();d.setDate(d.getDate()+2);md.value=d.toISOString().slice(0,10);}}
+function drawActions(t){
+  let html='';
+  const role=userRoleKey();
+  const isAdmin=(role==='admin'||role==='adminmanager');
+  const canSubmit=t.CurrentBasket==='Assignee' && (isMineAsAssignee(t)||isMineAsCreator(t)||isAdmin);
+  if(canSubmit) html+=`<button class="btn primary" onclick="submitTicket()">Submit Ticket</button><div class="scorebox"><label>Request more time</label><input id="moreTimeDate" type="date"><input id="moreTimeReason" placeholder="Reason for more time"><button class="btn" onclick="requestMoreTime()">Send Request</button></div>`;
+  if(hasPendingTimeRequest()&&(isMineAsCreator(t)||role==='executive1'||role==='exec1'||isAdmin)) html+=`<button class="btn good" onclick="approveMoreTime()">Approve More Time Request</button>`;
+  if(t.CurrentBasket==='Executive1'&&(role==='executive1'||role==='exec1'||isAdmin)) html+=`<div class="scorebox"><label>Executive1 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Approval / return comment"><button class="btn primary" onclick="approve1()">Approve</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;
+  if((t.CurrentBasket==='Executive2')&&(role==='executive2'||role==='exec2'||isAdmin)) html+=`<div class="scorebox"><span class="pill">System Score: ${score(t.SystemScore)}</span><label>Executive2 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Closing / return comment"><button class="btn primary" onclick="approve2()">Approve & Close</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;
+  dActions.innerHTML=html||'<span class="muted">No action available for your role on this ticket.</span>';
+  const rd=document.getElementById('returnDue');if(rd){const d=new Date();d.setDate(d.getDate()+1);rd.value=d.toISOString().slice(0,10);}const md=document.getElementById('moreTimeDate');if(md){const d=new Date();d.setDate(d.getDate()+2);md.value=d.toISOString().slice(0,10);}
+}
 function requestMoreTime(){const d=document.getElementById('moreTimeDate')?.value; if(!d)return alert('Select the new requested submission date.');postApi('requestMoreTime',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,requestedDueDate:d,reason:document.getElementById('moreTimeReason')?.value||''}).then(()=>{alert('More time request sent to Executive1 and ticket creator for approval.');refresh();openTicket(DETAIL.ticket.TicketID);}).catch(alertErr)}
 function approveMoreTime(){postApi('approveMoreTime',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:scoreComment?.value||commentTxt?.value||''}).then(()=>{alert('More time approval captured. If both required approvals are complete, the new submission date has been applied.');refresh();openTicket(DETAIL.ticket.TicketID);}).catch(alertErr)}
 function returnTicket(){const due=document.getElementById('returnDue')?.value; if(!due)return alert('Select a new due date before returning this ticket.');postApi('returnTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,newDueDate:due,comment:scoreComment?.value||commentTxt?.value||''}).then(()=>{alert('Ticket returned and re-opened with a new due date.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr)}
@@ -386,13 +410,13 @@ async function submitTicket(){
   try{
     if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID, commentTxt?.value||'');
     await postApi('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''});
-    alert('Ticket submitted to Executive1 successfully. Clock stopped, system score captured, and attachment link posted where applicable.');
-    refresh();
-    openTicket(DETAIL.ticket.TicketID);
+    alert('Ticket submitted successfully. It has moved to Executive1 Review and disappeared from the assignee open basket.');
+    closeDrawer();
+    loadTicketsView('task',300);
   }catch(e){alertErr(e);}
 }
-function approve1(){postApi('executive1Approve',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,score:scoreIn.value,comment:scoreComment.value}).then(()=>{alert('Executive1 approval successful. Ticket moved to Executive2.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr)}
-function approve2(){postApi('executive2Approve',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,score:scoreIn.value,comment:scoreComment.value}).then(()=>{alert('Executive2 approval successful. Ticket is permanently closed.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr)}
+function approve1(){postApi('executive1Approve',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,score:scoreIn.value,comment:scoreComment.value}).then(()=>{alert('Executive1 approval successful. Ticket moved to Executive2 and disappeared from Executive1 Review.');closeDrawer();loadTicketsView('review1',300);}).catch(alertErr)}
+function approve2(){postApi('executive2Approve',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,score:scoreIn.value,comment:scoreComment.value}).then(()=>{alert('Executive2 approval successful. Ticket is permanently closed and removed from Executive2 Review.');closeDrawer();loadTicketsView('review2',300);}).catch(alertErr)}
 function uploadFile(){
   const f=fileUp.files[0];
   if(!f) return alert('Choose a file first.');
