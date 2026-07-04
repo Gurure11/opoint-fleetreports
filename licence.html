@@ -431,8 +431,9 @@
       Replace this with your deployed Apps Script Web App URL after pasting the fixed Apps Script code.
       Example: https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
     */
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxojAd813-H0O2sOTSTxCu_1gD60Hn9dr3yNYTitJPeTXsu7jJ4PYmUgsegzmTFGd7D_A/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyeOwD9_sbIYM-ZNByIiVpjeCGNoex2xPXolyj5R3p9bGNx0E06bJSjdH4-5jROXwJkaA/exec';
     let editingRowNumber = null;
+    let editingExistingLicenceFileLink = '';
     let transactionLicenceRecords = [];
     let searchLicenceRecords = [];
 
@@ -460,6 +461,10 @@
       // Always save to the Licence sheet tab only. Do not send anything to a Distinct sheet tab.
 
       const licenceFile = document.getElementById('licenceUpload').files[0];
+
+      if (editingRowNumber && !licenceFile) {
+        formData.licenceFileLink = editingExistingLicenceFileLink || '';
+      }
 
       submitBtn.disabled = true;
       submitBtn.textContent = licenceFile ? 'Uploading licence...' : 'Saving...';
@@ -649,7 +654,7 @@
     }
 
     function getRecordKey(record) {
-      return record && (record.rowNumber || record.rowIndex || record.id || record.licenceNumber);
+      return record && (record.rowNumber || record.rowIndex || record.id);
     }
 
     function getRecordFromSource(source, index) {
@@ -667,6 +672,7 @@
       }
 
       editingRowNumber = rowNumber;
+      editingExistingLicenceFileLink = record.licenceFileLink || '';
       form.name.value = record.name || '';
       form.surname.value = record.surname || '';
       form.licenceNumber.value = record.licenceNumber || '';
@@ -680,6 +686,7 @@
       form.otherLicence.value = record.otherLicence || '';
       document.getElementById('fleetCardPolicyIssuedSigned').checked = String(record.fleetCardPolicyIssuedSigned || '').trim() !== '';
       document.getElementById('fleetPolicyIssuedSigned').checked = String(record.fleetPolicyIssuedSigned || '').trim() !== '';
+      document.getElementById('licenceUpload').value = '';
       document.getElementById('submitBtn').textContent = 'Update Licence';
       document.getElementById('cancelEditBtn').style.display = 'inline-block';
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -688,6 +695,7 @@
 
     function cancelEdit(showNotice) {
       editingRowNumber = null;
+      editingExistingLicenceFileLink = '';
       document.getElementById('submitBtn').textContent = 'Save Licence';
       document.getElementById('cancelEditBtn').style.display = 'none';
       if (showNotice !== false) {
