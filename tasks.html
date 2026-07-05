@@ -127,7 +127,71 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwlRzWwhn3QQU8rA9kpi3jIOxBuJeJ3iprhy7Ro_cM9V21v5NUOAxAunSFqGhWGZC__mw/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], users:[], referenceData:[], summary:{}};
+let LAST_GOOD_STATE = {tickets:[], users:[], referenceData:[], summary:{}};
 let CURRENT_FILTER = 'all';
+let REQUEST_SEQ = 0;
+let ACTIVE_DATA_VIEW = 'all';
+let AUTO_REFRESH_TIMER = null;
+let LAST_REFRESH_AT = 0;
+const REFRESH_INTERVAL_MS = 45000;
+
+function hasUsableTicketList(data){return data && Array.isArray(data.tickets);}
+function keepLastGoodState(data, opts={}){
+  if(!data) return STATE;
+  const allowEmpty = !!opts.allowEmpty;
+  const next = {...STATE};
+  if(Array.isArray(data.users) && (data.users.length || !LAST_GOOD_STATE.users.length)) next.users = data.users;
+  if(Array.isArray(data.referenceData)) next.referenceData = data.referenceData;
+  if(data.summary && typeof data.summary === 'object') next.summary = data.summary;
+  if(Array.isArray(data.tickets)){
+    if(data.tickets.length || allowEmpty || !LAST_GOOD_STATE.tickets.length){
+      next.tickets = data.tickets;
+    }else{
+      next.tickets = LAST_GOOD_STATE.tickets;
+    }
+  }
+  STATE = next;
+  if((STATE.tickets||[]).length || allowEmpty) LAST_GOOD_STATE = JSON.parse(JSON.stringify(STATE));
+  return STATE;
+}
+function updateTicketInCache(ticketId, patch){
+  if(!ticketId) return;
+  const apply = arr => (arr||[]).map(t => String(t.TicketID)===String(ticketId) ? {...t, ...patch} : t);
+  STATE.tickets = apply(STATE.tickets);
+  LAST_GOOD_STATE.tickets = apply(LAST_GOOD_STATE.tickets);
+  render();
+}
+
+function mergeTicketsForView(view, incoming){
+  if(!Array.isArray(incoming)) return;
+  const current = Array.isArray(STATE.tickets) ? STATE.tickets.slice() : [];
+  const incomingIds = new Set(incoming.map(t => String(t.TicketID||'')));
+  const byId = new Map(current.map(t => [String(t.TicketID||''), t]));
+  incoming.forEach(t => byId.set(String(t.TicketID||''), {...(byId.get(String(t.TicketID||''))||{}), ...t}));
+
+  // When a basket-specific view is refreshed, remove stale tickets from that basket.
+  // This restores the original flow: approved/submitted tickets disappear from the old basket immediately.
+  const basketByView = {review1:'Executive1', review2:'Executive2', closed:'Closed'};
+  const basket = basketByView[view];
+  let merged = Array.from(byId.values());
+  if(basket){
+    merged = merged.filter(t => {
+      const id = String(t.TicketID||'');
+      if(incomingIds.has(id)) return true;
+      if(view==='closed') return !(t.Status==='Closed' || t.CurrentBasket==='Closed');
+      return String(t.CurrentBasket||'') !== basket;
+    });
+  }
+  STATE.tickets = merged;
+  LAST_GOOD_STATE = JSON.parse(JSON.stringify({...LAST_GOOD_STATE, tickets: merged, users: STATE.users||LAST_GOOD_STATE.users||[], referenceData: STATE.referenceData||LAST_GOOD_STATE.referenceData||[]}));
+}
+function startAutoRefresh(){
+  if(AUTO_REFRESH_TIMER) clearInterval(AUTO_REFRESH_TIMER);
+  AUTO_REFRESH_TIMER = setInterval(()=>{
+    if(!USER) return;
+    loadTicketsView(ACTIVE_DATA_VIEW || 'all', 500, {silent:true, background:true});
+  }, REFRESH_INTERVAL_MS);
+}
 
 function showSync(msg){const el=document.getElementById('syncbar'); if(el){el.classList.remove('hide'); el.innerHTML='<b>'+esc(msg||'Synchronising...')+'</b> please wait';}}
 function hideSync(){const el=document.getElementById('syncbar'); if(el) el.classList.add('hide');}
@@ -182,24 +246,52 @@ async function postApi(action, data={}){
 function initDates(){const d=new Date(); const iso=d.toISOString().slice(0,10); ['ntIssue','ntDue','rtStart'].forEach(id=>{const el=document.getElementById(id); if(el) el.value=iso;});}
 function login(){document.getElementById('loginErr').textContent='Synchronising login...';postApi('login',{username:loginUser.value.trim(),password:loginPass.value.trim()}).then(u=>{USER=u;localStorage.setItem('ob_user',JSON.stringify(u));start();alert('Login successful.');}).catch(e=>loginErr.textContent=e.message);}
 function setupNow(){document.getElementById('loginErr').textContent='Repairing sheets...';postApi('setup',{}).then(()=>{loginErr.textContent='Sheets repaired. Try login again. This setup only fixes tabs/headings; heavy score repair is no longer run during setup/login.';}).catch(e=>loginErr.textContent=e.message);}
-function logout(){showSync('Synchronising logout...');localStorage.removeItem('ob_user');alert('Logout successful.');location.reload();}
+function logout(){showSync('Synchronising logout...');if(AUTO_REFRESH_TIMER) clearInterval(AUTO_REFRESH_TIMER);localStorage.removeItem('ob_user');alert('Logout successful.');location.reload();}
 function start(){document.getElementById('login').classList.add('hide');document.getElementById('app').classList.remove('hide');userPill.textContent=USER.Name+' · '+USER.Role;initDates();applyRoleVisibility();refresh();}
-function refresh(){postApi('bootstrap',{userId:USER.UserID,max:120}).then(data=>{STATE=data;fillLists();applyRoleVisibility();render();}).catch(e=>{hideSync(); alert('Bootstrap loading failed: '+(e.message||e)+'\n\nDeploy the matching FAST LAZY BULLETPROOF Apps Script as a NEW VERSION, then refresh. If it still fails, check the Apps Script error shown above.');});}
-function loadTicketsView(view, max){
+function refresh(){
+  const seq=++REQUEST_SEQ;
+  ACTIVE_DATA_VIEW='all';
+  postApi('bootstrap',{userId:USER.UserID,max:500}).then(data=>{
+    if(seq!==REQUEST_SEQ) return; // Prevent older responses from overwriting newer data.
+    keepLastGoodState(data,{allowEmpty:false});
+    fillLists();applyRoleVisibility();render();startAutoRefresh();LAST_REFRESH_AT=Date.now();
+  }).catch(e=>{
+    hideSync();
+    if((LAST_GOOD_STATE.tickets||[]).length){STATE=JSON.parse(JSON.stringify(LAST_GOOD_STATE));render();return alert('Temporary loading issue. The last stable dashboard data has been kept on screen. '+(e.message||e));}
+    alert('Bootstrap loading failed: '+(e.message||e)+'\n\nDeploy the matching FAST LAZY BULLETPROOF Apps Script as a NEW VERSION, then refresh. If it still fails, check the Apps Script error shown above.');
+  });
+}
+function loadTicketsView(view, max, opts={}){
   if(!USER) return;
-  postApi('getTicketsByView',{userId:USER.UserID,view:view||'all',max:max||300}).then(data=>{
-    STATE.tickets=data.tickets||[];
-    STATE.summary=data.summary||STATE.summary||{};
-    render();
-  }).catch(alertErr);
+  ACTIVE_DATA_VIEW=view||'all';
+  const seq=++REQUEST_SEQ;
+  const useBootstrap = !(STATE.users||[]).length && ACTIVE_DATA_VIEW==='all';
+  const action = useBootstrap ? 'bootstrap' : 'getTicketsByView';
+  const payload = useBootstrap ? {userId:USER.UserID,max:max||500} : {userId:USER.UserID,view:ACTIVE_DATA_VIEW,max:max||500};
+  return postApi(action,payload).then(data=>{
+    if(seq!==REQUEST_SEQ) return; // Ignore stale late responses.
+    if(!useBootstrap && ACTIVE_DATA_VIEW!=='all' && data && Array.isArray(data.tickets)){
+      mergeTicketsForView(ACTIVE_DATA_VIEW, data.tickets);
+      if(data.users) STATE.users = data.users;
+      if(data.referenceData) STATE.referenceData = data.referenceData;
+    }else{
+      keepLastGoodState(data,{allowEmpty:!!opts.allowEmpty});
+    }
+    if(useBootstrap || (data&&data.users)) fillLists();
+    applyRoleVisibility();render();LAST_REFRESH_AT=Date.now();startAutoRefresh();
+  }).catch(e=>{
+    hideSync();
+    if((LAST_GOOD_STATE.tickets||[]).length){STATE=JSON.parse(JSON.stringify(LAST_GOOD_STATE));render(); if(!opts.silent) alert('Temporary loading issue. The last stable dashboard data has been kept on screen. '+(e.message||e)); return;}
+    if(!opts.silent) alertErr(e);
+  });
 }
 function alertErr(e){alert(e.message||e);}
 function showTab(id){if((id==='review1'||id==='review2')&&!isReviewAllowed(id)){id='task';}showSync('Synchronising navigation...');document.querySelectorAll('.tab').forEach(b=>{const on=b.dataset.tab===id;b.classList.toggle('on',on);b.classList.toggle('active',on);});document.querySelectorAll('.section').forEach(s=>s.classList.toggle('on',s.id===id));setTimeout(hideSync,250);
-  if(id==='review1') loadTicketsView('review1',300);
-  else if(id==='review2') loadTicketsView('review2',300);
-  else if(id==='closed') loadTicketsView('closed',300);
-  else if(id==='task') loadTicketsView('task',300);
-  else if(id==='performance') loadTicketsView('all',500);
+  // Use local cache for navigation so counters do not disappear during tab changes.
+  render();
+  const view = id==='review1'?'review1':id==='review2'?'review2':id==='closed'?'closed':id==='task'?'task':id==='performance'?'all':null;
+  // Always refresh workflow baskets when opened. Keep cache visible while fresh data loads.
+  if(view) loadTicketsView(view, id==='performance'?500:300, {silent:true, background:true});
 }
 function modeChange(){const rec=document.querySelector('[name=mode]:checked').value==='recurring';document.querySelectorAll('.recOnly').forEach(e=>e.classList.toggle('hide',!rec));document.querySelectorAll('.singleOnly').forEach(e=>e.classList.toggle('hide',rec));}
 function activeUsers(){return (STATE.users||[]).filter(u=>String(u.IsActive).toUpperCase()!=='FALSE');}
@@ -283,10 +375,12 @@ function openTicketWindow(kind){
   else if(kind==='review2') showTab('review2');
   else if(kind==='closed') showTab('closed');
   else showTab('task');
-  loadTicketsView(kind==='all'?'task':kind,300);
+  render();
+  loadTicketsView(kind==='all'?'task':kind,300,{silent:true,background:true});
   const el=document.getElementById('taskRows'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
-function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=STATE.tickets||[];const sum={critical:0,openOnTime:0,e1:0,e2:0,closed:0,late:0};tickets.forEach(t=>{if(String(t.Priority)==='Critical'&&t.Status!=='Closed')sum.critical++; if(isOpenOnTime(t))sum.openOnTime++; if(t.CurrentBasket==='Executive1')sum.e1++; if(t.CurrentBasket==='Executive2')sum.e2++; if(t.Status==='Closed'||t.CurrentBasket==='Closed')sum.closed++; if(t.Status!=='Closed'&&isLate(t))sum.late++;});const srv=STATE.summary||{}; if(srv.critical!==undefined)sum.critical=srv.critical; if(srv.openOnTime!==undefined)sum.openOnTime=srv.openOnTime; if(srv.review1!==undefined)sum.e1=srv.review1; if(srv.review2!==undefined)sum.e2=srv.review2; if(srv.closed!==undefined)sum.closed=srv.closed; if(srv.late!==undefined)sum.late=srv.late;
+function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=STATE.tickets||[];const sum={critical:0,openOnTime:0,e1:0,e2:0,closed:0,late:0};tickets.forEach(t=>{if(String(t.Priority)==='Critical'&&t.Status!=='Closed')sum.critical++; if(isOpenOnTime(t))sum.openOnTime++; if(t.CurrentBasket==='Executive1')sum.e1++; if(t.CurrentBasket==='Executive2')sum.e2++; if(t.Status==='Closed'||t.CurrentBasket==='Closed')sum.closed++; if(t.Status!=='Closed'&&isLate(t))sum.late++;});// Dashboard counters are calculated from the loaded ticket cache only.
+  // This prevents flickering caused by a delayed or partial server summary.
   if(document.getElementById('stCritical'))stCritical.textContent=sum.critical; if(document.getElementById('stOpenOnTime'))stOpenOnTime.textContent=sum.openOnTime; stE1.textContent=sum.e1;stE2.textContent=sum.e2;stClosed.textContent=sum.closed;stLate.textContent=sum.late; renderDashboard(tickets,sum); buildPerfOptions(); renderPerformance();
   const filtered=filterTickets(CURRENT_FILTER).filter(t=>(t.Title+t.TicketID+t.AssignedToName+t.Department+t.CostCenter).toLowerCase().includes(s));
   taskRows.innerHTML=(`<tr><td colspan="8" class="filterTitle">Showing: ${esc(filterLabel(CURRENT_FILTER))}</td></tr>`)+ (filtered.map(rowTask).join('')||empty(8));
@@ -358,7 +452,15 @@ function esc(v){return String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt
 function createTicket(){newErr.textContent='';newMsg.textContent='';const mode=document.querySelector('[name=mode]:checked').value;const base={userId:USER.UserID,assignedToUserId:ntAssignee.value,title:ntTitle.value,description:ntDesc.value,priority:ntPriority.value,department:ntDept.value,costCenter:ntCostCenter.value};const action=mode==='recurring'?'createRecurringTicket':'createTicket';const data=mode==='recurring'?{...base,startDate:rtStart.value,frequency:rtFreq.value,dueDays:rtDueDays.value,occurrences:rtOcc.value}:{...base,issueDate:ntIssue.value,dueDate:ntDue.value};postApi(action,data).then((res)=>{const first=(res.ticket||((res.tickets||[])[0])||{}); const msg=buildNewTaskWhatsAppCopy(first.TicketID); newMsg.textContent=' Ticket created. WhatsApp message copied/opened for assignee.'; copyText(msg); const u=selectedAssignee(); const phone=cleanPhone(u.WhatsApp||u.Phone); if(phone) window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank'); ntTitle.value='';ntDesc.value='';refresh();}).catch(e=>newErr.textContent=e.message);}
 
 let DETAIL=null;
-function openTicket(id){postApi('getTicketDetail',{userId:USER.UserID,ticketId:id}).then(d=>{DETAIL=d;drawDrawer();drawer.classList.add('open');scrim.classList.add('open');}).catch(alertErr);}
+function openTicket(id){postApi('getTicketDetail',{userId:USER.UserID,ticketId:id}).then(d=>{DETAIL=d;drawDrawer();drawer.classList.add('open');scrim.classList.add('open');}).catch(e=>{
+  const cached=(STATE.tickets||[]).find(t=>String(t.TicketID)===String(id));
+  if(cached && (cached.CurrentBasket==='Executive2'||cached.CurrentBasket==='Executive1'||isMineAsCreator(cached)||isMineAsAssignee(cached)||isExecutiveUser())){
+    DETAIL={ticket:cached,attachments:[],comments:[{UserName:'System',Role:'Notice',CreatedAt:new Date().toISOString(),Comment:'Ticket detail could not be loaded from Apps Script, but the cached ticket is available. You can still attempt the authorised workflow action.'}],timeRequests:[]};
+    drawDrawer();drawer.classList.add('open');scrim.classList.add('open');
+    return;
+  }
+  alertErr(e);
+});}
 function closeDrawer(){drawer.classList.remove('open');scrim.classList.remove('open');}
 function drawDrawer(){const t=DETAIL.ticket;dRef.textContent=t.TicketID;dStatus.outerHTML=`<span id="dStatus" class="status ${t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'?'s-review':'s-open'}">${esc(t.Status)}</span>`;dBody.innerHTML=`<h2>${esc(t.Title)}</h2><p class="muted">${esc(t.Description||'No description')}</p><div class="kv"><div><small>Created by</small><b>${esc(t.CreatedByName)}</b></div><div><small>Assigned to</small><b>${esc(t.AssignedToName)}</b></div><div><small>Assignee Email</small><b>${esc(t.AssignedToEmail||'')}</b></div><div><small>Assignee WhatsApp</small><b>${esc(t.AssignedToWhatsApp||'')}</b></div><div><small>Department</small><b>${esc(t.Department||'')}</b></div><div><small>Cost Center</small><b>${esc(t.CostCenter||'')}</b></div><div><small>Due Date</small><b>${fmt(t.DueDate)}</b></div><div><small>Submission Date</small><b>${fmt(t.SubmittedAt)}</b></div><div><small>Time lapse</small><b>${esc(t.TimeRemainingText)}</b></div><div><small>System Score</small><b>${score(t.SystemScore)}</b></div><div><small>Final Score</small><b>${finalScore(computedFinalNumber(t))}</b></div><div><small>Executive1</small><b>${score(t.Executive1Score)} ${esc(t.Executive1Name||'')}</b></div><div><small>Executive2</small><b>${score(t.Executive2Score)} ${esc(t.Executive2Name||'')}</b></div></div><div class="copybar"><button class="btn" onclick="copyTicketWhatsApp()">Copy Task to WhatsApp</button><button class="btn good" onclick="openTicketWhatsApp()">Open WhatsApp to Assignee</button></div><h3>Attachments</h3>${(DETAIL.attachments.map(a=>`<div class="fileline"><a target="_blank" href="${a.DriveUrl}">${esc(a.FileName)}</a></div>`).join('') + linkListFromUploadAttachment(t.UploadAttachment)) || '<p class="muted">No attachments.</p>'}<div class="f"><label>Upload Attachment / File</label><input type="file" id="fileUp"><button class="btn" onclick="uploadFile()">Upload File</button></div><h3>Comments</h3><div class="comments">${DETAIL.comments.map(c=>`<div class="comment"><div class="meta">${esc(c.UserName)} · ${esc(c.Role)} · ${fmt(c.CreatedAt)}</div>${esc(c.Comment)}${c.DriveUrl?`<div class="fileline"><a target="_blank" href="${c.DriveUrl}">${esc(c.FileName||'View upload')}</a></div>`:''}</div>`).join('')||'<p class="muted">No comments.</p>'}</div><div class="f"><label>Add Comment</label><textarea id="commentTxt"></textarea><button class="btn" onclick="addComment()">Post Comment</button></div><h3>More Time Requests</h3><div class="comments">${(DETAIL.timeRequests||[]).map(r=>`<div class="comment"><div class="meta">${esc(r.RequestedByName)} · ${fmt(r.CreatedAt)} · ${esc(r.Status)}</div>Requested date: <b>${esc(r.RequestedDueDate)}</b><br>${esc(r.Reason||'')}</div>`).join('')||'<p class="muted">No time extension requests.</p>'}</div>`;drawActions(t);}
 function hasPendingTimeRequest(){return (DETAIL.timeRequests||[]).some(r=>String(r.Status||'').indexOf('Approved')<0 && String(r.Status||'').indexOf('Rejected')<0);}
@@ -409,14 +511,17 @@ async function submitTicket(){
   const f=document.getElementById('fileUp')?.files?.[0];
   try{
     if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID, commentTxt?.value||'');
-    await postApi('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''});
+    const moved = await postApi('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''});
+    const serverTicket = moved && (moved.ticket || moved.updatedTicket);
+    updateTicketInCache(DETAIL.ticket.TicketID, serverTicket || {CurrentBasket:'Executive1',Status:'Submitted',SubmittedAt:new Date().toISOString()});
     alert('Ticket submitted successfully. It has moved to Executive1 Review and disappeared from the assignee open basket.');
     closeDrawer();
-    loadTicketsView('task',300);
+    // Refresh the Executive1 basket immediately so the original ticket flow is visible without waiting for auto-refresh.
+    loadTicketsView(isReviewAllowed('review1')?'review1':'all',500,{silent:true,background:true});
   }catch(e){alertErr(e);}
 }
-function approve1(){postApi('executive1Approve',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,score:scoreIn.value,comment:scoreComment.value}).then(()=>{alert('Executive1 approval successful. Ticket moved to Executive2 and disappeared from Executive1 Review.');closeDrawer();loadTicketsView('review1',300);}).catch(alertErr)}
-function approve2(){postApi('executive2Approve',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,score:scoreIn.value,comment:scoreComment.value}).then(()=>{alert('Executive2 approval successful. Ticket is permanently closed and removed from Executive2 Review.');closeDrawer();loadTicketsView('review2',300);}).catch(alertErr)}
+function approve1(){const ticketId=DETAIL.ticket.TicketID;postApi('executive1Approve',{userId:USER.UserID,ticketId:ticketId,score:scoreIn.value,comment:scoreComment.value}).then(()=>{updateTicketInCache(ticketId,{CurrentBasket:'Executive2',Executive1Score:scoreIn.value,Executive1Name:USER.Name,Status:'Submitted'});alert('Executive1 approval successful. Ticket moved to Executive2 and disappeared from Executive1 Review.');closeDrawer();loadTicketsView('all',500,{silent:true,background:true});}).catch(alertErr)}
+function approve2(){const ticketId=DETAIL.ticket.TicketID;postApi('executive2Approve',{userId:USER.UserID,ticketId:ticketId,score:scoreIn.value,comment:scoreComment.value}).then(()=>{updateTicketInCache(ticketId,{CurrentBasket:'Closed',Status:'Closed',Executive2Score:scoreIn.value,Executive2Name:USER.Name,ClosedAt:new Date().toISOString(),ClosedTiming:DETAIL.ticket.ClosedTiming||DETAIL.ticket.TimeRemainingText||''});alert('Executive2 approval successful. Ticket is permanently closed and removed from Executive2 Review.');closeDrawer();CURRENT_FILTER='closed';showTab('closed');loadTicketsView('all',500,{silent:true,background:true});}).catch(alertErr)}
 function uploadFile(){
   const f=fileUp.files[0];
   if(!f) return alert('Choose a file first.');
