@@ -161,30 +161,6 @@ function updateTicketInCache(ticketId, patch){
   LAST_GOOD_STATE.tickets = apply(LAST_GOOD_STATE.tickets);
   render();
 }
-
-function mergeTicketsForView(view, incoming){
-  if(!Array.isArray(incoming)) return;
-  const current = Array.isArray(STATE.tickets) ? STATE.tickets.slice() : [];
-  const incomingIds = new Set(incoming.map(t => String(t.TicketID||'')));
-  const byId = new Map(current.map(t => [String(t.TicketID||''), t]));
-  incoming.forEach(t => byId.set(String(t.TicketID||''), {...(byId.get(String(t.TicketID||''))||{}), ...t}));
-
-  // When a basket-specific view is refreshed, remove stale tickets from that basket.
-  // This restores the original flow: approved/submitted tickets disappear from the old basket immediately.
-  const basketByView = {review1:'Executive1', review2:'Executive2', closed:'Closed'};
-  const basket = basketByView[view];
-  let merged = Array.from(byId.values());
-  if(basket){
-    merged = merged.filter(t => {
-      const id = String(t.TicketID||'');
-      if(incomingIds.has(id)) return true;
-      if(view==='closed') return !(t.Status==='Closed' || t.CurrentBasket==='Closed');
-      return String(t.CurrentBasket||'') !== basket;
-    });
-  }
-  STATE.tickets = merged;
-  LAST_GOOD_STATE = JSON.parse(JSON.stringify({...LAST_GOOD_STATE, tickets: merged, users: STATE.users||LAST_GOOD_STATE.users||[], referenceData: STATE.referenceData||LAST_GOOD_STATE.referenceData||[]}));
-}
 function startAutoRefresh(){
   if(AUTO_REFRESH_TIMER) clearInterval(AUTO_REFRESH_TIMER);
   AUTO_REFRESH_TIMER = setInterval(()=>{
@@ -270,13 +246,7 @@ function loadTicketsView(view, max, opts={}){
   const payload = useBootstrap ? {userId:USER.UserID,max:max||500} : {userId:USER.UserID,view:ACTIVE_DATA_VIEW,max:max||500};
   return postApi(action,payload).then(data=>{
     if(seq!==REQUEST_SEQ) return; // Ignore stale late responses.
-    if(!useBootstrap && ACTIVE_DATA_VIEW!=='all' && data && Array.isArray(data.tickets)){
-      mergeTicketsForView(ACTIVE_DATA_VIEW, data.tickets);
-      if(data.users) STATE.users = data.users;
-      if(data.referenceData) STATE.referenceData = data.referenceData;
-    }else{
-      keepLastGoodState(data,{allowEmpty:!!opts.allowEmpty});
-    }
+    keepLastGoodState(data,{allowEmpty:!!opts.allowEmpty});
     if(useBootstrap || (data&&data.users)) fillLists();
     applyRoleVisibility();render();LAST_REFRESH_AT=Date.now();startAutoRefresh();
   }).catch(e=>{
@@ -290,8 +260,7 @@ function showTab(id){if((id==='review1'||id==='review2')&&!isReviewAllowed(id)){
   // Use local cache for navigation so counters do not disappear during tab changes.
   render();
   const view = id==='review1'?'review1':id==='review2'?'review2':id==='closed'?'closed':id==='task'?'task':id==='performance'?'all':null;
-  // Always refresh workflow baskets when opened. Keep cache visible while fresh data loads.
-  if(view) loadTicketsView(view, id==='performance'?500:300, {silent:true, background:true});
+  if(view && (Date.now()-LAST_REFRESH_AT>REFRESH_INTERVAL_MS)) loadTicketsView(view, id==='performance'?500:300, {silent:true, background:true});
 }
 function modeChange(){const rec=document.querySelector('[name=mode]:checked').value==='recurring';document.querySelectorAll('.recOnly').forEach(e=>e.classList.toggle('hide',!rec));document.querySelectorAll('.singleOnly').forEach(e=>e.classList.toggle('hide',rec));}
 function activeUsers(){return (STATE.users||[]).filter(u=>String(u.IsActive).toUpperCase()!=='FALSE');}
@@ -376,7 +345,7 @@ function openTicketWindow(kind){
   else if(kind==='closed') showTab('closed');
   else showTab('task');
   render();
-  loadTicketsView(kind==='all'?'task':kind,300,{silent:true,background:true});
+  if(Date.now()-LAST_REFRESH_AT>REFRESH_INTERVAL_MS) loadTicketsView(kind==='all'?'task':kind,300,{silent:true,background:true});
   const el=document.getElementById('taskRows'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=STATE.tickets||[];const sum={critical:0,openOnTime:0,e1:0,e2:0,closed:0,late:0};tickets.forEach(t=>{if(String(t.Priority)==='Critical'&&t.Status!=='Closed')sum.critical++; if(isOpenOnTime(t))sum.openOnTime++; if(t.CurrentBasket==='Executive1')sum.e1++; if(t.CurrentBasket==='Executive2')sum.e2++; if(t.Status==='Closed'||t.CurrentBasket==='Closed')sum.closed++; if(t.Status!=='Closed'&&isLate(t))sum.late++;});// Dashboard counters are calculated from the loaded ticket cache only.
@@ -511,13 +480,11 @@ async function submitTicket(){
   const f=document.getElementById('fileUp')?.files?.[0];
   try{
     if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID, commentTxt?.value||'');
-    const moved = await postApi('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''});
-    const serverTicket = moved && (moved.ticket || moved.updatedTicket);
-    updateTicketInCache(DETAIL.ticket.TicketID, serverTicket || {CurrentBasket:'Executive1',Status:'Submitted',SubmittedAt:new Date().toISOString()});
+    await postApi('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''});
+    updateTicketInCache(DETAIL.ticket.TicketID,{CurrentBasket:'Executive1',Status:'Submitted',SubmittedAt:new Date().toISOString()});
     alert('Ticket submitted successfully. It has moved to Executive1 Review and disappeared from the assignee open basket.');
     closeDrawer();
-    // Refresh the Executive1 basket immediately so the original ticket flow is visible without waiting for auto-refresh.
-    loadTicketsView(isReviewAllowed('review1')?'review1':'all',500,{silent:true,background:true});
+    loadTicketsView('all',500,{silent:true,background:true});
   }catch(e){alertErr(e);}
 }
 function approve1(){const ticketId=DETAIL.ticket.TicketID;postApi('executive1Approve',{userId:USER.UserID,ticketId:ticketId,score:scoreIn.value,comment:scoreComment.value}).then(()=>{updateTicketInCache(ticketId,{CurrentBasket:'Executive2',Executive1Score:scoreIn.value,Executive1Name:USER.Name,Status:'Submitted'});alert('Executive1 approval successful. Ticket moved to Executive2 and disappeared from Executive1 Review.');closeDrawer();loadTicketsView('all',500,{silent:true,background:true});}).catch(alertErr)}
