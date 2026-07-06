@@ -398,6 +398,8 @@
     .row-actions .btn-sm-upload { background: var(--gold); color: #071f47; }
     .row-actions .btn-sm-upload:hover { filter: brightness(1.1); }
     .row-actions .btn-sm-delete { background: #ef4444; color: white; }
+    .row-actions .btn-sm-stolen { background: #f97316; color: white; }
+    .row-actions .btn-sm-sold { background: #16a34a; color: white; }
 
     .regbook-link {
       font-size: 10px;
@@ -468,6 +470,13 @@
     <div class="stat-card" data-filter="Projects &amp; Tender"><i class="fas fa-briefcase"></i><div class="count" id="cntProjects">0</div><div class="label">Projects &amp; Tender</div><span class="filter-badge">click</span></div>
   </div>
 
+  <div class="dashboard-grid" id="executiveSummaryCards">
+    <div class="stat-card" data-special-filter="all-active"><i class="fas fa-coins"></i><div class="count" id="totalAssetValue">R 0.00</div><div class="label">Total Vehicle & Equipment Value</div><div class="sub">Active NBV / Value</div></div>
+    <div class="stat-card" data-special-filter="all-active"><i class="fas fa-chart-line"></i><div class="count" id="totalDepreciation">R 0.00</div><div class="label">Total Depreciation To Date</div><div class="sub">Accumulated DPN</div></div>
+    <div class="stat-card" data-special-filter="Stolen"><i class="fas fa-exclamation-triangle"></i><div class="count" id="cntStolen">0</div><div class="label">Stolen Vehicles / Equipment</div><div class="sub" id="valStolen">R 0.00</div><span class="filter-badge">click</span></div>
+    <div class="stat-card" data-special-filter="Sold"><i class="fas fa-hand-holding-usd"></i><div class="count" id="cntSold">0</div><div class="label">Sold Vehicles / Equipment</div><div class="sub" id="valSold">R 0.00</div><span class="filter-badge">click</span></div>
+  </div>
+
   <!-- ACTION ROW -->
   <div class="action-row">
     <div class="btn-group">
@@ -527,10 +536,15 @@
         <div class="form-group"><label>Value</label><input type="number" id="value"></div>
         <div class="form-group"><label>Vehicle Reg Book Upload</label><input type="file" id="vehicleRegBookFile" accept="image/*,application/pdf,.doc,.docx"></div>
         <div class="form-group"><label>Tracking Certificate Upload</label><input type="file" id="trackingCertificateFile" accept="image/*,application/pdf,.doc,.docx"></div>
+        <div class="form-group"><label>Upload up to 5 Images</label><input type="file" id="imageFiles" accept="image/*" multiple><small style="color:var(--muted);margin-top:6px;">Maximum 5 images. Links post to Google Sheet.</small></div>
         <input type="hidden" id="rowNumber">
         <input type="hidden" id="vehicleRegBookLink">
         <input type="hidden" id="trackingCertificateLink">
         <input type="hidden" id="regBookLink">
+        <input type="hidden" id="imageLinks">
+        <input type="hidden" id="assetStatus">
+        <input type="hidden" id="statusDate">
+        <input type="hidden" id="soldValue">
       </div>
       <div class="form-actions">
         <button type="submit" id="saveBtn">Save Asset</button>
@@ -550,7 +564,7 @@
     <table id="assetTable">
       <thead><tr>
         <th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th>
-        <th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th>
+        <th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th><th>Images</th><th>Status</th><th>Status Date</th><th>Sold Value</th>
         <th class="action-col">Actions</th>
       </tr></thead>
       <tbody></tbody>
@@ -573,7 +587,8 @@
     "zoho","location","driverOperator",
     "allocationDept","registeredEntity","coveredBy","trackingCompany","installmentAmount",
     "lastInstallmentDate","eTagToll","notes","regBoo","usefulLife","recharge",
-    "monthlyDpn","year","monthsDpn","accumDpn","nbv","oustandingVaf","value"
+    "monthlyDpn","year","monthsDpn","accumDpn","nbv","oustandingVaf","value",
+    "imageLinks","assetStatus","statusDate","soldValue"
   ];
 
   const FIELD_ALIASES = {
@@ -613,7 +628,11 @@
     oustandingVaf: ["oustandingVaf","Outstanding VAF","Outstanding Vaf"],
     value: ["value","Value"],
     vehicleRegBookLink: ["vehicleRegBookLink","Vehicle Reg Book","Vehicle Reg Book Link","regBookLink"],
-    trackingCertificateLink: ["trackingCertificateLink","Tracking Certificate","Tracking Certificate Link"]
+    trackingCertificateLink: ["trackingCertificateLink","Tracking Certificate","Tracking Certificate Link"],
+    imageLinks: ["imageLinks", "Image Links", "Images", "Asset Images"],
+    assetStatus: ["assetStatus", "Asset Status", "Status"],
+    statusDate: ["statusDate", "Status Date"],
+    soldValue: ["soldValue", "Sold Value"]
   };
 
   let mainAssets = [];
@@ -636,6 +655,44 @@
       if (!isNaN(d)) return d.toISOString().split('T')[0];
     }
     return v;
+  }
+
+
+
+  const CURRENCY_FIELDS = new Set(["cost","marketValue","installmentAmount","recharge","monthlyDpn","accumDpn","nbv","oustandingVaf","value","soldValue"]);
+
+  function toNumber(v) {
+    if (v === undefined || v === null || v === "") return 0;
+    const n = Number(String(v).replace(/[^0-9.\-]/g, ""));
+    return isNaN(n) ? 0 : n;
+  }
+
+  function money(v) {
+    return "R " + toNumber(v).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function applyDepreciationToData(data) {
+    const cost = toNumber(data.cost);
+    const usefulLife = toNumber(data.usefulLife);
+    const monthsDpn = toNumber(data.monthsDpn);
+    const monthlyDpn = toNumber(data.monthlyDpn) || (usefulLife > 0 ? cost / usefulLife : 0);
+    const accumDpn = Math.min(cost, monthlyDpn * monthsDpn);
+    const nbv = Math.max(0, cost - accumDpn);
+    data.monthlyDpn = monthlyDpn;
+    data.accumDpn = accumDpn;
+    data.nbv = nbv;
+    data.value = nbv;
+    return data;
+  }
+
+  function linkListCell(links, label) {
+    const parts = String(links || "").split(/\s*\|\s*/).filter(Boolean).slice(0, 5);
+    if (!parts.length) return `<span style="color:#aaa;">—</span>`;
+    return parts.map((link, i) => `<div class="regbook-link"><a href="${link}" target="_blank"><i class="fas fa-image"></i> ${label || 'Image'} ${i + 1}</a></div>`).join("");
+  }
+
+  function calcAssetValue(row) {
+    return toNumber(getField(row, "value")) || toNumber(getField(row, "nbv")) || toNumber(getField(row, "marketValue")) || toNumber(getField(row, "cost"));
   }
 
   function isEquipmentFilter(filter) {
@@ -667,6 +724,11 @@
       reader.onerror = () => reject(new Error("Could not read file: " + file.name));
       reader.readAsDataURL(file);
     });
+  }
+
+  async function filesToPayloads(fileList, maxFiles = 5) {
+    const files = Array.from(fileList || []).slice(0, maxFiles);
+    return Promise.all(files.map(fileToPayload));
   }
 
   function linkCell(link, label) {
@@ -722,9 +784,23 @@
     document.getElementById("cntAdmin").textContent = counts['Admin'];
     document.getElementById("cntProjects").textContent = counts['Projects & Tender'];
 
-    document.querySelectorAll('.stat-card').forEach(card => {
+    const activeRows = allAssets.filter(a => String(getField(a, "assetStatus") || "Active").toLowerCase() !== "sold" && String(getField(a, "assetStatus") || "Active").toLowerCase() !== "stolen");
+    const stolenRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "stolen");
+    const soldRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "sold");
+    document.getElementById("totalAssetValue").textContent = money(activeRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
+    document.getElementById("totalDepreciation").textContent = money(activeRows.reduce((sum, a) => sum + toNumber(getField(a, "accumDpn")), 0));
+    document.getElementById("cntStolen").textContent = stolenRows.length;
+    document.getElementById("valStolen").textContent = money(stolenRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
+    document.getElementById("cntSold").textContent = soldRows.length;
+    document.getElementById("valSold").textContent = money(soldRows.reduce((sum, a) => sum + (toNumber(getField(a, "soldValue")) || calcAssetValue(a)), 0));
+
+    document.querySelectorAll('.stat-card[data-filter]').forEach(card => {
       const filter = card.dataset.filter;
       card.onclick = () => applyFilter(filter);
+    });
+    document.querySelectorAll('.stat-card[data-special-filter]').forEach(card => {
+      const status = card.dataset.specialFilter;
+      card.onclick = () => applyStatusFilter(status);
     });
   }
 
@@ -735,6 +811,16 @@
 
     const source = isEquipmentFilter(filter) ? equipmentAssets : mainAssets;
     renderTable(source, filter);
+  }
+
+  function applyStatusFilter(status) {
+    currentFilter = status;
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('filter-active', c.dataset.specialFilter === status));
+    document.getElementById('filterIndicator').textContent = status === 'all-active' ? 'Filter: Active Assets' : `Filter: ${status}`;
+    const rows = status === 'all-active'
+      ? allAssets.filter(a => !['sold','stolen'].includes(String(getField(a, "assetStatus") || "Active").toLowerCase()))
+      : allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === status.toLowerCase());
+    renderTable(rows);
   }
 
   function clearFilter() {
@@ -760,10 +846,10 @@
 
     rows.forEach(function(data){
       const row = document.createElement("tr");
-      const displayFields = FIELD_IDS.filter(id => id !== "licenced" && id !== "typeOfLicence" && id !== "validityOfLicence");
+      const displayFields = FIELD_IDS.filter(id => !["licenced","typeOfLicence","validityOfLicence","imageLinks","assetStatus","statusDate","soldValue"].includes(id));
       displayFields.forEach(field => {
         const td = document.createElement("td");
-        td.textContent = valueOrBlank(getField(data, field));
+        td.textContent = CURRENCY_FIELDS.has(field) ? money(getField(data, field)) : valueOrBlank(getField(data, field));
         row.appendChild(td);
       });
 
@@ -774,6 +860,16 @@
       const trackingTd = document.createElement("td");
       trackingTd.innerHTML = linkCell(getField(data, "trackingCertificateLink"), "View Tracking");
       row.appendChild(trackingTd);
+
+      const imagesTd = document.createElement("td");
+      imagesTd.innerHTML = linkListCell(getField(data, "imageLinks"), "Image");
+      row.appendChild(imagesTd);
+
+      ["assetStatus", "statusDate", "soldValue"].forEach(field => {
+        const td = document.createElement("td");
+        td.textContent = field === "soldValue" ? money(getField(data, field)) : valueOrBlank(getField(data, field) || (field === "assetStatus" ? "Active" : ""));
+        row.appendChild(td);
+      });
 
       const actionCell = document.createElement("td");
       actionCell.className = "action-col";
@@ -794,6 +890,10 @@
         document.getElementById("vehicleRegBookLink").value = getField(data, "vehicleRegBookLink") || "";
         document.getElementById("trackingCertificateLink").value = getField(data, "trackingCertificateLink") || "";
         document.getElementById("regBookLink").value = data.regBookLink || "";
+        document.getElementById("imageLinks").value = getField(data, "imageLinks") || "";
+        document.getElementById("assetStatus").value = getField(data, "assetStatus") || "Active";
+        document.getElementById("statusDate").value = getField(data, "statusDate") || "";
+        document.getElementById("soldValue").value = getField(data, "soldValue") || "";
         document.getElementById("saveBtn").textContent = "Update Asset";
         document.getElementById("entrySection").classList.remove("hidden");
         window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
@@ -845,6 +945,35 @@
       const uploadRegBtn = makeUploadButton("Vehicle Reg Book", "Vehicle Reg Book", "vehicleRegBookLink");
       const uploadTrackingBtn = makeUploadButton("Tracking Certificate", "Tracking Certificate", "trackingCertificateLink");
 
+      function makeStatusButton(status) {
+        const btn = document.createElement("button");
+        btn.className = status === "Sold" ? "btn-sm-sold" : "btn-sm-stolen";
+        btn.innerHTML = status === "Sold" ? '<i class="fas fa-dollar-sign"></i>' : '<i class="fas fa-exclamation-triangle"></i>';
+        btn.title = "Move to " + status + " window";
+        btn.addEventListener("click", function(e) {
+          e.stopPropagation();
+          let soldValue = "";
+          if (status === "Sold") soldValue = prompt("Enter sold value", calcAssetValue(data));
+          if (status === "Sold" && soldValue === null) return;
+          if (!confirm("Move this asset to " + status + " window?")) return;
+          apiPost({
+            action: "moveAssetStatus",
+            rowNumber: data.rowNumber,
+            assetStatus: status,
+            soldValue,
+            sheetId: SHEET_ID,
+            sheetName: data._sheetName || sheetForAsset(data)
+          }).then(res => {
+            if (res.status === "success") { showStatus("✅ " + res.message); loadAssets(); }
+            else showStatus("❌ Status update failed: " + res.message, true);
+          }).catch(err => showStatus("❌ Status update error: " + err.message, true));
+        });
+        return btn;
+      }
+
+      const stolenBtn = makeStatusButton("Stolen");
+      const soldBtn = makeStatusButton("Sold");
+
       const delBtn = document.createElement("button");
       delBtn.className = "btn-sm-delete";
       delBtn.innerHTML = '<i class="fas fa-trash"></i>';
@@ -870,6 +999,8 @@
       actionDiv.appendChild(editBtn);
       actionDiv.appendChild(uploadRegBtn);
       actionDiv.appendChild(uploadTrackingBtn);
+      actionDiv.appendChild(stolenBtn);
+      actionDiv.appendChild(soldBtn);
       actionDiv.appendChild(delBtn);
       actionCell.appendChild(actionDiv);
       row.appendChild(actionCell);
@@ -902,8 +1033,16 @@
       allAssets = [...mainAssets, ...equipmentAssets];
 
       updateDashboard();
+      const initialRows = allAssets.slice(0, 120);
       if (currentFilter) applyFilter(currentFilter);
-      else renderTable(allAssets);
+      else {
+        renderTable(initialRows);
+        if (allAssets.length > initialRows.length) {
+          const renderFull = () => renderTable(allAssets);
+          if ("requestIdleCallback" in window) requestIdleCallback(renderFull, { timeout: 1500 });
+          else setTimeout(renderFull, 250);
+        }
+      }
 
       const failures = results.filter(r => r.status === "rejected").map(r => r.reason.message).join("; ");
       if (failures) showStatus("⚠️ Loaded with warning: " + failures, true);
@@ -929,11 +1068,13 @@
     data.sheetId = SHEET_ID;
     data.sheetName = sheetForAsset(data);
     data.folderId = DRIVE_FOLDER_ID;
+    applyDepreciationToData(data);
 
     try {
       showStatus("Saving asset and documents...");
       data.vehicleRegBookFile = await fileToPayload(document.getElementById("vehicleRegBookFile").files[0]);
       data.trackingCertificateFile = await fileToPayload(document.getElementById("trackingCertificateFile").files[0]);
+      data.imageFiles = await filesToPayloads(document.getElementById("imageFiles").files, 5);
       const response = await apiPost(data);
       if (response.status !== "success") throw new Error(response.message || "Save failed");
       showStatus(rowNum ? "✅ Asset Updated Successfully" : "✅ Asset Saved Successfully");
@@ -1005,12 +1146,16 @@
     if (currentFilter) {
       rows = (isEquipmentFilter(currentFilter) ? equipmentAssets : mainAssets).filter(a => String(getField(a, "assetClass")).toLowerCase().includes(currentFilter.toLowerCase()));
     }
-    const displayFields = FIELD_IDS.filter(id => id !== "licenced" && id !== "typeOfLicence" && id !== "validityOfLicence");
-    const headers = [...displayFields, "vehicleRegBookLink", "trackingCertificateLink"];
+    const displayFields = FIELD_IDS.filter(id => !["licenced","typeOfLicence","validityOfLicence","imageLinks","assetStatus","statusDate","soldValue"].includes(id));
+    const headers = [...displayFields, "vehicleRegBookLink", "trackingCertificateLink", "imageLinks", "assetStatus", "statusDate", "soldValue"];
     const csvRows = [headers, ...rows.map(row => {
       const vals = displayFields.map(id => valueOrBlank(getField(row, id)));
       vals.push(getField(row, "vehicleRegBookLink"));
       vals.push(getField(row, "trackingCertificateLink"));
+      vals.push(getField(row, "imageLinks"));
+      vals.push(getField(row, "assetStatus"));
+      vals.push(getField(row, "statusDate"));
+      vals.push(getField(row, "soldValue"));
       return vals;
     })];
     const csv = csvRows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -1023,7 +1168,48 @@
     URL.revokeObjectURL(url);
   });
 
-  document.addEventListener("DOMContentLoaded", loadAssets);
+
+
+  function setupOtherDropdowns() {
+    document.querySelectorAll('select').forEach(sel => {
+      if (![...sel.options].some(o => o.value === "Other" || o.textContent === "Other")) {
+        const opt = document.createElement("option");
+        opt.value = "Other";
+        opt.textContent = "Other";
+        sel.appendChild(opt);
+      }
+      sel.addEventListener("change", function() {
+        if (this.value !== "Other") return;
+        const custom = prompt("Enter other value");
+        if (!custom) { this.value = ""; return; }
+        const opt = document.createElement("option");
+        opt.value = custom; opt.textContent = custom; opt.selected = true;
+        this.appendChild(opt);
+      });
+    });
+  }
+
+  function setupDepreciationFields() {
+    ["cost", "usefulLife", "monthlyDpn", "monthsDpn"].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("input", () => {
+        const data = {};
+        FIELD_IDS.forEach(fid => { const f = document.getElementById(fid); if (f) data[fid] = f.value; });
+        applyDepreciationToData(data);
+        ["monthlyDpn", "accumDpn", "nbv", "value"].forEach(fid => {
+          const f = document.getElementById(fid);
+          if (f && data[fid] !== undefined) f.value = Number(data[fid]).toFixed(2);
+        });
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setupOtherDropdowns();
+    setupDepreciationFields();
+    loadAssets();
+  });
 </script>
 </body>
 </html>
