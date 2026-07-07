@@ -211,6 +211,60 @@
       background: #4b5563;
     }
 
+
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .summary-card {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border-left: 5px solid #2563eb;
+    }
+
+    .summary-card h3 {
+      margin: 0;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .summary-card p {
+      margin: 8px 0 0;
+      font-size: 28px;
+      font-weight: bold;
+      color: #111827;
+    }
+
+    .summary-card.red-card { border-left-color: #dc2626; }
+    .summary-card.orange-card { border-left-color: #f97316; }
+    .summary-card.green-card { border-left-color: #16a34a; }
+
+    .view-link {
+      color: #2563eb;
+      font-weight: bold;
+      text-decoration: underline;
+      display: inline-block;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+
+    .transactions-scroll {
+      overflow-x: auto;
+      max-height: 560px;
+    }
+
+    .transactions-scroll table th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
     /* table action cell: right-aligned, compact */
     .action-cell {
       text-align: right;
@@ -237,6 +291,35 @@
     <div class="header">
       <h1>Licence Dashboard</h1>
       <p>Distinct licence data entry and expiry monitoring</p>
+    </div>
+
+
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h3>Total No of Drivers</h3>
+        <p id="totalDriversBox">0</p>
+      </div>
+      <div class="summary-card green-card">
+        <h3>Total Other Licence</h3>
+        <p id="totalOtherLicenceBox">0</p>
+      </div>
+      <div class="summary-card red-card">
+        <h3>Total Expired</h3>
+        <p id="totalExpiredBox">0</p>
+      </div>
+      <div class="summary-card">
+        <h3>Total Aqua Drivers</h3>
+        <p id="totalAquaDriversBox">0</p>
+      </div>
+      <div class="summary-card orange-card">
+        <h3>Total Distinct</h3>
+        <p id="totalDistinctBox">0</p>
+      </div>
+      <div class="summary-card">
+        <h3>Total Onpoint</h3>
+        <p id="totalOnpointBox">0</p>
+      </div>
     </div>
 
     <div class="status-grid">
@@ -396,7 +479,7 @@
     
     <div class="form-card" style="margin-top:20px;">
       <h2>All Licence Transactions</h2>
-      <div style="overflow-x:auto;">
+      <div class="transactions-scroll">
         <table style="width:100%; border-collapse:collapse; font-size:14px;">
           <thead>
             <tr style="background:#111827; color:white;">
@@ -438,8 +521,7 @@
     let searchLicenceRecords = [];
 
     document.addEventListener('DOMContentLoaded', function() {
-      loadStatus();
-      loadTransactions();
+      loadDashboard();
 
       document.getElementById('searchBtn').addEventListener('click', searchPerson);
       document.getElementById('searchInput').addEventListener('keydown', function(e) {
@@ -490,8 +572,7 @@
             e.target.reset();
             e.target.countryOfIssue.value = 'South Africa';
             e.target.company.value = 'Distinct';
-            loadStatus();
-            loadTransactions();
+            loadDashboard();
           }
         })
         .catch(function(error) {
@@ -503,53 +584,84 @@
         });
     });
 
+    function loadDashboard() {
+      fetch(SCRIPT_URL + '?action=dashboard&cacheBust=' + Date.now())
+        .then(parseJsonResponse)
+        .then(function(response) {
+          if (!response || response.success === false) {
+            throw new Error((response && response.message) || 'Could not load dashboard.');
+          }
+
+          renderCounts(response.counts || {});
+          renderStatus(normalizeStatusResponse(response.status || response));
+          renderLicenceTransactions(normalizeLicenceList(response.records || response.data || []));
+        })
+        .catch(function(error) {
+          document.getElementById('aboutToExpireBox').innerHTML = '<div class="empty">Could not load status.</div>';
+          document.getElementById('expiredBox').innerHTML = '<div class="empty">Could not load status.</div>';
+          document.getElementById('transactionsBody').innerHTML =
+            '<tr><td colspan="15" style="padding:12px; text-align:center;">Could not load dashboard: ' + escapeHtml((error && error.message) || 'Server error') + '</td></tr>';
+        });
+    }
+
+    function renderCounts(counts) {
+      counts = counts || {};
+      document.getElementById('totalDriversBox').textContent = Number(counts.totalDrivers || 0);
+      document.getElementById('totalOtherLicenceBox').textContent = Number(counts.totalOtherLicence || 0);
+      document.getElementById('totalExpiredBox').textContent = Number(counts.totalExpired || 0);
+      document.getElementById('totalAquaDriversBox').textContent = Number(counts.totalAquaDrivers || 0);
+      document.getElementById('totalDistinctBox').textContent = Number(counts.totalDistinct || 0);
+      document.getElementById('totalOnpointBox').textContent = Number(counts.totalOnpoint || 0);
+    }
+
     function loadTransactions() {
       callServer('searchLicences', '')
         .then(function(response) {
-          const body = document.getElementById('transactionsBody');
-          const results = normalizeLicenceList(response);
-
-          if (!results || results.length === 0) {
-            transactionLicenceRecords = [];
-            body.innerHTML = '<tr><td colspan="15" style="padding:12px; text-align:center;">No transactions found on the Licence tab.</td></tr>';
-            return;
-          }
-
-          transactionLicenceRecords = results;
-          body.innerHTML = results.map(function(p, index) {
-            const licenceLink = p.licenceFileLink
-              ? '<a href="' + escapeAttr(p.licenceFileLink) + '" target="_blank">View Licence</a>'
-              : '';
-
-            const actions = getRecordKey(p)
-              ? '<button class="action-btn edit-btn" type="button" onclick="startEdit(\'transactions\', ' + index + ')">Edit</button>' +
-                '<button class="action-btn delete-btn" type="button" onclick="deleteLicenceRecord(\'transactions\', ' + index + ')">Delete</button>'
-              : '<span class="empty">No row ID</span>';
-
-            return '<tr>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.name) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.surname) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.licenceNumber) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.countryOfIssue) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.company) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.department) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.licenceType) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.validity) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.firstIssue) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.vehicleRestrictions) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.otherLicence) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + licenceLink + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.fleetCardPolicyIssuedSigned) + '</td>' +
-              '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.fleetPolicyIssuedSigned) + '</td>' +
-              '<td class="action-cell">' + actions + '</td>' +
-            '</tr>';
-          }).join('');
+          renderLicenceTransactions(normalizeLicenceList(response));
         })
         .catch(function(error) {
           document.getElementById('transactionsBody').innerHTML =
             '<tr><td colspan="15" style="padding:12px; text-align:center;">Could not load transactions: ' + escapeHtml((error && error.message) || 'Server error') + '</td></tr>';
         });
     }
+
+    function renderLicenceTransactions(results) {
+      const body = document.getElementById('transactionsBody');
+
+      if (!results || results.length === 0) {
+        transactionLicenceRecords = [];
+        body.innerHTML = '<tr><td colspan="15" style="padding:12px; text-align:center;">No transactions found on the Licence tab.</td></tr>';
+        return;
+      }
+
+      transactionLicenceRecords = results;
+      body.innerHTML = results.map(function(p, index) {
+        const licenceLink = makeLicenceLinks(p);
+        const actions = getRecordKey(p)
+          ? '<button class="action-btn edit-btn" type="button" onclick="startEdit(\'transactions\', ' + index + ')">Edit</button>' +
+            '<button class="action-btn delete-btn" type="button" onclick="deleteLicenceRecord(\'transactions\', ' + index + ')">Delete</button>'
+          : '<span class="empty">No row ID</span>';
+
+        return '<tr>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.name) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.surname) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.licenceNumber) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.countryOfIssue) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.company) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.department) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.licenceType) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.validity) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.firstIssue) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.vehicleRestrictions) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.otherLicence) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + licenceLink + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.fleetCardPolicyIssuedSigned) + '</td>' +
+          '<td style="padding:10px; border:1px solid #e5e7eb;">' + escapeHtml(p.fleetPolicyIssuedSigned) + '</td>' +
+          '<td class="action-cell">' + actions + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
 
     function loadStatus() {
       callServer('getLicenceStatus')
@@ -769,8 +881,7 @@
           }
           showMessage(result.message || 'Deleted successfully.', 'success');
           cancelEdit(false);
-          loadStatus();
-          loadTransactions();
+          loadDashboard();
         })
         .catch(function(error) {
           showMessage((error && error.message) || 'Could not delete record.', 'error');
@@ -785,6 +896,24 @@
       const date = new Date(text);
       if (isNaN(date.getTime())) return '';
       return date.toISOString().slice(0, 10);
+    }
+
+
+    function makeLicenceLinks(record) {
+      const links = [];
+      if (record && Array.isArray(record.licenceLinks)) {
+        record.licenceLinks.forEach(function(link) { if (link) links.push(link); });
+      }
+      if (record && record.licenceFileLink) {
+        String(record.licenceFileLink).split(/[\n,; ]+/).forEach(function(link) {
+          if (link && link.indexOf('http') === 0) links.push(link);
+        });
+      }
+      const unique = links.filter(function(link, index, arr) { return arr.indexOf(link) === index; });
+      if (!unique.length) return '';
+      return unique.map(function(link, index) {
+        return '<a class="view-link" href="' + escapeAttr(link) + '" target="_blank">View Licence ' + (index + 1) + '</a>';
+      }).join('');
     }
 
     function renderSearchResults(results) {
@@ -816,7 +945,7 @@
           'First Issue: ' + escapeHtml(p.firstIssue) + '<br>' +
           'Vehicle Restrictions: ' + escapeHtml(p.vehicleRestrictions) + '<br>' +
           'Other Licence: ' + escapeHtml(p.otherLicence) + '<br>' +
-          'Licence Link: ' + (p.licenceFileLink ? '<a href="' + escapeAttr(p.licenceFileLink) + '" target="_blank">View Licence</a>' : '') + '<br>' +
+          'Licence Link: ' + makeLicenceLinks(p) + '<br>' +
           'Fleet Card Policy: ' + escapeHtml(p.fleetCardPolicyIssuedSigned) + '<br>' +
           'Fleet Policy: ' + escapeHtml(p.fleetPolicyIssuedSigned) + '<br>' +
           actions +
