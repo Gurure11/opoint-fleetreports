@@ -262,6 +262,13 @@
       </div>
 
       <div>
+        <label for="projectFilter">Project</label>
+        <select id="projectFilter">
+          <option value="">All Projects</option>
+        </select>
+      </div>
+
+      <div>
         <label for="handoverTypeFilter">Handover Type</label>
         <select id="handoverTypeFilter">
           <option value="">All Types</option>
@@ -292,6 +299,11 @@
       <div class="card">
         <h3>Unique Vehicles</h3>
         <p id="uniqueVehicles">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Unique Projects</h3>
+        <p id="uniqueProjects">0</p>
       </div>
 
       <div class="card">
@@ -327,6 +339,11 @@
       </div>
 
       <div class="chart-box">
+        <h3>Hand Overs by Project</h3>
+        <canvas id="projectChart"></canvas>
+      </div>
+
+      <div class="chart-box">
         <h3>Monthly Hand Overs</h3>
         <canvas id="monthlyChart"></canvas>
       </div>
@@ -359,7 +376,7 @@
       Example:
       const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
     */
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbxWJDWWiliBxx3ExDSj_G08HddCazmDdRLOu4gSndxUlZ59g8yA_qibQCGbjKhuin/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFJVSCI-sOWvzXEu0oZ0H68fyaFZqusqDCijrkqjnKRiAiwMhNR_QpcJA6c9y3BMee/exec";
 
     let handoverData = [];
     let filteredData = [];
@@ -367,6 +384,7 @@
     let departmentChart;
     let typeChart;
     let vehicleChart;
+    let projectChart;
     let monthlyChart;
 
     const headings = [
@@ -389,8 +407,80 @@
       "Damage Location",
       "Additional Notes",
       "Photo Links",
-      "Folder ID"
+      "Folder ID",
+      "SubmissionID",
+      "SubmissionTimestamp",
+      "EmployeeName",
+      "EmployeeNumber",
+      "CellNumber",
+      "VehicleReg",
+      "VehicleModel",
+      "ServiceDue",
+      "HandoverType",
+      "FuelLevel",
+      "Checklist",
+      "AbnormalityDescription",
+      "DamageLocation",
+      "HandoverDate",
+      "HandoverTime",
+      "AdditionalNotes",
+      "PhotoLinks",
+      "Photo1Label",
+      "Photo1URL",
+      "Photo1FileID",
+      "Photo2Label",
+      "Photo2URL",
+      "Photo2FileID",
+      "Photo3Label",
+      "Photo3URL",
+      "Photo3FileID",
+      "Photo4Label",
+      "Photo4URL",
+      "Photo4FileID",
+      "Photo5Label",
+      "Photo5URL",
+      "Photo5FileID",
+      "Project"
     ];
+
+    const PHOTO_URL_FIELDS = ["Photo1URL", "Photo2URL", "Photo3URL", "Photo4URL", "Photo5URL"];
+    const PHOTO_LABEL_FIELDS = ["Photo1Label", "Photo2Label", "Photo3Label", "Photo4Label", "Photo5Label"];
+
+    function getFirst(row, fields) {
+      for (const field of fields) {
+        const value = row[field];
+        if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+      }
+      return "";
+    }
+
+    function rowDateValue(row) {
+      return getFirst(row, ["Date", "HandoverDate"]);
+    }
+
+    function rowEmployeeValue(row) {
+      return getFirst(row, ["Employee Name", "EmployeeName"]);
+    }
+
+    function rowVehicleValue(row) {
+      return getFirst(row, ["Vehicle Registration", "VehicleReg"]);
+    }
+
+    function rowHandoverTypeValue(row) {
+      return getFirst(row, ["Handover Type", "HandoverType"]);
+    }
+
+    function rowServiceDueValue(row) {
+      return getFirst(row, ["Service Due", "ServiceDue"]);
+    }
+
+    function rowDamageDescriptionValue(row) {
+      return getFirst(row, ["Damage Description", "AbnormalityDescription"]);
+    }
+
+    function rowDamageLocationValue(row) {
+      return getFirst(row, ["Damage Location", "DamageLocation"]);
+    }
 
     function loadData() {
       if (!SCRIPT_URL || SCRIPT_URL.includes("REPLACE_WITH_YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL")) {
@@ -480,12 +570,12 @@
     }
 
     function hasDamage(row) {
-      return Boolean(String(row["Damage Description"] || "").trim())
-        || Boolean(String(row["Damage Location"] || "").trim());
+      return Boolean(String(rowDamageDescriptionValue(row) || "").trim())
+        || Boolean(String(rowDamageLocationValue(row) || "").trim());
     }
 
     function isServiceDue(row) {
-      const value = String(row["Service Due"] || "").trim().toLowerCase();
+      const value = String(rowServiceDueValue(row) || "").trim().toLowerCase();
       return value === "yes"
         || value === "due"
         || value === "true"
@@ -494,9 +584,10 @@
 
     function populateFilters() {
       populateSelect("departmentFilter", "Department", "All Departments");
-      populateSelect("employeeFilter", "Employee Name", "All Employees");
-      populateSelect("vehicleFilter", "Vehicle Registration", "All Vehicles");
-      populateSelect("handoverTypeFilter", "Handover Type", "All Types");
+      populateSelectFromGetter("employeeFilter", rowEmployeeValue, "All Employees");
+      populateSelectFromGetter("vehicleFilter", rowVehicleValue, "All Vehicles");
+      populateSelect("projectFilter", "Project", "All Projects");
+      populateSelectFromGetter("handoverTypeFilter", rowHandoverTypeValue, "All Types");
     }
 
     function populateSelect(selectId, field, defaultLabel) {
@@ -518,10 +609,30 @@
       });
     }
 
+    function populateSelectFromGetter(selectId, getter, defaultLabel) {
+      const select = document.getElementById(selectId);
+      select.innerHTML = "";
+
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = defaultLabel;
+      select.appendChild(defaultOption);
+
+      const values = [...new Set(handoverData.map(row => getter(row)).filter(Boolean))].sort();
+
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    }
+
     function attachFilterEvents() {
       document.getElementById("departmentFilter").addEventListener("change", applyFilters);
       document.getElementById("employeeFilter").addEventListener("change", applyFilters);
       document.getElementById("vehicleFilter").addEventListener("change", applyFilters);
+      document.getElementById("projectFilter").addEventListener("change", applyFilters);
       document.getElementById("handoverTypeFilter").addEventListener("change", applyFilters);
       document.getElementById("fromDate").addEventListener("change", applyFilters);
       document.getElementById("toDate").addEventListener("change", applyFilters);
@@ -531,6 +642,7 @@
       const department = document.getElementById("departmentFilter").value;
       const employee = document.getElementById("employeeFilter").value;
       const vehicle = document.getElementById("vehicleFilter").value;
+      const project = document.getElementById("projectFilter").value;
       const handoverType = document.getElementById("handoverTypeFilter").value;
       const fromDate = document.getElementById("fromDate").value ? new Date(document.getElementById("fromDate").value) : null;
       const toDate = document.getElementById("toDate").value ? new Date(document.getElementById("toDate").value) : null;
@@ -540,12 +652,13 @@
       }
 
       filteredData = handoverData.filter(row => {
-        const rowDate = normalizeDate(row["Date"]);
+        const rowDate = normalizeDate(rowDateValue(row));
 
         return (!department || row["Department"] === department)
-          && (!employee || row["Employee Name"] === employee)
-          && (!vehicle || row["Vehicle Registration"] === vehicle)
-          && (!handoverType || row["Handover Type"] === handoverType)
+          && (!employee || rowEmployeeValue(row) === employee)
+          && (!vehicle || rowVehicleValue(row) === vehicle)
+          && (!project || row["Project"] === project)
+          && (!handoverType || rowHandoverTypeValue(row) === handoverType)
           && (!fromDate || (rowDate && rowDate >= fromDate))
           && (!toDate || (rowDate && rowDate <= toDate));
       });
@@ -557,6 +670,7 @@
       document.getElementById("departmentFilter").value = "";
       document.getElementById("employeeFilter").value = "";
       document.getElementById("vehicleFilter").value = "";
+      document.getElementById("projectFilter").value = "";
       document.getElementById("handoverTypeFilter").value = "";
       document.getElementById("fromDate").value = "";
       document.getElementById("toDate").value = "";
@@ -572,13 +686,15 @@
     }
 
     function renderCards() {
-      const vehicles = new Set(filteredData.map(row => row["Vehicle Registration"]).filter(Boolean));
-      const employees = new Set(filteredData.map(row => row["Employee Name"]).filter(Boolean));
+      const vehicles = new Set(filteredData.map(row => rowVehicleValue(row)).filter(Boolean));
+      const projects = new Set(filteredData.map(row => row["Project"]).filter(Boolean));
+      const employees = new Set(filteredData.map(row => rowEmployeeValue(row)).filter(Boolean));
       const damageRows = filteredData.filter(hasDamage);
       const serviceDueRows = filteredData.filter(isServiceDue);
 
       document.getElementById("totalHandovers").textContent = filteredData.length;
       document.getElementById("uniqueVehicles").textContent = vehicles.size;
+      document.getElementById("uniqueProjects").textContent = projects.size;
       document.getElementById("uniqueEmployees").textContent = employees.size;
       document.getElementById("damageCount").textContent = damageRows.length;
       document.getElementById("serviceDueCount").textContent = serviceDueRows.length;
@@ -595,11 +711,22 @@
       return grouped;
     }
 
+    function groupCountByGetter(data, getter) {
+      const grouped = {};
+
+      data.forEach(row => {
+        const label = getter(row) || "Unknown";
+        grouped[label] = (grouped[label] || 0) + 1;
+      });
+
+      return grouped;
+    }
+
     function groupByMonth(data) {
       const grouped = {};
 
       data.forEach(row => {
-        const date = normalizeDate(row["Date"]);
+        const date = normalizeDate(rowDateValue(row));
         if (!date) return;
 
         const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -627,7 +754,7 @@
         typeChart,
         "typeChart",
         "pie",
-        groupCount(filteredData, "Handover Type"),
+        groupCountByGetter(filteredData, rowHandoverTypeValue),
         "Hand Overs"
       );
 
@@ -635,7 +762,15 @@
         vehicleChart,
         "vehicleChart",
         "bar",
-        groupCount(filteredData, "Vehicle Registration"),
+        groupCountByGetter(filteredData, rowVehicleValue),
+        "Hand Overs"
+      );
+
+      projectChart = drawChart(
+        projectChart,
+        "projectChart",
+        "bar",
+        groupCount(filteredData, "Project"),
         "Hand Overs"
       );
 
@@ -696,7 +831,7 @@
         .filter(link => link.startsWith("http"));
     }
 
-    function makePhotoLinks(value) {
+    function makePhotoLinks(value, labelPrefix = "View Photo") {
       const links = splitPhotoLinks(value);
 
       if (!links.length) {
@@ -704,9 +839,32 @@
       }
 
       return links.map((link, index) => {
-        const safeLink = escapeHtml(link);
-        return `<a class="photo-link" onclick="openPhotoModal('${encodeURIComponent(link)}')">View Photo ${index + 1}</a>`;
+        return `<a class="photo-link" onclick="openPhotoModal('${encodeURIComponent(link)}')">${escapeHtml(labelPrefix)} ${index + 1}</a>`;
       }).join("");
+    }
+
+    function makeSinglePhotoLink(url, label) {
+      if (!url || !String(url).trim().startsWith("http")) return "";
+      const cleanLabel = label || "View Photo";
+      return `<a class="photo-link" onclick="openPhotoModal('${encodeURIComponent(url)}')">${escapeHtml(cleanLabel)}</a>`;
+    }
+
+    function makeAllRowPhotoLinks(row) {
+      const parts = [];
+
+      const oldLinks = makePhotoLinks(row["Photo Links"], "Old Photo");
+      if (oldLinks) parts.push(oldLinks);
+
+      const newLinks = makePhotoLinks(row["PhotoLinks"], "PhotoLinks Photo");
+      if (newLinks) parts.push(newLinks);
+
+      PHOTO_URL_FIELDS.forEach((urlField, index) => {
+        const label = row[PHOTO_LABEL_FIELDS[index]] || `Photo ${index + 1}`;
+        const link = makeSinglePhotoLink(row[urlField], label);
+        if (link) parts.push(link);
+      });
+
+      return parts.join("<br>");
     }
 
     function openPhotoModal(encodedUrl) {
@@ -767,7 +925,17 @@
         <tr>
           ${headings.map(heading => {
             if (heading === "Photo Links") {
-              return `<td>${makePhotoLinks(row[heading])}</td>`;
+              return `<td>${makeAllRowPhotoLinks(row)}</td>`;
+            }
+
+            if (heading === "PhotoLinks") {
+              return `<td>${makePhotoLinks(row[heading], "PhotoLinks Photo")}</td>`;
+            }
+
+            if (PHOTO_URL_FIELDS.includes(heading)) {
+              const index = PHOTO_URL_FIELDS.indexOf(heading);
+              const label = row[PHOTO_LABEL_FIELDS[index]] || `View ${heading.replace("URL", "")}`;
+              return `<td>${makeSinglePhotoLink(row[heading], label)}</td>`;
             }
 
             return `<td>${escapeHtml(row[heading])}</td>`;
