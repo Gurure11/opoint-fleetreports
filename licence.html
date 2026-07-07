@@ -453,6 +453,7 @@
             <label>Upload Licence</label>
             <input id="licenceUpload" name="licenceUpload" type="file" accept="image/*,.pdf" capture="environment">
             <div class="file-note">Uploads to Google Drive and saves a clickable link in the Licence sheet tab.</div>
+            <div id="currentLicenceFileBox" class="file-note" style="display:none; margin-top:8px;"></div>
           </div>
 
           <div>
@@ -514,7 +515,7 @@
       Replace this with your deployed Apps Script Web App URL after pasting the fixed Apps Script code.
       Example: https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
     */
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJx1fkf68F9Uxw-t29t0Gu9uS3mTLZU08HJ9lJHW7KY_1Tgk9J9K8BeD8BB5hVjYYXkw/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwscVZAodrB-UGBPzakpXbcyPJyNbkBQd9YVhnfHfvwBV61PGcAMrFUyeQkKiqe2JOsOw/exec';
     let editingRowNumber = null;
     let editingExistingLicenceFileLink = '';
     let transactionLicenceRecords = [];
@@ -572,6 +573,8 @@
             e.target.reset();
             e.target.countryOfIssue.value = 'South Africa';
             e.target.company.value = 'Distinct';
+            const currentBox = document.getElementById('currentLicenceFileBox');
+            if (currentBox) { currentBox.style.display = 'none'; currentBox.innerHTML = ''; }
             loadDashboard();
           }
         })
@@ -823,11 +826,11 @@
 
     function renderStatus(data) {
       data = data || { aboutToExpire: [], expired: [] };
-      renderPeople('aboutToExpireBox', data.aboutToExpire, 'No licences about to expire.');
-      renderPeople('expiredBox', data.expired, 'No expired licences.');
+      renderPeople('aboutToExpireBox', data.aboutToExpire, 'No licences about to expire.', true);
+      renderPeople('expiredBox', data.expired, 'No expired licences.', false);
     }
 
-    function renderPeople(elementId, people, emptyText) {
+    function renderPeople(elementId, people, emptyText, limitAboutToExpire) {
       const box = document.getElementById(elementId);
 
       if (!people || people.length === 0) {
@@ -835,7 +838,10 @@
         return;
       }
 
-      box.innerHTML = people.map(function(p) {
+      const list = limitAboutToExpire ? people.slice(0, 5) : people;
+      const extraCount = limitAboutToExpire && people.length > 5 ? people.length - 5 : 0;
+
+      box.innerHTML = list.map(function(p) {
         return '<div class="person">' +
           '<strong>' + escapeHtml(p.name) + ' ' + escapeHtml(p.surname) + '</strong><br>' +
           'Licence: ' + escapeHtml(p.licenceNumber) + '<br>' +
@@ -845,7 +851,19 @@
           'Validity: ' + escapeHtml(p.validity) + '<br>' +
           'Days remaining: ' + escapeHtml(String(p.daysRemaining)) +
         '</div>';
-      }).join('');
+      }).join('') +
+      (extraCount ? '<button type="button" style="width:auto; margin-top:10px;" onclick="showAllAboutToExpire()">View more (' + extraCount + ' more)</button>' : '');
+    }
+
+    function showAllAboutToExpire() {
+      callServer('getLicenceStatus')
+        .then(function(response) {
+          const data = normalizeStatusResponse(response);
+          renderPeople('aboutToExpireBox', data.aboutToExpire, 'No licences about to expire.', false);
+        })
+        .catch(function() {
+          document.getElementById('aboutToExpireBox').innerHTML = '<div class="empty">Could not open full about-to-expire list.</div>';
+        });
     }
 
     function getRecordKey(record) {
@@ -868,6 +886,16 @@
 
       editingRowNumber = rowNumber;
       editingExistingLicenceFileLink = record.licenceFileLink || '';
+      const currentBox = document.getElementById('currentLicenceFileBox');
+      if (currentBox) {
+        if (editingExistingLicenceFileLink) {
+          currentBox.innerHTML = 'Current licence file: <a href="' + escapeAttr(editingExistingLicenceFileLink) + '" target="_blank">View current file</a><br>Leave upload blank to keep this file, or choose a new file to replace it.';
+          currentBox.style.display = 'block';
+        } else {
+          currentBox.innerHTML = 'No current licence file saved. Choose a file to upload one.';
+          currentBox.style.display = 'block';
+        }
+      }
       form.name.value = record.name || '';
       form.surname.value = record.surname || '';
       form.licenceNumber.value = record.licenceNumber || '';
@@ -893,6 +921,8 @@
       editingExistingLicenceFileLink = '';
       document.getElementById('submitBtn').textContent = 'Save Licence';
       document.getElementById('cancelEditBtn').style.display = 'none';
+      const currentBox = document.getElementById('currentLicenceFileBox');
+      if (currentBox) { currentBox.style.display = 'none'; currentBox.innerHTML = ''; }
       if (showNotice !== false) {
         document.getElementById('licenceForm').reset();
         document.getElementById('licenceForm').countryOfIssue.value = 'South Africa';
