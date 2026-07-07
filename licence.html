@@ -585,8 +585,7 @@
     });
 
     function loadDashboard() {
-      fetch(SCRIPT_URL + '?action=dashboard&cacheBust=' + Date.now())
-        .then(parseJsonResponse)
+      jsonpGet('dashboard', { cacheBust: Date.now() })
         .then(function(response) {
           if (!response || response.success === false) {
             throw new Error((response && response.message) || 'Could not load dashboard.');
@@ -594,13 +593,13 @@
 
           renderCounts(response.counts || {});
           renderStatus(normalizeStatusResponse(response.status || response));
-          renderLicenceTransactions(normalizeLicenceList(response.records || response.data || []));
+          renderLicenceTransactions(normalizeLicenceList(response.records || response.data || response.transactions || []));
         })
         .catch(function(error) {
           document.getElementById('aboutToExpireBox').innerHTML = '<div class="empty">Could not load status.</div>';
           document.getElementById('expiredBox').innerHTML = '<div class="empty">Could not load status.</div>';
           document.getElementById('transactionsBody').innerHTML =
-            '<tr><td colspan="15" style="padding:12px; text-align:center;">Could not load dashboard: ' + escapeHtml((error && error.message) || 'Server error') + '</td></tr>';
+            '<tr><td colspan="15" style="padding:12px; text-align:center;">Could not load dashboard: ' + escapeHtml((error && error.message) || 'Server error') + '<br>Open the Apps Script URL directly with ?action=health to test deployment.</td></tr>';
         });
     }
 
@@ -694,6 +693,47 @@
         });
     }
 
+    function jsonpGet(action, params) {
+      params = params || {};
+      return new Promise(function(resolve, reject) {
+        if (!SCRIPT_URL || SCRIPT_URL.indexOf('/exec') === -1) {
+          reject(new Error('SCRIPT_URL must be the deployed Apps Script Web App URL ending in /exec.'));
+          return;
+        }
+
+        const callbackName = 'licenceDashCb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        const script = document.createElement('script');
+        const query = Object.keys(params).map(function(key) {
+          return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+        }).join('&');
+        const url = SCRIPT_URL + '?action=' + encodeURIComponent(action) + '&callback=' + encodeURIComponent(callbackName) + (query ? '&' + query : '');
+
+        const timer = setTimeout(function() {
+          cleanup();
+          reject(new Error('Apps Script JSONP connection timed out. Check Web App access: Execute as Me, Anyone with the link, and deploy a New version.'));
+        }, 30000);
+
+        function cleanup() {
+          clearTimeout(timer);
+          try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+          try { script.remove(); } catch (e) {}
+        }
+
+        window[callbackName] = function(response) {
+          cleanup();
+          resolve(response);
+        };
+
+        script.onerror = function() {
+          cleanup();
+          reject(new Error('Could not connect to Apps Script. Confirm the deployment URL and access permissions.'));
+        };
+
+        script.src = url;
+        document.body.appendChild(script);
+      });
+    }
+
     function callServer(functionName, payload) {
       if (window.google && google.script && google.script.run) {
         return new Promise(function(resolve, reject) {
@@ -710,11 +750,11 @@
       }
 
       if (functionName === 'getLicenceStatus') {
-        return fetch(SCRIPT_URL + '?action=status').then(parseJsonResponse);
+        return jsonpGet('status', { cacheBust: Date.now() });
       }
 
       if (functionName === 'searchLicences') {
-        return fetch(SCRIPT_URL + '?action=search&query=' + encodeURIComponent(payload)).then(parseJsonResponse);
+        return jsonpGet('search', { query: payload || '', cacheBust: Date.now() });
       }
 
       if (functionName === 'submitLicence' || functionName === 'updateLicence' || functionName === 'deleteLicence') {
