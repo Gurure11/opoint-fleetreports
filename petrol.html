@@ -237,6 +237,43 @@
       border-radius: 8px;
     }
 
+
+    .row-action-button {
+      padding: 7px 10px;
+      border: none;
+      border-radius: 7px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      width: auto;
+      white-space: nowrap;
+      margin-right: 6px;
+    }
+
+    .row-action-button.save {
+      background: #16a34a;
+    }
+
+    .row-action-button.cancel {
+      background: #6b7280;
+    }
+
+    .row-action-button:hover {
+      filter: brightness(0.95);
+    }
+
+    .row-edit-input {
+      min-width: 120px;
+      padding: 7px;
+      border: 1px solid #94a3b8;
+      border-radius: 6px;
+    }
+
+    tr.editing td {
+      background: #eff6ff;
+    }
+
     .loading {
       padding: 15px;
       background: white;
@@ -375,10 +412,11 @@
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbx1jFKri8ZPYfl2xiJ4UVKOw5o0z47GwioMqzdp1epTec5BU6nWI3jM0TgKpoYQk3Sf/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwNC3MBg2r_dprYRuoEL7o7I0TsjCNZZHkZLuH5PJT3ldQt_gt_WpftFHna2-rQbPwCBg/exec";
 
     let fuelData = [];
     let filteredData = [];
+    let editingRowKey = null;
 
     let departmentChart;
     let costCenterChart;
@@ -386,13 +424,14 @@
     let vehicleChart;
     let monthlyChart;
 
-    // Headings include "Project Name" (added after Notes, before KM Traveled)
+    // Exact Fuel Log Google Sheet headings. Do not change order.
     const headings = [
       "Timestamp", "Date", "Driver", "Vehicle", "ER Number", "Merchant",
       "Odo Start", "Odo Finish", "Fuel Type", "Price/L", "Liters",
       "Fuel Total", "Lubrication", "Lube Cost", "Tolls", "Toll Total",
-      "Grand Total", "Cost Center", "Department", "Notes", 
-      "Project Name", "KM Traveled", "KM/Liter", "Submission ID", "Status", "Photo Link"
+      "Grand Total", "Cost Center", "Department", "Notes", "KM Traveled",
+      "KM/Liter", "Submission ID", "Status", "Photo Link", "ER No.",
+      "Final Odo reading", "Price/L (R)", "Project Name"
     ];
 
     function loadData() {
@@ -463,6 +502,53 @@
       errorBox.style.display = "block";
     }
 
+
+    function apiRequest(action, payload) {
+      return new Promise((resolve, reject) => {
+        const callbackName = "fuelApi_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+        const script = document.createElement("script");
+        let completed = false;
+
+        window[callbackName] = function(response) {
+          completed = true;
+          try {
+            if (response && response.error) {
+              reject(new Error(response.message || "Apps Script request failed."));
+            } else {
+              resolve(response);
+            }
+          } finally {
+            delete window[callbackName];
+            script.remove();
+          }
+        };
+
+        const requestPayload = encodeURIComponent(JSON.stringify(payload || {}));
+        script.src = API_URL
+          + "?callback=" + encodeURIComponent(callbackName)
+          + "&action=" + encodeURIComponent(action)
+          + "&payload=" + requestPayload
+          + "&cacheBust=" + Date.now();
+
+        script.onerror = function() {
+          completed = true;
+          delete window[callbackName];
+          script.remove();
+          reject(new Error("Failed to connect to Apps Script."));
+        };
+
+        document.body.appendChild(script);
+
+        setTimeout(function() {
+          if (!completed) {
+            delete window[callbackName];
+            script.remove();
+            reject(new Error("Apps Script request timed out."));
+          }
+        }, 20000);
+      });
+    }
+
     function toNumber(value) {
       if (value === null || value === undefined || value === "") return 0;
       return Number(String(value).replace(/[R,\s]/g, "")) || 0;
@@ -491,7 +577,7 @@
     }
 
     function getVehicleLabel(row) {
-      return row["ER Number"] || row["Vehicle"] || "Unknown";
+      return row["ER Number"] || row["ER No."] || row["Vehicle"] || "Unknown";
     }
 
     function populateFilters() {
@@ -799,6 +885,43 @@
       }).join(" ");
     }
 
+    function getRowKey(row, index) {
+      return String(row._rowNumber || row.__rowNumber || row["_rowNumber"] || row["Row Number"] || index);
+    }
+
+    function renderCell(row, heading, rowKey, isEditing) {
+      const value = row[heading] ?? "";
+
+      if (isEditing) {
+        return `<td><input class="row-edit-input" data-row-key="${escapeHtml(rowKey)}" data-field="${escapeHtml(heading)}" value="${escapeHtml(value)}"></td>`;
+      }
+
+      if (heading === "Submission ID" && row["Submission ID"]) {
+        return `<td>${renderPhotoButtons(row["Submission ID"])}</td>`;
+      }
+
+      if (heading === "Photo Link") {
+        if (isEditing) {
+          return `<td><input class="row-edit-input" data-row-key="${escapeHtml(rowKey)}" data-field="${escapeHtml(heading)}" value="${escapeHtml(value)}"></td>`;
+        }
+        const buttons = renderPhotoButtons(row[heading]);
+        return `<td>${buttons || escapeHtml(row[heading])}</td>`;
+      }
+
+      return `<td>${escapeHtml(value)}</td>`;
+    }
+
+    function renderRowActions(rowKey, isEditing) {
+      if (isEditing) {
+        return `
+          <button class="row-action-button save" type="button" onclick="saveFuelRow('${escapeHtml(rowKey)}')">Save</button>
+          <button class="row-action-button cancel" type="button" onclick="cancelEditFuelRow()">Cancel</button>
+        `;
+      }
+
+      return `<button class="row-action-button" type="button" onclick="editFuelRow('${escapeHtml(rowKey)}')">Edit</button>`;
+    }
+
     function renderTable() {
       const tableHead = document.getElementById("tableHead");
       const tableBody = document.getElementById("tableBody");
@@ -806,24 +929,67 @@
       tableHead.innerHTML = `
         <tr>
           ${headings.map(h => `<th>${escapeHtml(h)}</th>`).join("")}
+          <th>Action</th>
         </tr>
       `;
 
-      tableBody.innerHTML = filteredData.map(row => `
-        <tr>
-          ${headings.map(h => {
-            if (h === "Submission ID" && row["Submission ID"]) {
-              return `<td>${renderPhotoButtons(row["Submission ID"])}</td>`;
-            }
+      tableBody.innerHTML = filteredData.map((row, index) => {
+        const rowKey = getRowKey(row, index);
+        const isEditing = editingRowKey === rowKey;
 
-            if (h === "Photo Link") {
-              return `<td>${escapeHtml(row[h])}</td>`;
-            }
+        return `
+          <tr class="${isEditing ? "editing" : ""}">
+            ${headings.map(h => renderCell(row, h, rowKey, isEditing)).join("")}
+            <td>${renderRowActions(rowKey, isEditing)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
 
-            return `<td>${escapeHtml(row[h])}</td>`;
-          }).join("")}
-        </tr>
-      `).join("");
+    function editFuelRow(rowKey) {
+      editingRowKey = String(rowKey);
+      renderTable();
+    }
+
+    function cancelEditFuelRow() {
+      editingRowKey = null;
+      renderTable();
+    }
+
+    function findRowByKey(rowKey) {
+      return fuelData.find((row, index) => getRowKey(row, index) === String(rowKey));
+    }
+
+    function saveFuelRow(rowKey) {
+      const row = findRowByKey(rowKey);
+      if (!row) {
+        alert("Could not find this row in the loaded data. Please refresh and try again.");
+        return;
+      }
+
+      const inputs = document.querySelectorAll(`.row-edit-input[data-row-key="${CSS.escape(String(rowKey))}"]`);
+      const updated = {};
+
+      inputs.forEach(input => {
+        updated[input.getAttribute("data-field")] = input.value;
+      });
+
+      const rowNumber = row._rowNumber || row.__rowNumber || row["_rowNumber"] || row["Row Number"];
+      if (!rowNumber) {
+        alert("This row cannot be saved because the Apps Script did not return _rowNumber. Use the matching Apps Script supplied with this HTML.");
+        return;
+      }
+
+      apiRequest("updateFuelRow", { rowNumber, values: updated })
+        .then(response => {
+          Object.assign(row, updated);
+          editingRowKey = null;
+          applyFilters();
+          alert((response && response.message) || "Row saved to Google Sheet.");
+        })
+        .catch(error => {
+          alert("Could not save row: " + (error.message || error));
+        });
     }
 
     loadData();
