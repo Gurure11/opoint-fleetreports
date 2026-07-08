@@ -893,6 +893,7 @@
                             <th>Defect</th>
                             <th>Action</th>
                             <th>Next Service</th>
+                            <th>Est. Service Date</th>
                             <th>Technician</th>
                             <th>Completion Date</th>
                             <th>Breakdown #</th>
@@ -903,7 +904,7 @@
                     </thead>
                     <tbody id="tableBody">
                         <tr>
-                            <td colspan="14" style="text-align: center; padding: 40px;">
+                            <td colspan="15" style="text-align: center; padding: 40px;">
                                 <i class="fas fa-spinner fa-spin" style="font-size: 2em; color: var(--secondary-color);"></i>
                                 <br>Loading data from Google Sheets...
                             </td>
@@ -916,7 +917,7 @@
         <!-- Service Due Alerts Section -->
         <section class="dashboard">
             <h2><i class="fas fa-bell"></i> Automated Service Detection</h2>
-            <p class="section-note">Latest odometer readings are matched by registration number against the next service kilometer value. Email alerts are sent to fleet@onpointontime.co.za.</p>
+            <p class="section-note">Latest odometer readings and the estimated next service date are matched by registration number. Vehicles due within 14 days or due by kilometers update this Service Due window.</p>
             <div class="search-filter">
                 <button onclick="runServiceCheck()" class="btn-primary" style="background: var(--accent-color);">
                     <i class="fas fa-sync"></i> Check Service Due Now
@@ -933,13 +934,14 @@
                             <th>Vehicle</th>
                             <th>Current KM</th>
                             <th>Next Service KM</th>
+                            <th>Est. Service Date</th>
                             <th>Status</th>
-                            <th>Last Fuel Log</th>
-                            <th>Email Alert</th>
+                            <th>Last Update</th>
+                            <th>Alert</th>
                         </tr>
                     </thead>
                     <tbody id="serviceDueBody">
-                        <tr><td colspan="7" style="text-align:center; padding:30px;">Click refresh to load service due vehicles.</td></tr>
+                        <tr><td colspan="8" style="text-align:center; padding:30px;">Click refresh to load service due vehicles.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1144,6 +1146,12 @@
                     </div>
 
                     <div class="form-group">
+                        <label><i class="fas fa-calendar-day"></i> Estimated Date of Next Service</label>
+                        <input type="date" id="estimatedNextServiceDate">
+                        <small style="color: #666; margin-top: 5px;">Used to update the Service Due dashboard window as the date approaches</small>
+                    </div>
+
+                    <div class="form-group">
                         <label><i class="fas fa-chart-line"></i> Total Cost (Manual Entry)</label>
                         <input type="number" id="totalCost" value="0" min="0" step="0.01" placeholder="0.00" style="font-weight: bold;">
                     </div>
@@ -1181,7 +1189,7 @@
         // =============================================
         // FIXED: Corrected Apps Script URL format - needs to be the EXEC URL, not the edit URL
         // Please replace YOUR_SCRIPT_ID with your actual Apps Script deployment ID
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP5v0qYcn16hcP_UECJwFL2rRehTipJmOlAuXEIOHylfWb-WKWPpyZiHVKgQo6quw/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxY9tuToxwMhh1SyBvyF7qRA63qYJ9a_WRBVtMd6iSaUdQTRoWWxmM0pCX51yldLfjx/exec';
         
         // Google Sheets Configuration
         const SHEET_CONFIG = {
@@ -1379,6 +1387,7 @@
             'Technician',
             'Completion Date',
             'Reminder Date',
+            'Estimated Next Service Date',
             'Total Cost',
             'Breakdown Count',
             'Current Fuel KM',
@@ -1443,7 +1452,7 @@
                         // Show fallback message but don't break the UI
                         document.getElementById('tableBody').innerHTML = `
                             <tr>
-                                <td colspan="14" style="text-align: center; padding: 35px; color:#e74c3c;">
+                                <td colspan="15" style="text-align: center; padding: 35px; color:#e74c3c;">
                                     <strong>⚠️ Cannot connect to Google Sheets</strong><br><br>
                                     Click the "Test Connection" button above for troubleshooting help.<br>
                                     Once connected, data will load automatically.
@@ -1472,7 +1481,7 @@
 
             document.getElementById('tableBody').innerHTML = `
                 <tr>
-                    <td colspan="14" style="text-align: center; padding: 40px;">
+                    <td colspan="15" style="text-align: center; padding: 40px;">
                         <i class="fas fa-spinner fa-spin" style="font-size: 2em; color: var(--secondary-color);"></i>
                         <br>Fetching data from Google Sheets...
                     </td>
@@ -1493,6 +1502,8 @@
                 if (result && result.success) {
                     displayData(result.data || []);
                     updateStats(result.stats || { total: 0, weekly: 0, monthly: 0, yearly: 0 });
+                    latestMaintenanceRepairCostTotal = Number((result.stats || {}).repairCostTotal || 0) || 0;
+                    updateRepairCostCard();
                 } else {
                     throw new Error(result?.error || 'Unknown error from Apps Script');
                 }
@@ -1501,7 +1512,7 @@
                 showMessage('❌ Error connecting to Google Sheets: ' + getFriendlyError(error), 'error');
                 document.getElementById('tableBody').innerHTML = `
                     <tr>
-                        <td colspan="14" style="text-align: center; padding: 35px; color:#e74c3c;">
+                        <td colspan="15" style="text-align: center; padding: 35px; color:#e74c3c;">
                             <strong>Could not connect to Google Sheets.</strong><br>
                             ${escapeHtml(getFriendlyError(error))}<br><br>
                             <button onclick="testGoogleConnection()" class="btn-primary" style="margin: 0 auto; display:inline-flex;">Test Connection</button>
@@ -1517,7 +1528,7 @@
             if (!records || records.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="14" style="text-align: center; padding: 40px;">
+                        <td colspan="15" style="text-align: center; padding: 40px;">
                             <i class="fas fa-folder-open" style="font-size: 2em; color: var(--secondary-color);"></i>
                             <br>No maintenance records found
                          </td>
@@ -1539,6 +1550,7 @@
                     <td>${formatDefectNarration(record.reportedDefect || record.defect || '')}</td>
                     <td>${formatActionNarration(record.completedAction || record.action || '')}</td>
                     <td>${record.nextService ? Number(record.nextService).toLocaleString() + ' km' : ''}</td>
+                    <td>${formatDate(record.estimatedNextServiceDate || record.estimatedServiceDate || '')}</td>
                     <td>${escapeHtml(record.technician || '')}</td>
                     <td>${formatDate(record.completionDate)}</td>
                     <td style="text-align: center;">
@@ -1693,6 +1705,7 @@
                 technician: document.getElementById('technician').value,
                 completionDate: document.getElementById('completionDate').value,
                 reminderDate: document.getElementById('reminderDate').value,
+                estimatedNextServiceDate: document.getElementById('estimatedNextServiceDate') ? document.getElementById('estimatedNextServiceDate').value : '',
                 totalCost: totalCost,
                 breakdownCount: editingMaintenanceRecord ? (editingMaintenanceRecord.breakdownCount || '') : '',
                 currentFuelKM: editingMaintenanceRecord ? (editingMaintenanceRecord.currentFuelKM || '') : '',
@@ -1802,6 +1815,7 @@
             setValue('technician', record.technician);
             setValue('completionDate', normalizeInputDate(record.completionDate));
             setValue('reminderDate', normalizeInputDate(record.reminderDate));
+            setValue('estimatedNextServiceDate', normalizeInputDate(record.estimatedNextServiceDate || record.estimatedServiceDate));
             setValue('totalCost', record.totalCost || record.totalRepairCost || '0');
 
             loadPartsForEditing(record.parts);
@@ -2076,14 +2090,14 @@
         // Fleet Management Functions
         async function fetchServiceDue() {
             const tbody = document.getElementById('serviceDueBody');
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Checking service due vehicles...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Checking service due vehicles...</td></tr>';
             try {
                 const result = await appsScriptGet({ action: 'getServiceDue' });
                 if (!result.success) throw new Error(result.error || 'Could not load service due records');
                 displayServiceDue(result.data || []);
                 document.getElementById('serviceDueCount').textContent = (result.data || []).length;
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#e74c3c;">${escapeHtml(error.message)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:#e74c3c;">${escapeHtml(error.message)}</td></tr>`;
             }
         }
 
@@ -2102,23 +2116,33 @@
         function displayServiceDue(records) {
             const tbody = document.getElementById('serviceDueBody');
             if (!records.length) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">No vehicles currently due for service.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px;">No vehicles currently due for service.</td></tr>';
                 return;
             }
             tbody.innerHTML = '';
             records.forEach(record => {
-                const overdue = Number(record.currentKM || 0) >= Number(record.nextServiceKM || 0);
+                const statusText = record.status || 'Approaching';
+                const overdue = String(statusText).toLowerCase().includes('overdue') || String(statusText).toLowerCase().includes('due now');
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${escapeHtml(record.registration || '')}</strong></td>
                     <td>${escapeHtml(record.vehicle || record.makeModel || '')}</td>
                     <td>${Number(record.currentKM || 0).toLocaleString()} km</td>
-                    <td>${Number(record.nextServiceKM || 0).toLocaleString()} km</td>
-                    <td><span class="status-badge ${overdue ? 'status-overdue' : 'status-service'}">${overdue ? 'Due / Overdue' : 'Approaching'}</span></td>
-                    <td>${formatDate(record.lastFuelDate || record.lastUpdated || '')}</td>
-                    <td>${record.alertSent ? 'Sent' : 'Pending'}</td>`;
+                    <td>${record.nextServiceKM ? Number(record.nextServiceKM || 0).toLocaleString() + ' km' : ''}</td>
+                    <td>${formatDate(record.estimatedNextServiceDate || '')}</td>
+                    <td><span class="status-badge ${overdue ? 'status-overdue' : 'status-service'}">${escapeHtml(statusText)}</span></td>
+                    <td>${formatDate(record.lastFuelDate || record.lastUpdated || record.date || '')}</td>
+                    <td>${record.alertSent ? 'Flagged' : 'Pending'}</td>`;
                 tbody.appendChild(tr);
             });
+        }
+
+        let latestMaintenanceRepairCostTotal = 0;
+        let latestPoolRepairCostTotal = 0;
+
+        function updateRepairCostCard() {
+            const repairEl = document.getElementById('repairCostTotal');
+            if (repairEl) repairEl.textContent = formatCurrency((latestMaintenanceRepairCostTotal || 0) + (latestPoolRepairCostTotal || 0)).replace('.00','');
         }
 
         async function fetchPoolData() {
@@ -2170,10 +2194,10 @@
         function updatePoolStats(records) {
             const activeOffroad = records.filter(r => String(r.status || '').toLowerCase() !== 'completed').length;
             const totalCost = records.reduce((sum, r) => sum + (Number(r.totalRepairCost || 0) || 0), 0);
+            latestPoolRepairCostTotal = totalCost;
             const offroadEl = document.getElementById('offroadVehicles');
-            const repairEl = document.getElementById('repairCostTotal');
             if (offroadEl) offroadEl.textContent = activeOffroad;
-            if (repairEl) repairEl.textContent = formatCurrency(totalCost).replace('.00','');
+            updateRepairCostCard();
         }
 
         async function savePoolVehicle(e) {
