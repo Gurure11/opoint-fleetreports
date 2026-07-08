@@ -432,6 +432,41 @@
       box-shadow: 0 0 0 3px rgba(212,175,55,0.3) !important;
     }
 
+
+    .transaction-toolbar {
+      display: grid;
+      grid-template-columns: 1.3fr repeat(4, minmax(145px, 1fr)) auto auto;
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+      margin: 8px 0 14px 0;
+      background: linear-gradient(180deg, #ffffff, var(--soft-blue));
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+    .transaction-toolbar .filter-box {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .transaction-toolbar label {
+      margin-bottom: 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.25px;
+    }
+    .transaction-toolbar input,
+    .transaction-toolbar select {
+      padding: 9px 10px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+    .transaction-toolbar button {
+      padding: 10px 16px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
     @media (max-width: 768px) {
       body { padding:12px; }
       .container { padding:16px; border-radius:20px; }
@@ -441,6 +476,8 @@
       .form-actions { flex-direction: column; }
       .form-actions button { width: 100%; justify-content: center; }
       .action-col .row-actions { justify-content: center; }
+      .transaction-toolbar { grid-template-columns: 1fr; }
+      .transaction-toolbar button { width: 100%; justify-content: center; }
     }
     @media print {
       body { background:white; }
@@ -561,6 +598,15 @@
       Transaction Journal
       <span id="filterIndicator" style="font-size:14px;font-weight:normal;color:var(--muted);margin-left:12px;"></span>
     </h2>
+    <div class="transaction-toolbar" id="transactionToolbar">
+      <div class="filter-box"><label>Search</label><input type="search" id="transactionSearch" placeholder="Search registration, description, make..."></div>
+      <div class="filter-box"><label>Sort</label><select id="transactionSort"><option value="">Default</option><option value="alphaAsc">Alphabet A-Z</option><option value="alphaDesc">Alphabet Z-A</option><option value="dateNewest">Date Newest</option><option value="dateOldest">Date Oldest</option></select></div>
+      <div class="filter-box"><label>Class</label><select id="transactionClassFilter"><option value="">All Classes</option></select></div>
+      <div class="filter-box"><label>Car Model</label><select id="transactionModelFilter"><option value="">All Models</option></select></div>
+      <div class="filter-box"><label>Cost Center</label><select id="transactionCostCenterFilter"><option value="">All Cost Centers</option></select></div>
+      <button type="button" class="btn-blue" id="transactionSearchBtn"><i class="fas fa-search"></i> Search</button>
+      <button type="button" class="btn-outline" id="transactionClearBtn"><i class="fas fa-eraser"></i> Reset</button>
+    </div>
     <table id="assetTable">
       <thead><tr>
         <th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th>
@@ -579,7 +625,7 @@
   const MAIN_SHEET_NAME = "Asssert Reg";
   const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
   const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJy_HUHvkXbbzlFOsg9IXj7zrCWwA1OJr1GQCS1XrISC7Lbl8yehvpGYq2NvmvLXDM/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIgJJHPIqb2NQ-eHLS5X5q1ilyraid536AkC2q7MKs1I7AFX0fotzrVinojDEMDOO_/exec";
 
   const FIELD_IDS = [
     "code","assetClass","purchaseDate","purchasedBy","financing","description",
@@ -632,13 +678,15 @@
     imageLinks: ["imageLinks", "Image Links", "Images", "Asset Images"],
     assetStatus: ["assetStatus", "Asset Status", "Status"],
     statusDate: ["statusDate", "Status Date"],
-    soldValue: ["soldValue", "Sold Value"]
+    soldValue: ["soldValue", "Sold Value"],
+    costCenter: ["costCenter", "Cost Center", "Cost Centre", "CostCenter", "CostCentre", "allocationDept", "Allocation/Dept", "registeredEntity", "Registered Entity", "purchasedBy", "Purchased by", "Purchased By"]
   };
 
   let mainAssets = [];
   let equipmentAssets = [];
   let allAssets = [];
   let currentFilter = null;
+  const transactionControls = { search: "", sort: "", assetClass: "", model: "", costCenter: "" };
 
   function getField(row, field) {
     const aliases = FIELD_ALIASES[field] || [field];
@@ -853,6 +901,97 @@
     });
   }
 
+  function getTransactionCostCenter(row) {
+    return getField(row, "costCenter") || getField(row, "registeredEntity") || getField(row, "purchasedBy") || getField(row, "allocationDept");
+  }
+
+  function getAlphabetValue(row) {
+    return String(getField(row, "description") || getField(row, "registrationNo") || getField(row, "makeOfVehicle") || getField(row, "model") || "").toLowerCase();
+  }
+
+  function getCurrentBaseRows() {
+    if (!currentFilter) return allAssets;
+    if (currentFilter === "all-active") {
+      return allAssets.filter(a => !["sold","stolen"].includes(String(getField(a, "assetStatus") || "Active").toLowerCase()));
+    }
+    if (["Sold", "Stolen"].includes(currentFilter)) {
+      return allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === currentFilter.toLowerCase());
+    }
+    return isEquipmentFilter(currentFilter) ? equipmentAssets : mainAssets;
+  }
+
+  function applyTransactionControls(rows) {
+    let filtered = (rows || []).slice();
+    const search = transactionControls.search.toLowerCase();
+
+    if (search) {
+      filtered = filtered.filter(row => {
+        const searchable = [
+          getField(row, "registrationNo"), getField(row, "description"), getField(row, "makeOfVehicle"),
+          getField(row, "model"), getField(row, "assetClass"), getTransactionCostCenter(row),
+          getField(row, "driverOperator"), getField(row, "location")
+        ].join(" ").toLowerCase();
+        return searchable.includes(search);
+      });
+    }
+
+    if (transactionControls.assetClass) {
+      filtered = filtered.filter(row => String(getField(row, "assetClass")).trim().toLowerCase() === transactionControls.assetClass.toLowerCase());
+    }
+    if (transactionControls.model) {
+      filtered = filtered.filter(row => String(getField(row, "model")).trim().toLowerCase() === transactionControls.model.toLowerCase());
+    }
+    if (transactionControls.costCenter) {
+      filtered = filtered.filter(row => String(getTransactionCostCenter(row)).trim().toLowerCase() === transactionControls.costCenter.toLowerCase());
+    }
+
+    if (transactionControls.sort === "alphaAsc") filtered.sort((a,b) => getAlphabetValue(a).localeCompare(getAlphabetValue(b)));
+    if (transactionControls.sort === "alphaDesc") filtered.sort((a,b) => getAlphabetValue(b).localeCompare(getAlphabetValue(a)));
+    if (transactionControls.sort === "dateNewest") filtered.sort((a,b) => (parseAssetDate(getField(b, "purchaseDate")) || 0) - (parseAssetDate(getField(a, "purchaseDate")) || 0));
+    if (transactionControls.sort === "dateOldest") filtered.sort((a,b) => (parseAssetDate(getField(a, "purchaseDate")) || 0) - (parseAssetDate(getField(b, "purchaseDate")) || 0));
+
+    return filtered;
+  }
+
+  function refreshTransactionOptions() {
+    const optionMap = [
+      ["transactionClassFilter", row => getField(row, "assetClass"), transactionControls.assetClass],
+      ["transactionModelFilter", row => getField(row, "model"), transactionControls.model],
+      ["transactionCostCenterFilter", row => getTransactionCostCenter(row), transactionControls.costCenter]
+    ];
+    optionMap.forEach(([id, getter, selected]) => {
+      const select = document.getElementById(id);
+      if (!select) return;
+      const first = select.options[0] ? select.options[0].outerHTML : '<option value="">All</option>';
+      const values = [...new Set(allAssets.map(getter).map(v => String(v || "").trim()).filter(Boolean))]
+        .sort((a,b) => a.localeCompare(b));
+      select.innerHTML = first + values.map(v => `<option value="${String(v).replace(/"/g, '&quot;')}">${v}</option>`).join("");
+      select.value = selected || "";
+    });
+  }
+
+  function readTransactionControls() {
+    transactionControls.search = (document.getElementById("transactionSearch")?.value || "").trim();
+    transactionControls.sort = document.getElementById("transactionSort")?.value || "";
+    transactionControls.assetClass = document.getElementById("transactionClassFilter")?.value || "";
+    transactionControls.model = document.getElementById("transactionModelFilter")?.value || "";
+    transactionControls.costCenter = document.getElementById("transactionCostCenterFilter")?.value || "";
+  }
+
+  function renderCurrentTransactionTable() {
+    readTransactionControls();
+    renderTable(getCurrentBaseRows(), currentFilter && !["all-active", "Sold", "Stolen"].includes(currentFilter) ? currentFilter : null);
+  }
+
+  function resetTransactionControls() {
+    ["transactionSearch", "transactionSort", "transactionClassFilter", "transactionModelFilter", "transactionCostCenterFilter"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    transactionControls.search = transactionControls.sort = transactionControls.assetClass = transactionControls.model = transactionControls.costCenter = "";
+    renderTable(getCurrentBaseRows(), currentFilter && !["all-active", "Sold", "Stolen"].includes(currentFilter) ? currentFilter : null);
+  }
+
   function applyFilter(filter) {
     currentFilter = filter;
     document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('filter-active', c.dataset.filter === filter));
@@ -886,6 +1025,15 @@
       const filterLower = filter.toLowerCase();
       rows = rows.filter(a => String(getField(a, "assetClass")).trim().toLowerCase().includes(filterLower));
     }
+    rows = applyTransactionControls(rows);
+    const activeParts = [];
+    if (filter) activeParts.push("Filter: " + filter);
+    if (transactionControls.search) activeParts.push("Search: " + transactionControls.search);
+    if (transactionControls.assetClass) activeParts.push("Class: " + transactionControls.assetClass);
+    if (transactionControls.model) activeParts.push("Model: " + transactionControls.model);
+    if (transactionControls.costCenter) activeParts.push("Cost Center: " + transactionControls.costCenter);
+    if (transactionControls.sort) activeParts.push("Sort applied");
+    if (activeParts.length) document.getElementById('filterIndicator').textContent = activeParts.join(" · ");
     tbody.innerHTML = "";
     if (!rows.length) {
       const colCount = document.querySelector("#assetTable thead tr").children.length;
@@ -1080,6 +1228,7 @@
       mainAssets = results[0].status === "fulfilled" ? results[0].value.map(applyDepreciationToData) : [];
       equipmentAssets = results[1].status === "fulfilled" ? results[1].value.map(applyDepreciationToData) : [];
       allAssets = [...mainAssets, ...equipmentAssets];
+      refreshTransactionOptions();
 
       updateDashboard();
       const initialRows = allAssets.slice(0, 120);
@@ -1185,6 +1334,15 @@
     showStatus("");
     if (currentFilter) applyFilter(currentFilter); else renderTable(allAssets);
   });
+
+  document.getElementById("transactionSearchBtn").addEventListener("click", renderCurrentTransactionTable);
+  document.getElementById("transactionClearBtn").addEventListener("click", resetTransactionControls);
+  ["transactionSort", "transactionClassFilter", "transactionModelFilter", "transactionCostCenterFilter"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", renderCurrentTransactionTable);
+  });
+  const searchInput = document.getElementById("transactionSearch");
+  if (searchInput) searchInput.addEventListener("keydown", e => { if (e.key === "Enter") renderCurrentTransactionTable(); });
 
   document.getElementById("refreshDashBtn").addEventListener("click", loadAssets);
   document.getElementById("clearFilterBtn").addEventListener("click", clearFilter);
