@@ -548,8 +548,8 @@
         <div class="form-group"><label>Registration no</label><input type="text" id="registrationNo"></div>
         <div class="form-group"><label>Engine no</label><input type="text" id="engineNo"></div>
         <div class="form-group"><label>Vin no</label><input type="text" id="vinNo"></div>
-        <div class="form-group"><label>Cost</label><input type="number" id="cost"></div>
-        <div class="form-group"><label>Market Value</label><input type="number" id="marketValue"></div>
+        <div class="form-group"><label>Cost</label><input type="text" inputmode="decimal" id="cost"></div>
+        <div class="form-group"><label>Market Value</label><input type="text" inputmode="decimal" id="marketValue"></div>
         <div class="form-group"><label>ZOHO</label><select id="zoho"><option value="">Select ZOHO</option><option>Yes</option><option>No</option></select></div>
         <div class="form-group"><label>Location</label><input type="text" id="location"></div>
         <div class="form-group"><label>Driver/Operator</label><input type="text" id="driverOperator"></div>
@@ -557,20 +557,20 @@
         <div class="form-group"><label>Registered Entity</label><input type="text" id="registeredEntity"></div>
         <div class="form-group"><label>Covered by</label><select id="coveredBy"><option value="">Select Insurance</option><option>Outsurance</option><option>Auto General</option><option>Standard Bank</option><option>Other</option></select></div>
         <div class="form-group"><label>TRACKING COMPANY</label><select id="trackingCompany"><option value="">Select Tracking</option><option>Netstar</option><option>Car Tracker</option><option>The Both(Car Tracker & Netstar)</option></select></div>
-        <div class="form-group"><label>Installment Amount</label><input type="number" id="installmentAmount"></div>
+        <div class="form-group"><label>Installment Amount</label><input type="text" inputmode="decimal" id="installmentAmount"></div>
         <div class="form-group"><label>Last Installment date</label><input type="date" id="lastInstallmentDate"></div>
         <div class="form-group"><label>eTag Toll</label><select id="eTagToll"><option value="">Select eTag</option><option>Yes</option><option>No</option></select></div>
         <div class="form-group"><label>NOTES</label><textarea id="notes"></textarea></div>
         <div class="form-group"><label>Reg. Boo</label><input type="text" id="regBoo"></div>
-        <div class="form-group"><label>Useful life</label><input type="number" id="usefulLife"></div>
-        <div class="form-group"><label>Recharge</label><input type="number" id="recharge"></div>
-        <div class="form-group"><label>Monthly dpn</label><input type="number" id="monthlyDpn"></div>
+        <div class="form-group"><label>Useful life</label><input type="text" inputmode="decimal" id="usefulLife"></div>
+        <div class="form-group"><label>Recharge</label><input type="text" inputmode="decimal" id="recharge"></div>
+        <div class="form-group"><label>Monthly dpn</label><input type="text" inputmode="decimal" id="monthlyDpn"></div>
         <div class="form-group"><label>Year</label><select id="year"><option value="">Select Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
-        <div class="form-group"><label>Months Dpn</label><input type="number" id="monthsDpn"></div>
-        <div class="form-group"><label>Accum dpn</label><input type="number" id="accumDpn"></div>
-        <div class="form-group"><label>NBV</label><input type="number" id="nbv"></div>
-        <div class="form-group"><label>Outstanding VAF</label><input type="number" id="oustandingVaf"></div>
-        <div class="form-group"><label>Value</label><input type="number" id="value"></div>
+        <div class="form-group"><label>Months Dpn</label><input type="text" inputmode="decimal" id="monthsDpn"></div>
+        <div class="form-group"><label>Accum dpn</label><input type="text" inputmode="decimal" id="accumDpn"></div>
+        <div class="form-group"><label>NBV</label><input type="text" inputmode="decimal" id="nbv"></div>
+        <div class="form-group"><label>Outstanding VAF</label><input type="text" inputmode="decimal" id="oustandingVaf"></div>
+        <div class="form-group"><label>Value</label><input type="text" inputmode="decimal" id="value"></div>
         <div class="form-group"><label>Vehicle Reg Book Upload</label><input type="file" id="vehicleRegBookFile" accept="image/*,application/pdf,.doc,.docx"></div>
         <div class="form-group"><label>Tracking Certificate Upload</label><input type="file" id="trackingCertificateFile" accept="image/*,application/pdf,.doc,.docx"></div>
         <div class="form-group"><label>Upload up to 5 Images</label><input type="file" id="imageFiles" accept="image/*" multiple><small style="color:var(--muted);margin-top:6px;">Maximum 5 images. Links post to Google Sheet.</small></div>
@@ -709,9 +709,31 @@
 
   const CURRENCY_FIELDS = new Set(["cost","marketValue","installmentAmount","recharge","monthlyDpn","accumDpn","nbv","oustandingVaf","value","soldValue"]);
 
+  function normalizeDecimalValue(v) {
+    if (v === undefined || v === null) return "";
+    let text = String(v).trim();
+    if (!text) return "";
+    text = text.replace(/R/gi, "").replace(/\s/g, "");
+    const hasComma = text.includes(",");
+    const hasDot = text.includes(".");
+    if (hasComma && hasDot) {
+      // Last separator is treated as the decimal separator; the other one is thousands.
+      if (text.lastIndexOf(",") > text.lastIndexOf(".")) text = text.replace(/\./g, "").replace(",", ".");
+      else text = text.replace(/,/g, "");
+    } else if (hasComma) {
+      // Allow decimal comma, e.g. 29452,32.
+      text = text.replace(",", ".");
+    }
+    text = text.replace(/[^0-9.\-]/g, "");
+    const firstDot = text.indexOf(".");
+    if (firstDot !== -1) text = text.slice(0, firstDot + 1) + text.slice(firstDot + 1).replace(/\./g, "");
+    return text;
+  }
+
   function toNumber(v) {
-    if (v === undefined || v === null || v === "") return 0;
-    const n = Number(String(v).replace(/[^0-9.\-]/g, ""));
+    const normalized = normalizeDecimalValue(v);
+    if (normalized === "" || normalized === "-" || normalized === ".") return 0;
+    const n = Number(normalized);
     return isNaN(n) ? 0 : n;
   }
 
@@ -1257,6 +1279,12 @@
     e.preventDefault();
     const data = {};
     FIELD_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
+    CURRENCY_FIELDS.forEach(id => {
+      if (data[id] !== undefined && data[id] !== "") data[id] = normalizeDecimalValue(data[id]);
+    });
+    ["usefulLife", "monthsDpn"].forEach(id => {
+      if (data[id] !== undefined && data[id] !== "") data[id] = normalizeDecimalValue(data[id]);
+    });
     const rowNum = document.getElementById("rowNumber").value;
     if (rowNum) data.rowNumber = rowNum;
     data.vehicleRegBookLink = document.getElementById("vehicleRegBookLink").value || "";
@@ -1396,6 +1424,16 @@
     });
   }
 
+  function setupDecimalInputs() {
+    [...CURRENCY_FIELDS, "usefulLife", "monthsDpn"].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.type = "text";
+      el.inputMode = "decimal";
+      el.autocomplete = "off";
+    });
+  }
+
   function setupDepreciationFields() {
     ["purchaseDate", "cost", "usefulLife", "monthlyDpn", "monthsDpn"].forEach(id => {
       const el = document.getElementById(id);
@@ -1414,6 +1452,7 @@
 
   document.addEventListener("DOMContentLoaded", function(){
     setupOtherDropdowns();
+    setupDecimalInputs();
     setupDepreciationFields();
     loadAssets();
   });
