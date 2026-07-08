@@ -90,6 +90,44 @@
       background: #1d4ed8;
     }
 
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      min-width: 150px;
+    }
+
+    .row-actions button {
+      width: auto;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .save-row-btn {
+      background: #16a34a;
+    }
+
+    .save-row-btn:hover {
+      background: #15803d;
+    }
+
+    .cancel-row-btn {
+      background: #6b7280;
+    }
+
+    .cancel-row-btn:hover {
+      background: #4b5563;
+    }
+
+    .row-edit-input {
+      min-width: 160px;
+      padding: 7px;
+      font-size: 12px;
+    }
+
+    tr.editing-row {
+      background: #eff6ff;
+    }
+
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -380,6 +418,7 @@
 
     let handoverData = [];
     let filteredData = [];
+    let editingSubmissionId = null;
 
     let departmentChart;
     let typeChart;
@@ -538,6 +577,125 @@
       const errorBox = document.getElementById("errorMessage");
       errorBox.textContent = message;
       errorBox.style.display = "block";
+    }
+
+    function clearError() {
+      const errorBox = document.getElementById("errorMessage");
+      errorBox.textContent = "";
+      errorBox.style.display = "none";
+    }
+
+    async function postToAppsScript(payload) {
+      const response = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+
+      const text = await response.text();
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        throw new Error("Apps Script did not return valid JSON. Redeploy as a Web App and make sure the /exec URL is used. Response: " + text.slice(0, 180));
+      }
+
+      if (!data || data.success === false || data.error) {
+        throw new Error(data && data.message ? data.message : "Save failed.");
+      }
+
+      return data;
+    }
+
+    function getSubmissionId(row) {
+      return getFirst(row, ["Submission ID", "SubmissionID"]);
+    }
+
+    function findRowBySubmissionId(submissionId) {
+      return handoverData.find(row => String(getSubmissionId(row)) === String(submissionId));
+    }
+
+    function isEditablePhotoField(heading) {
+      return heading === "Photo Links"
+        || heading === "PhotoLinks"
+        || PHOTO_URL_FIELDS.includes(heading)
+        || PHOTO_LABEL_FIELDS.includes(heading)
+        || heading.endsWith("FileID")
+        || heading === "Folder ID";
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, "&#096;");
+    }
+
+    function renderEditableCell(row, heading) {
+      if (isEditablePhotoField(heading)) {
+        if (heading === "Photo Links") return makeAllRowPhotoLinks(row);
+        if (heading === "PhotoLinks") return makePhotoLinks(row[heading], "PhotoLinks Photo");
+        if (PHOTO_URL_FIELDS.includes(heading)) {
+          const index = PHOTO_URL_FIELDS.indexOf(heading);
+          const label = row[PHOTO_LABEL_FIELDS[index]] || `View ${heading.replace("URL", "")}`;
+          return makeSinglePhotoLink(row[heading], label);
+        }
+      }
+
+      return `<input class="row-edit-input" data-field="${escapeAttr(heading)}" value="${escapeAttr(row[heading])}">`;
+    }
+
+    function editRow(submissionId) {
+      editingSubmissionId = submissionId;
+      renderTable();
+    }
+
+    function cancelEdit() {
+      editingSubmissionId = null;
+      renderTable();
+    }
+
+    async function saveRow(submissionId) {
+      clearError();
+
+      const row = findRowBySubmissionId(submissionId);
+      if (!row) {
+        showError("Could not find this row in the loaded data. Please refresh and try again.");
+        return;
+      }
+
+      const tableRow = document.querySelector(`tr[data-submission-id="${CSS.escape(String(submissionId))}"]`);
+      if (!tableRow) {
+        showError("Could not find the edited row on the dashboard.");
+        return;
+      }
+
+      const updatedRow = { ...row };
+      tableRow.querySelectorAll("[data-field]").forEach(input => {
+        updatedRow[input.dataset.field] = input.value;
+      });
+
+      const saveButton = tableRow.querySelector(".save-row-btn");
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
+      }
+
+      try {
+        await postToAppsScript({
+          action: "updateHandover",
+          submissionId: submissionId,
+          row: updatedRow
+        });
+
+        Object.assign(row, updatedRow);
+        editingSubmissionId = null;
+        applyFilters();
+      } catch (err) {
+        showError("Save failed: " + String(err.message || err));
+        if (saveButton) {
+          saveButton.disabled = false;
+          saveButton.textContent = "Save";
+        }
+      }
     }
 
     function escapeHtml(value) {
@@ -918,30 +1076,50 @@
       tableHead.innerHTML = `
         <tr>
           ${headings.map(heading => `<th>${escapeHtml(heading)}</th>`).join("")}
+          <th>Actions</th>
         </tr>
       `;
 
-      tableBody.innerHTML = filteredData.map(row => `
-        <tr>
-          ${headings.map(heading => {
-            if (heading === "Photo Links") {
-              return `<td>${makeAllRowPhotoLinks(row)}</td>`;
-            }
+      tableBody.innerHTML = filteredData.map(row => {
+        const submissionId = getSubmissionId(row);
+        const isEditing = editingSubmissionId !== null && String(editingSubmissionId) === String(submissionId);
 
-            if (heading === "PhotoLinks") {
-              return `<td>${makePhotoLinks(row[heading], "PhotoLinks Photo")}</td>`;
-            }
+        const actionButtons = isEditing
+          ? `<div class="row-actions">
+               <button class="save-row-btn" type="button" onclick="saveRow('${escapeAttr(submissionId)}')">Save</button>
+               <button class="cancel-row-btn" type="button" onclick="cancelEdit()">Cancel</button>
+             </div>`
+          : `<div class="row-actions">
+               <button type="button" onclick="editRow('${escapeAttr(submissionId)}')">Edit</button>
+             </div>`;
 
-            if (PHOTO_URL_FIELDS.includes(heading)) {
-              const index = PHOTO_URL_FIELDS.indexOf(heading);
-              const label = row[PHOTO_LABEL_FIELDS[index]] || `View ${heading.replace("URL", "")}`;
-              return `<td>${makeSinglePhotoLink(row[heading], label)}</td>`;
-            }
+        return `
+          <tr data-submission-id="${escapeAttr(submissionId)}" class="${isEditing ? "editing-row" : ""}">
+            ${headings.map(heading => {
+              if (isEditing) {
+                return `<td>${renderEditableCell(row, heading)}</td>`;
+              }
 
-            return `<td>${escapeHtml(row[heading])}</td>`;
-          }).join("")}
-        </tr>
-      `).join("");
+              if (heading === "Photo Links") {
+                return `<td>${makeAllRowPhotoLinks(row)}</td>`;
+              }
+
+              if (heading === "PhotoLinks") {
+                return `<td>${makePhotoLinks(row[heading], "PhotoLinks Photo")}</td>`;
+              }
+
+              if (PHOTO_URL_FIELDS.includes(heading)) {
+                const index = PHOTO_URL_FIELDS.indexOf(heading);
+                const label = row[PHOTO_LABEL_FIELDS[index]] || `View ${heading.replace("URL", "")}`;
+                return `<td>${makeSinglePhotoLink(row[heading], label)}</td>`;
+              }
+
+              return `<td>${escapeHtml(row[heading])}</td>`;
+            }).join("")}
+            <td>${actionButtons}</td>
+          </tr>
+        `;
+      }).join("");
     }
 
     loadData();
