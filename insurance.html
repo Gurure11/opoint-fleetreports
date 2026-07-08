@@ -310,6 +310,87 @@
     .status-warning { background:#fef3c7; color:#92400e; }
     .status-none { background:#f3f4f6; color:#6b7280; }
 
+
+
+    /* Data Input + Row Editing */
+    .input-panel {
+      background:white;
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:20px;
+      margin:16px 0 22px 0;
+      box-shadow:0 8px 20px rgba(11,47,107,0.06);
+    }
+    .input-panel h2 {
+      color:var(--primary-blue);
+      font-size:20px;
+      margin-bottom:14px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .form-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+      gap:12px;
+    }
+    .form-field label {
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+      margin-bottom:5px;
+    }
+    .form-field input, .form-field select {
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 12px;
+      background:#fafcff;
+      font-size:13px;
+    }
+    .form-field input:focus, .form-field select:focus, .row-input:focus {
+      border-color:var(--gold);
+      box-shadow:0 0 0 3px rgba(212,175,55,0.15);
+      outline:none;
+    }
+    .form-actions {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:16px;
+    }
+    .btn-small {
+      border:none;
+      border-radius:999px;
+      padding:8px 12px;
+      font-weight:800;
+      font-size:12px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      white-space:nowrap;
+    }
+    .btn-edit { background:var(--soft-blue); color:var(--primary-blue); }
+    .btn-save { background:var(--success); color:white; }
+    .btn-cancel { background:#f3f4f6; color:#374151; }
+    .row-input {
+      width:100%;
+      min-width:110px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:7px 8px;
+      font-size:12px;
+      background:#fff;
+    }
+    .cert-link {
+      font-weight:800;
+      color:var(--bright-blue);
+      text-decoration:none;
+    }
+    .cert-link:hover { text-decoration:underline; }
+
     @media (max-width: 768px) {
       body { padding:12px; }
       .container { padding:16px; border-radius:20px; }
@@ -317,11 +398,12 @@
       .action-row { flex-direction: column; align-items: stretch; }
       .btn-gold, .btn-outline { justify-content: center; }
       .search-bar { border-radius:30px; flex-direction:column; align-items:stretch; }
+      .form-grid { grid-template-columns:1fr; }
       .search-bar input, .search-bar select { min-width:auto; }
     }
     @media print {
       body { background:white; }
-      .header, .action-row, .search-bar, .status { display:none !important; }
+      .header, .action-row, .search-bar, .input-panel, .status { display:none !important; }
       .container { box-shadow:none; border:none; max-width:none; padding:0; }
     }
   </style>
@@ -358,6 +440,32 @@
     <button class="btn-outline" id="clearSearchBtn" style="padding:6px 18px;"><i class="fas fa-times"></i> Clear</button>
   </div>
 
+
+
+  <!-- DATA INPUT SECTION -->
+  <div class="input-panel" id="inputPanel">
+    <h2><i class="fas fa-file-shield"></i> Add Insurance Record</h2>
+    <div class="form-grid">
+      <div class="form-field"><label>Registration</label><input id="f_registrationNumber" placeholder="Vehicle registration"></div>
+      <div class="form-field"><label>Financed</label><select id="f_financedAsset"><option value="">Select</option><option value="Y">Yes</option><option value="N">No</option></select></div>
+      <div class="form-field"><label>Finance Agreement</label><input id="f_financeAgreementNumber" placeholder="Agreement number"></div>
+      <div class="form-field"><label>Asset Description</label><input id="f_assetDescription" placeholder="Asset description"></div>
+      <div class="form-field"><label>VIN Number</label><input id="f_vinNumber" placeholder="VIN number"></div>
+      <div class="form-field"><label>Insurer</label><input id="f_insurer" placeholder="Insurer"></div>
+      <div class="form-field"><label>Policy Number</label><input id="f_policyNumber" placeholder="Policy number"></div>
+      <div class="form-field"><label>Cover Type</label><input id="f_coverType" placeholder="Comprehensive / Third party"></div>
+      <div class="form-field"><label>Annual Premium</label><input id="f_annualPremium" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="form-field"><label>Monthly Premium</label><input id="f_monthlyPremium" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="form-field"><label>Policy Expiry</label><input id="f_policyExpiry" type="date"></div>
+      <div class="form-field"><label>Status</label><select id="f_status"><option value="">Auto calculate</option><option value="Active">Active</option><option value="Expiring Soon">Expiring Soon</option><option value="Expired">Expired</option><option value="Not Insured">Not Insured</option></select></div>
+      <div class="form-field"><label>Insurance Certificate</label><input id="f_certificate" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-success" id="addRecordBtn"><i class="fas fa-save"></i> Save Record</button>
+      <button class="btn-outline" id="clearFormBtn"><i class="fas fa-eraser"></i> Clear Form</button>
+    </div>
+  </div>
+
   <!-- ACTION ROW -->
   <div class="action-row">
     <div class="btn-group">
@@ -390,10 +498,12 @@
           <th>Policy Expiry</th>
           <th>Days to Expiry</th>
           <th>Status</th>
+          <th>Certificate</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="tableBody">
-        <tr><td colspan="13" style="text-align:center;padding:40px;">Loading data from Google Sheet...</td></tr>
+        <tr><td colspan="15" style="text-align:center;padding:40px;">Loading data from Google Sheet...</td></tr>
       </tbody>
     </table>
   </div>
@@ -403,7 +513,7 @@
   // ============================================================
   // CONFIGURATION
   // ============================================================
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxcYjq-TXuATj8iCzwGzHhuaCImk5w9UaC6tFZ1V0sY2CK1SW-QP18vbSx87G-KceBb/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby55VfnOIPR4e46T_usGcAuTYmSGPCibWYb6qU1-fcTiiFE3uqCG_lQYxBN3epLxWEF8Q/exec";
   const SHEET_ID = "1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw";
   const SHEET_TAB = "Insurance";
 
@@ -411,7 +521,7 @@
   const FIELD_IDS = [
     "registrationNumber", "financedAsset", "financeAgreementNumber", "assetDescription",
     "vinNumber", "insurer", "policyNumber", "coverType", "annualPremium",
-    "monthlyPremium", "policyExpiry", "daysToExpiry", "status"
+    "monthlyPremium", "policyExpiry", "daysToExpiry", "status", "insuranceCertificateLink"
   ];
 
   let allAssets = [];
@@ -420,6 +530,15 @@
   // HELPERS
   // ============================================================
   function valueOrBlank(v) { return (v === undefined || v === null) ? "" : v; }
+  function escapeHtml(value) {
+    return String(valueOrBlank(value)).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function normaliseDateForInput(value) {
+    if (!value) return "";
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return String(value);
+    return d.toISOString().split('T')[0];
+  }
 
   function formatCurrency(amount) {
     if (!amount || isNaN(amount)) return "R0";
@@ -488,12 +607,122 @@ allAssets = data.records;
       .catch(err => {
         console.error("Fetch error:", err);
         showStatus(`❌ Error: ${err.message}. Please check connection and try again.`, 'error');
-        document.getElementById("tableBody").innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--danger);">
+        document.getElementById("tableBody").innerHTML = `<tr><td colspan="15" style="text-align:center;padding:40px;color:var(--danger);">
           <i class="fas fa-exclamation-circle" style="font-size:24px;display:block;margin-bottom:10px;"></i>
           Failed to load data: ${err.message}
         </td></tr>`;
         return [];
       });
+  }
+
+
+
+  async function readFileAsData(file) {
+    if (!file) return null;
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || "");
+        resolve({
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          base64: result.includes(",") ? result.split(",")[1] : result
+        });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function postApi(payload) {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ sheetId: SHEET_ID, sheetTab: SHEET_TAB, ...payload })
+    });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch (err) { throw new Error("Server did not return valid JSON: " + text.slice(0, 180)); }
+    if (data.status !== "success") throw new Error(data.message || "Server error");
+    return data;
+  }
+
+  function collectFormData() {
+    const record = {};
+    FIELD_IDS.forEach(id => {
+      const el = document.getElementById("f_" + id);
+      if (el && el.type !== "file") record[id] = el.value.trim();
+    });
+    return record;
+  }
+
+  function clearInputForm() {
+    document.querySelectorAll("#inputPanel input, #inputPanel select").forEach(el => el.value = "");
+  }
+
+  async function addInsuranceRecord() {
+    try {
+      showStatus("Saving insurance record...", "info");
+      const record = collectFormData();
+      const certFile = document.getElementById("f_certificate").files[0];
+      const certificate = await readFileAsData(certFile);
+      const data = await postApi({ action: "add", record, certificate });
+      clearInputForm();
+      showStatus(data.message || "Record saved successfully.", "success");
+      await fetchInsuranceData();
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ Save failed: " + err.message, "error");
+    }
+  }
+
+  function buildRowPayload(rowIndex) {
+    const record = {};
+    FIELD_IDS.forEach(id => {
+      if (id === "daysToExpiry" || id === "insuranceCertificateLink") return;
+      const el = document.querySelector(`[data-row-index="${rowIndex}"][data-field="${id}"]`);
+      if (el) record[id] = el.value.trim();
+    });
+    return record;
+  }
+
+  function editRow(rowIndex) {
+    const row = allAssets.find(r => String(r.rowIndex) === String(rowIndex));
+    if (!row) return;
+    const tr = document.getElementById("row-" + rowIndex);
+    tr.innerHTML = `
+      <td><input class="row-input" data-row-index="${rowIndex}" data-field="registrationNumber" value="${escapeHtml(row.registrationNumber)}"></td>
+      <td><select class="row-input" data-row-index="${rowIndex}" data-field="financedAsset"><option value=""></option><option value="Y" ${row.financedAsset === 'Y' ? 'selected' : ''}>Yes</option><option value="N" ${row.financedAsset === 'N' ? 'selected' : ''}>No</option></select></td>
+      <td><input class="row-input" data-row-index="${rowIndex}" data-field="financeAgreementNumber" value="${escapeHtml(row.financeAgreementNumber)}"></td>
+      <td><input class="row-input" data-row-index="${rowIndex}" data-field="assetDescription" value="${escapeHtml(row.assetDescription)}"></td>
+      <td><input class="row-input" data-row-index="${rowIndex}" data-field="vinNumber" value="${escapeHtml(row.vinNumber)}"></td>
+      <td><input class="row-input" data-row-index="${rowIndex}" data-field="insurer" value="${escapeHtml(row.insurer)}"></td>
+      <td><input class="row-input" data-row-index="${rowIndex}" data-field="policyNumber" value="${escapeHtml(row.policyNumber)}"></td>
+      <td><input class="row-input" data-row-index="${rowIndex}" data-field="coverType" value="${escapeHtml(row.coverType)}"></td>
+      <td><input class="row-input" type="number" step="0.01" data-row-index="${rowIndex}" data-field="annualPremium" value="${escapeHtml(String(row.annualPremium || '').replace(/[^0-9.\-]/g,''))}"></td>
+      <td><input class="row-input" type="number" step="0.01" data-row-index="${rowIndex}" data-field="monthlyPremium" value="${escapeHtml(String(row.monthlyPremium || '').replace(/[^0-9.\-]/g,''))}"></td>
+      <td><input class="row-input" type="date" data-row-index="${rowIndex}" data-field="policyExpiry" value="${normaliseDateForInput(row.policyExpiry)}"></td>
+      <td style="text-align:center;font-weight:600;">${valueOrBlank(row.daysToExpiry) || '-'}</td>
+      <td><select class="row-input" data-row-index="${rowIndex}" data-field="status"><option value="">Auto</option><option value="Active" ${row.status === 'Active' ? 'selected' : ''}>Active</option><option value="Expiring Soon" ${row.status === 'Expiring Soon' ? 'selected' : ''}>Expiring Soon</option><option value="Expired" ${row.status === 'Expired' ? 'selected' : ''}>Expired</option><option value="Not Insured" ${row.status === 'Not Insured' ? 'selected' : ''}>Not Insured</option></select></td>
+      <td>${row.insuranceCertificateLink ? `<a class="cert-link" href="${escapeHtml(row.insuranceCertificateLink)}" target="_blank">View</a>` : '-'}<br><input class="row-input" type="file" data-row-index="${rowIndex}" data-cert-file accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"></td>
+      <td><button class="btn-small btn-save" onclick="saveRow(${rowIndex})"><i class="fas fa-save"></i> Save</button> <button class="btn-small btn-cancel" onclick="applyFilters()"><i class="fas fa-times"></i> Cancel</button></td>
+    `;
+  }
+
+  async function saveRow(rowIndex) {
+    try {
+      showStatus("Saving row changes...", "info");
+      const record = buildRowPayload(rowIndex);
+      const certInput = document.querySelector(`[data-row-index="${rowIndex}"][data-cert-file]`);
+      const certificate = await readFileAsData(certInput && certInput.files[0]);
+      const data = await postApi({ action: "update", rowIndex, record, certificate });
+      showStatus(data.message || "Row updated successfully.", "success");
+      await fetchInsuranceData();
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ Row save failed: " + err.message, "error");
+    }
   }
 
   function testConnection() {
@@ -542,30 +771,35 @@ allAssets = data.records;
     const tbody = document.getElementById("tableBody");
     
     if (!assets || assets.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--muted);">
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:40px;color:var(--muted);">
         <i class="fas fa-database" style="font-size:24px;display:block;margin-bottom:10px;"></i>
         No insurance records found.
       </td></tr>`;
       return;
     }
 
-    tbody.innerHTML = assets.map((row, index) => `
-      <tr>
-        <td><strong>${valueOrBlank(row.registrationNumber)}</strong></td>
+    tbody.innerHTML = assets.map((row, index) => {
+      const rowIndex = row.rowIndex || (index + 2);
+      const cert = row.insuranceCertificateLink ? `<a class="cert-link" href="${escapeHtml(row.insuranceCertificateLink)}" target="_blank"><i class="fas fa-eye"></i> View</a>` : '-';
+      return `
+      <tr id="row-${rowIndex}">
+        <td><strong>${escapeHtml(row.registrationNumber)}</strong></td>
         <td>${valueOrBlank(row.financedAsset) === 'Y' ? '✅ Yes' : '❌ No'}</td>
-        <td>${valueOrBlank(row.financeAgreementNumber) || '-'}</td>
-        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;" title="${valueOrBlank(row.assetDescription)}">${valueOrBlank(row.assetDescription)}</td>
-        <td style="font-size:11px;font-family:monospace;">${valueOrBlank(row.vinNumber) || '-'}</td>
-        <td><strong>${valueOrBlank(row.insurer) || '-'}</strong></td>
-        <td>${valueOrBlank(row.policyNumber) || '-'}</td>
-        <td>${valueOrBlank(row.coverType) || '-'}</td>
+        <td>${escapeHtml(row.financeAgreementNumber) || '-'}</td>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(row.assetDescription)}">${escapeHtml(row.assetDescription)}</td>
+        <td style="font-size:11px;font-family:monospace;">${escapeHtml(row.vinNumber) || '-'}</td>
+        <td><strong>${escapeHtml(row.insurer) || '-'}</strong></td>
+        <td>${escapeHtml(row.policyNumber) || '-'}</td>
+        <td>${escapeHtml(row.coverType) || '-'}</td>
         <td style="font-weight:600;color:var(--primary-blue);">${formatCurrency(row.annualPremium)}</td>
         <td>${formatCurrency(row.monthlyPremium)}</td>
         <td>${formatDate(row.policyExpiry)}</td>
         <td style="text-align:center;font-weight:600;">${valueOrBlank(row.daysToExpiry) || '-'}</td>
         <td>${getStatusBadge(row.status)}</td>
-      </tr>
-    `).join('');
+        <td>${cert}</td>
+        <td><button class="btn-small btn-edit" onclick="editRow(${rowIndex})"><i class="fas fa-pen"></i> Edit</button></td>
+      </tr>`;
+    }).join('');
   }
 
   function populateInsurerFilter(assets) {
@@ -622,13 +856,13 @@ allAssets = data.records;
   function exportCSV() {
     const headers = ['Registration Number', 'Financed', 'Finance Agreement', 'Asset Description',
       'VIN Number', 'Insurer', 'Policy Number', 'Cover Type', 'Annual Premium',
-      'Monthly Premium', 'Policy Expiry', 'Days to Expiry', 'Status'];
+      'Monthly Premium', 'Policy Expiry', 'Days to Expiry', 'Status', 'Insurance Certificate Link'];
     
     const rows = allAssets.map(row => [
       row.registrationNumber, row.financedAsset, row.financeAgreementNumber,
       row.assetDescription, row.vinNumber, row.insurer, row.policyNumber,
       row.coverType, row.annualPremium, row.monthlyPremium,
-      row.policyExpiry, row.daysToExpiry, row.status
+      row.policyExpiry, row.daysToExpiry, row.status, row.insuranceCertificateLink
     ]);
     
     const csvRows = [headers, ...rows];
@@ -650,6 +884,8 @@ allAssets = data.records;
     fetchInsuranceData();
   });
 
+  document.getElementById("addRecordBtn").addEventListener("click", addInsuranceRecord);
+  document.getElementById("clearFormBtn").addEventListener("click", clearInputForm);
   document.getElementById("refreshBtn").addEventListener("click", fetchInsuranceData);
   document.getElementById("testConnectionBtn").addEventListener("click", testConnection);
   document.getElementById("printBtn").addEventListener("click", () => window.print());
