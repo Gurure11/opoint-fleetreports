@@ -542,7 +542,7 @@
         <div class="form-group"><label>Purchased by</label><select id="purchasedBy"><option value="">Select Purchased By</option><option>Onpoint</option><option>Aqua Telecoms</option><option>Nkanyezi</option><option>Distinct</option></select></div>
         <div class="form-group"><label>Financing</label><input type="text" id="financing"></div>
         <div class="form-group"><label>Description</label><input type="text" id="description"></div>
-        <div class="form-group"><label>Model</label><select id="model"><option value="">Select Model Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
+        <input type="hidden" id="model">
         <div class="form-group"><label>Make of Vehicle</label><select id="makeOfVehicle"><option value="">Select Make</option><option>Toyota</option><option>Faw</option><option>Ford</option><option>Foton</option><option>Mahindra</option><option>Isuzu</option><option>Mercedes Benz</option><option>VW</option><option>Nissan</option></select></div>
         <div class="form-group"><label>Body Type</label><select id="bodyType"><option value="">Select Body Type</option><option>Sedan</option><option>Hatchback</option><option>Truck</option><option>Minibus</option><option>SUV</option><option>Bakkie</option><option>Lorry</option></select></div>
         <div class="form-group"><label>Registration no</label><input type="text" id="registrationNo"></div>
@@ -568,6 +568,7 @@
         <div class="form-group"><label>Year</label><select id="year"><option value="">Select Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
         <div class="form-group"><label>Months Dpn</label><input type="text" inputmode="decimal" id="monthsDpn"></div>
         <div class="form-group"><label>Accum dpn</label><input type="text" inputmode="decimal" id="accumDpn"></div>
+        <div class="form-group"><label>Residual Value (5% - 10%)</label><input type="text" inputmode="decimal" id="residualValue" placeholder="Auto 10% of Cost if blank"></div>
         <div class="form-group"><label>NBV</label><input type="text" inputmode="decimal" id="nbv"></div>
         <div class="form-group"><label>Outstanding VAF</label><input type="text" inputmode="decimal" id="oustandingVaf"></div>
         <div class="form-group"><label>Value</label><input type="text" inputmode="decimal" id="value"></div>
@@ -610,7 +611,7 @@
     <table id="assetTable">
       <thead><tr>
         <th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th>
-        <th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th><th>Images</th><th>Status</th><th>Status Date</th><th>Sold Value</th>
+        <th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>Residual Value</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th><th>Images</th><th>Status</th><th>Status Date</th><th>Sold Value</th>
         <th class="action-col">Actions</th>
       </tr></thead>
       <tbody></tbody>
@@ -625,7 +626,7 @@
   const MAIN_SHEET_NAME = "Asssert Reg";
   const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
   const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIgJJHPIqb2NQ-eHLS5X5q1ilyraid536AkC2q7MKs1I7AFX0fotzrVinojDEMDOO_/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfWTlORnkLKmjkBRCMTtYdirTJXGtAslGRXd4sUtBU8irpWLihILOl0O3nHk3Q-EZ7TA/exec";
 
   const FIELD_IDS = [
     "code","assetClass","purchaseDate","purchasedBy","financing","description",
@@ -633,7 +634,7 @@
     "zoho","location","driverOperator",
     "allocationDept","registeredEntity","coveredBy","trackingCompany","installmentAmount",
     "lastInstallmentDate","eTagToll","notes","regBoo","usefulLife","recharge",
-    "monthlyDpn","year","monthsDpn","accumDpn","nbv","oustandingVaf","value",
+    "monthlyDpn","year","monthsDpn","accumDpn","residualValue","nbv","oustandingVaf","value",
     "imageLinks","assetStatus","statusDate","soldValue"
   ];
 
@@ -650,7 +651,8 @@
     registrationNo: ["registrationNo","Registration no","Registration No"],
     engineNo: ["engineNo","Engine no","Engine No"],
     vinNo: ["vinNo","Vin no","Vin No"],
-    cost: ["cost","Cost"],
+    cost: ["cost","Cost","purchasePrice","Purchase Price"],
+    residualValue: ["residualValue","Residual Value","residual","Residual"],
     marketValue: ["marketValue","Market Value"],
     zoho: ["zoho","ZOHO"],
     location: ["location","Location"],
@@ -696,6 +698,19 @@
     return "";
   }
 
+  function setFormValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const val = valueOrBlank(value);
+    if (el.tagName === "SELECT" && val && ![...el.options].some(o => o.value == val || o.textContent == val)) {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val;
+      el.appendChild(opt);
+    }
+    el.value = val;
+  }
+
   function valueOrBlank(v) {
     if (v === undefined || v === null) return "";
     if (typeof v === "string" && v.includes("T")) {
@@ -707,33 +722,17 @@
 
 
 
-  const CURRENCY_FIELDS = new Set(["cost","marketValue","installmentAmount","recharge","monthlyDpn","accumDpn","nbv","oustandingVaf","value","soldValue"]);
-
-  function normalizeDecimalValue(v) {
-    if (v === undefined || v === null) return "";
-    let text = String(v).trim();
-    if (!text) return "";
-    text = text.replace(/R/gi, "").replace(/\s/g, "");
-    const hasComma = text.includes(",");
-    const hasDot = text.includes(".");
-    if (hasComma && hasDot) {
-      // Last separator is treated as the decimal separator; the other one is thousands.
-      if (text.lastIndexOf(",") > text.lastIndexOf(".")) text = text.replace(/\./g, "").replace(",", ".");
-      else text = text.replace(/,/g, "");
-    } else if (hasComma) {
-      // Allow decimal comma, e.g. 29452,32.
-      text = text.replace(",", ".");
-    }
-    text = text.replace(/[^0-9.\-]/g, "");
-    const firstDot = text.indexOf(".");
-    if (firstDot !== -1) text = text.slice(0, firstDot + 1) + text.slice(firstDot + 1).replace(/\./g, "");
-    return text;
-  }
+  const CURRENCY_FIELDS = new Set(["cost","marketValue","installmentAmount","recharge","monthlyDpn","accumDpn","residualValue","nbv","oustandingVaf","value","soldValue"]);
 
   function toNumber(v) {
-    const normalized = normalizeDecimalValue(v);
-    if (normalized === "" || normalized === "-" || normalized === ".") return 0;
-    const n = Number(normalized);
+    if (v === undefined || v === null || v === "") return 0;
+    let s = String(v).trim().replace(/\s/g, "").replace(/R/gi, "");
+    if (s.includes(",") && s.includes(".")) {
+      s = s.lastIndexOf(",") > s.lastIndexOf(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+    } else if (s.includes(",")) {
+      s = s.replace(",", ".");
+    }
+    const n = Number(s.replace(/[^0-9.\-]/g, ""));
     return isNaN(n) ? 0 : n;
   }
 
@@ -774,33 +773,42 @@
     return ((asAt.getFullYear() - start.getFullYear()) * 12) + (asAt.getMonth() - start.getMonth()) + 1;
   }
 
-  function applyDepreciationToData(data) {
+  function applyDepreciationToData(data, options = {}) {
     const purchasePrice = getAnyNumber(data, ["purchasePrice", "Purchase Price", "cost", "Cost"]);
-    const residualValue = getAnyNumber(data, ["residualValue", "Residual Value", "residual", "Residual"]);
+    let residualValue = getAnyNumber(data, ["residualValue", "Residual Value", "residual", "Residual"]);
     const usefulLifeYears = getAnyNumber(data, ["usefulLife", "Useful life", "Useful Life"]);
     const purchaseDate = getField(data, "purchaseDate") || data.purchaseDate || data["Purchase Date"];
+    const manualMonthlyText = data.monthlyDpn !== undefined && data.monthlyDpn !== null ? String(data.monthlyDpn).trim() : "";
+    const manualMonthlyDpn = manualMonthlyText === "" ? null : toNumber(manualMonthlyText);
+
+    // Residual Value formula: if blank, use 10% of Cost. User may still edit/save any value.
+    if (!residualValue && purchasePrice > 0) {
+      residualValue = purchasePrice * 0.10;
+      data.residualValue = residualValue;
+    }
 
     if (purchasePrice <= 0 || usefulLifeYears <= 0) {
-      data.monthsDpn = 0;
-      data.monthlyDpn = 0;
-      data.accumDpn = 0;
-      data.nbv = purchasePrice;
-      data.value = purchasePrice;
+      if (manualMonthlyDpn === null) data.monthlyDpn = "";
+      data.monthsDpn = data.monthsDpn || 0;
+      data.accumDpn = data.accumDpn || 0;
+      data.nbv = data.nbv || purchasePrice;
+      data.value = data.value || purchasePrice;
       return data;
     }
 
     const depreciableAmount = Math.max(0, purchasePrice - residualValue);
-    const monthlyDpn = depreciableAmount / usefulLifeYears / 12;
+    const calculatedMonthlyDpn = depreciableAmount / usefulLifeYears / 12;
+    const monthlyDpn = manualMonthlyDpn === null ? calculatedMonthlyDpn : manualMonthlyDpn;
     const usefulLifeMonths = Math.max(1, Math.round(usefulLifeYears * 12));
-    const monthsDpn = Math.min(depreciationMonthsFromPurchase(purchaseDate), usefulLifeMonths);
-    const accumDpn = Math.min(depreciableAmount, monthlyDpn * monthsDpn);
-    const nbv = Math.max(residualValue, purchasePrice - accumDpn);
+    const monthsDpn = data.monthsDpn !== undefined && String(data.monthsDpn).trim() !== "" ? toNumber(data.monthsDpn) : Math.min(depreciationMonthsFromPurchase(purchaseDate), usefulLifeMonths);
+    const accumDpn = data.accumDpn !== undefined && String(data.accumDpn).trim() !== "" ? toNumber(data.accumDpn) : Math.min(depreciableAmount, monthlyDpn * monthsDpn);
+    const nbv = data.nbv !== undefined && String(data.nbv).trim() !== "" ? toNumber(data.nbv) : Math.max(residualValue, purchasePrice - accumDpn);
 
     data.monthsDpn = monthsDpn;
-    data.monthlyDpn = monthlyDpn;
+    data.monthlyDpn = manualMonthlyDpn === null ? calculatedMonthlyDpn : data.monthlyDpn;
     data.accumDpn = accumDpn;
     data.nbv = nbv;
-    data.value = nbv;
+    data.value = data.value !== undefined && String(data.value).trim() !== "" ? data.value : nbv;
     return data;
   }
 
@@ -1101,10 +1109,7 @@
       editBtn.title = "Edit row";
       editBtn.addEventListener("click", function(e) {
         e.stopPropagation();
-        FIELD_IDS.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.value = valueOrBlank(getField(data, id));
-        });
+        FIELD_IDS.forEach(id => setFormValue(id, getField(data, id)));
         document.getElementById("rowNumber").value = data.rowNumber || "";
         document.getElementById("vehicleRegBookLink").value = getField(data, "vehicleRegBookLink") || "";
         document.getElementById("trackingCertificateLink").value = getField(data, "trackingCertificateLink") || "";
@@ -1278,13 +1283,7 @@
   document.getElementById("assetForm").addEventListener("submit", async function(e){
     e.preventDefault();
     const data = {};
-    FIELD_IDS.forEach(id => { data[id] = document.getElementById(id).value; });
-    CURRENCY_FIELDS.forEach(id => {
-      if (data[id] !== undefined && data[id] !== "") data[id] = normalizeDecimalValue(data[id]);
-    });
-    ["usefulLife", "monthsDpn"].forEach(id => {
-      if (data[id] !== undefined && data[id] !== "") data[id] = normalizeDecimalValue(data[id]);
-    });
+    FIELD_IDS.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
     const rowNum = document.getElementById("rowNumber").value;
     if (rowNum) data.rowNumber = rowNum;
     data.vehicleRegBookLink = document.getElementById("vehicleRegBookLink").value || "";
@@ -1424,35 +1423,30 @@
     });
   }
 
-  function setupDecimalInputs() {
-    [...CURRENCY_FIELDS, "usefulLife", "monthsDpn"].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.type = "text";
-      el.inputMode = "decimal";
-      el.autocomplete = "off";
-    });
-  }
-
   function setupDepreciationFields() {
-    ["purchaseDate", "cost", "usefulLife", "monthlyDpn", "monthsDpn"].forEach(id => {
+    ["cost", "usefulLife", "residualValue"].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.addEventListener("input", () => {
+      el.addEventListener("change", () => {
         const data = {};
         FIELD_IDS.forEach(fid => { const f = document.getElementById(fid); if (f) data[fid] = f.value; });
+        const residualWasBlank = !String(data.residualValue || "").trim();
         applyDepreciationToData(data);
-        ["monthlyDpn", "accumDpn", "nbv", "value"].forEach(fid => {
+        ["residualValue", "monthlyDpn", "accumDpn", "nbv", "value"].forEach(fid => {
           const f = document.getElementById(fid);
-          if (f && data[fid] !== undefined) f.value = Number(data[fid]).toFixed(2);
+          if (!f || document.activeElement === f) return;
+          // Only auto-fill Monthly dpn if it is currently blank, so user edits are never overwritten.
+          if (fid === "monthlyDpn" && String(f.value || "").trim() !== "") return;
+          if (fid === "residualValue" && !residualWasBlank) return;
+          if (data[fid] !== undefined && data[fid] !== "") f.value = Number(toNumber(data[fid])).toFixed(2);
         });
       });
     });
   }
 
+
   document.addEventListener("DOMContentLoaded", function(){
     setupOtherDropdowns();
-    setupDecimalInputs();
     setupDepreciationFields();
     loadAssets();
   });
