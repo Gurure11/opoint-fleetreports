@@ -530,6 +530,73 @@
         .notification.error { border-left: 4px solid #dc3545; }
         .notification.warning { border-left: 4px solid #ffc107; }
 
+
+        .action-cell {
+            min-width: 150px;
+            white-space: nowrap;
+        }
+
+        .btn-small {
+            padding: 7px 12px;
+            border: none;
+            border-radius: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .btn-edit {
+            background: #0b2b5c;
+            color: #fff;
+        }
+
+        .btn-save {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .btn-cancel {
+            background: #6c757d;
+            color: #fff;
+        }
+
+        .edit-input, .edit-select, .edit-textarea {
+            width: 100%;
+            min-width: 120px;
+            padding: 7px 9px;
+            border: 1px solid #cfd8e3;
+            border-radius: 10px;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .edit-textarea {
+            min-width: 220px;
+            min-height: 70px;
+            resize: vertical;
+        }
+
+        .edit-image-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 220px;
+        }
+
+        .edit-image-stack input[type="file"] {
+            font-size: 11px;
+        }
+
+        .multi-image-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
         @media (max-width: 1200px) {
             .filter-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -710,13 +777,14 @@
                             <th>Phone</th>
                             <th>Description</th>
                             <th>At Fault</th>
-                            <th>Image</th>
+                            <th>Images</th>
                             <th>Additional Details</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
                         <tr>
-                            <td colspan="14" style="text-align: center; padding: 50px;">
+                            <td colspan="15" style="text-align: center; padding: 50px;">
                                 <i class="fas fa-spinner fa-pulse"></i> Loading data...
                             </td>
                         </tr>
@@ -729,7 +797,7 @@
     <script>
         // CONFIGURATION - Replace with your deployed URL
         const CONFIG = {
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbzSBvkMC8d25IYTA3ypMucNL_0fn429lZMXSmTx-v7pKipom3LiJOprToQ6jDOyj6M53A/exec', // Replace with your Apps Script URL
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbzPOWn6fn-SOjBEjsFH4ZMYg1ZqsCwpX4txdn8NCbb-QGaA0c41F3g9VIj2EV3enBo5/exec', // Replace with your Apps Script URL
             SHEET_ID: '1vhtaNNmY-YsyDiaA2IFodoBYdQsEcL09F7BgMJo4utI',
             SHEET_NAME: 'Onpoint Incident Fleet Report'
         };
@@ -821,15 +889,19 @@
                 console.log('Test response:', data);
                 
                 if (data.success) {
-                    updateSyncStatus('online', `Connected to sheet: ${data.sheetName}`);
+                    const returnedUrl = data.deployedUrl || '';
+                    const extraNote = returnedUrl && returnedUrl !== CONFIG.GAS_URL
+                        ? ` | Backend URL differs. Apps Script says: ${returnedUrl}`
+                        : '';
+                    updateSyncStatus('online', `Connected to sheet: ${data.sheetName}${extraNote}`);
                     loadIncidents();
                 } else {
                     throw new Error(data.error || 'API returned error');
                 }
             } catch (error) {
                 console.error('Connection test failed:', error);
-                updateSyncStatus('offline', `Connection failed: ${error.message}`);
-                showNotification('Cannot connect to Google Sheets. Using demo data.', 'warning');
+                updateSyncStatus('offline', `Connection failed: ${error.message}. Check that CONFIG.GAS_URL is the latest deployed Web App URL and access is Anyone with the link.`);
+                showNotification('Cannot connect to Google Sheets. Check Apps Script deployment URL.', 'warning');
                 generateDemoData();
                 setLoading(false);
             }
@@ -1083,10 +1155,36 @@
             });
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function getExtraFields(inc) {
-            const ignore = new Set(['Timestamp','Date','Time','VehicleReg','Location','AccidentType','Department','CostCenter','DriverName','DriverPhone','Description','AtFault','ReportedToMetro','DrunkenDriving','ImageDriveUrl','RowNumber','raw']);
+            const ignore = new Set([
+                'Timestamp','Date','Time','VehicleReg','Location','AccidentType','Department','CostCenter','DriverName','DriverPhone','Description','AtFault','ReportedToMetro','DrunkenDriving','ImageDriveUrl','ImageLink1','ImageLink2','ImageLink3','ImageLink4','ImageLink5','RowNumber','raw'
+            ]);
             const source = inc.raw && typeof inc.raw === 'object' ? inc.raw : inc;
             return Object.keys(source).filter(key => !ignore.has(key) && String(source[key] || '').trim() !== '').map(key => `${key}: ${source[key]}`);
+        }
+
+        function getImageLinks(inc) {
+            const links = [];
+            ['ImageDriveUrl','ImageLink1','ImageLink2','ImageLink3','ImageLink4','ImageLink5'].forEach(key => {
+                const value = (inc[key] || '').toString().trim();
+                if (value && !links.includes(value)) links.push(value);
+            });
+            return links.slice(0, 5);
+        }
+
+        function renderImageLinks(inc) {
+            const links = getImageLinks(inc);
+            if (!links.length) return '<span style="color:#999;">No image</span>';
+            return `<div class="multi-image-links">${links.map((link, index) => `<a href="${escapeHtml(link)}" target="_blank" class="image-link"><i class="fas fa-image"></i> View ${index + 1}</a>`).join('')}</div>`;
         }
 
         function renderTable() {
@@ -1094,39 +1192,164 @@
             tbody.innerHTML = '';
             
             if (filteredIncidents.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 50px;">No incidents found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; padding: 50px;">No incidents found</td></tr>';
                 return;
             }
             
-            filteredIncidents.slice(0, 50).forEach(inc => {
+            filteredIncidents.slice(0, 50).forEach((inc, index) => {
                 const row = tbody.insertRow();
+                row.dataset.rowNumber = inc.RowNumber || '';
+                row.dataset.index = index;
                 const extraFields = getExtraFields(inc);
                 const atFaultValue = inc.AtFault || '';
                 const atFaultBadge = atFaultValue
-                    ? `<span class="${atFaultValue === 'Yes' ? 'badge-yes' : 'badge-no'}">${atFaultValue}</span>`
+                    ? `<span class="${atFaultValue === 'Yes' ? 'badge-yes' : 'badge-no'}">${escapeHtml(atFaultValue)}</span>`
                     : '<span style="color:#999;">N/A</span>';
                 row.innerHTML = `
-                    <td class="compact-cell">${inc.Timestamp || ''}</td>
-                    <td class="compact-cell">${inc.Date || ''}</td>
-                    <td class="compact-cell">${inc.Time || ''}</td>
-                    <td class="compact-cell"><strong>${inc.VehicleReg || ''}</strong></td>
-                    <td class="compact-cell">${inc.Location || ''}</td>
-                    <td class="compact-cell">${inc.AccidentType || ''}</td>
-                    <td class="compact-cell">${inc.Department || ''}</td>
-                    <td class="compact-cell">${inc.CostCenter || ''}</td>
-                    <td class="compact-cell">${inc.DriverName || ''}</td>
-                    <td class="compact-cell">${inc.DriverPhone || ''}</td>
-                    <td class="description-cell">${inc.Description || ''}</td>
+                    <td class="compact-cell">${escapeHtml(inc.Timestamp || '')}</td>
+                    <td class="compact-cell">${escapeHtml(inc.Date || '')}</td>
+                    <td class="compact-cell">${escapeHtml(inc.Time || '')}</td>
+                    <td class="compact-cell"><strong>${escapeHtml(inc.VehicleReg || '')}</strong></td>
+                    <td class="compact-cell">${escapeHtml(inc.Location || '')}</td>
+                    <td class="compact-cell">${escapeHtml(inc.AccidentType || '')}</td>
+                    <td class="compact-cell">${escapeHtml(inc.Department || '')}</td>
+                    <td class="compact-cell">${escapeHtml(inc.CostCenter || '')}</td>
+                    <td class="compact-cell">${escapeHtml(inc.DriverName || '')}</td>
+                    <td class="compact-cell">${escapeHtml(inc.DriverPhone || '')}</td>
+                    <td class="description-cell">${escapeHtml(inc.Description || '')}</td>
                     <td class="compact-cell">${atFaultBadge}</td>
-                    <td class="compact-cell">
-                        ${inc.ImageDriveUrl ? 
-                            `<a href="${inc.ImageDriveUrl}" target="_blank" class="image-link"><i class="fas fa-image"></i> View</a>` : 
-                            '<span style="color:#999;">No image</span>'
-                        }
-                    </td>
-                    <td class="extra-fields-cell">${extraFields.length ? `<div class="extra-fields-list">${extraFields.map(v => `<span class="extra-chip">${v}</span>`).join('')}</div>` : '<span style="color:#999;">None</span>'}</td>
+                    <td class="compact-cell">${renderImageLinks(inc)}</td>
+                    <td class="extra-fields-cell">${extraFields.length ? `<div class="extra-fields-list">${extraFields.map(v => `<span class="extra-chip">${escapeHtml(v)}</span>`).join('')}</div>` : '<span style="color:#999;">None</span>'}</td>
+                    <td class="action-cell"><button class="btn-small btn-edit" onclick="editIncidentRow(${index})"><i class="fas fa-edit"></i> Edit</button></td>
                 `;
             });
+        }
+
+        function editIncidentRow(index) {
+            const inc = filteredIncidents[index];
+            if (!inc) return;
+            if (!inc.RowNumber) {
+                showNotification('This row cannot be edited because RowNumber was not returned by Apps Script.', 'error');
+                return;
+            }
+            const tbody = document.getElementById('tableBody');
+            const row = Array.from(tbody.rows).find(r => Number(r.dataset.index) === index);
+            if (!row) return;
+
+            row.innerHTML = `
+                <td class="compact-cell">${escapeHtml(inc.Timestamp || '')}</td>
+                <td><input class="edit-input" type="date" id="edit_Date_${index}" value="${escapeHtml(inc.Date || '')}"></td>
+                <td><input class="edit-input" type="time" id="edit_Time_${index}" value="${escapeHtml(inc.Time || '')}"></td>
+                <td><input class="edit-input" id="edit_VehicleReg_${index}" value="${escapeHtml(inc.VehicleReg || '')}"></td>
+                <td><input class="edit-input" id="edit_Location_${index}" value="${escapeHtml(inc.Location || '')}"></td>
+                <td><input class="edit-input" id="edit_AccidentType_${index}" value="${escapeHtml(inc.AccidentType || '')}"></td>
+                <td><input class="edit-input" id="edit_Department_${index}" value="${escapeHtml(inc.Department || '')}"></td>
+                <td><input class="edit-input" id="edit_CostCenter_${index}" value="${escapeHtml(inc.CostCenter || '')}"></td>
+                <td><input class="edit-input" id="edit_DriverName_${index}" value="${escapeHtml(inc.DriverName || '')}"></td>
+                <td><input class="edit-input" id="edit_DriverPhone_${index}" value="${escapeHtml(inc.DriverPhone || '')}"></td>
+                <td><textarea class="edit-textarea" id="edit_Description_${index}">${escapeHtml(inc.Description || '')}</textarea></td>
+                <td>
+                    <select class="edit-select" id="edit_AtFault_${index}">
+                        <option value="" ${!inc.AtFault ? 'selected' : ''}>N/A</option>
+                        <option value="Yes" ${inc.AtFault === 'Yes' ? 'selected' : ''}>Yes</option>
+                        <option value="No" ${inc.AtFault === 'No' ? 'selected' : ''}>No</option>
+                    </select>
+                </td>
+                <td>
+                    <div class="edit-image-stack">
+                        <input type="file" id="edit_Image1_${index}" accept="image/*">
+                        <input type="file" id="edit_Image2_${index}" accept="image/*">
+                        <input type="file" id="edit_Image3_${index}" accept="image/*">
+                        <input type="file" id="edit_Image4_${index}" accept="image/*">
+                        <input type="file" id="edit_Image5_${index}" accept="image/*">
+                        <small style="color:#6c757d;">Leave blank to keep existing image links.</small>
+                    </div>
+                </td>
+                <td class="extra-fields-cell"><span style="color:#999;">Existing extra details remain unchanged.</span></td>
+                <td class="action-cell">
+                    <button class="btn-small btn-save" onclick="saveIncidentRow(${index})"><i class="fas fa-save"></i> Save</button>
+                    <button class="btn-small btn-cancel" onclick="renderTable()"><i class="fas fa-times"></i> Cancel</button>
+                </td>
+            `;
+        }
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const result = String(reader.result || '');
+                    resolve(result.includes(',') ? result.split(',')[1] : result);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function getEditedImages(index) {
+            const images = [];
+            for (let i = 1; i <= 5; i++) {
+                const input = document.getElementById(`edit_Image${i}_${index}`);
+                if (input && input.files && input.files[0]) {
+                    const file = input.files[0];
+                    images.push({
+                        slot: i,
+                        name: file.name,
+                        type: file.type || 'image/jpeg',
+                        base64: await readFileAsBase64(file)
+                    });
+                }
+            }
+            return images;
+        }
+
+        async function saveIncidentRow(index) {
+            const inc = filteredIncidents[index];
+            if (!inc || !inc.RowNumber) return;
+            setLoading(true);
+            try {
+                const payload = {
+                    action: 'updateIncident',
+                    rowNumber: inc.RowNumber,
+                    values: {
+                        Date: document.getElementById(`edit_Date_${index}`).value,
+                        Time: document.getElementById(`edit_Time_${index}`).value,
+                        VehicleReg: document.getElementById(`edit_VehicleReg_${index}`).value,
+                        Location: document.getElementById(`edit_Location_${index}`).value,
+                        AccidentType: document.getElementById(`edit_AccidentType_${index}`).value,
+                        Department: document.getElementById(`edit_Department_${index}`).value,
+                        CostCenter: document.getElementById(`edit_CostCenter_${index}`).value,
+                        DriverName: document.getElementById(`edit_DriverName_${index}`).value,
+                        DriverPhone: document.getElementById(`edit_DriverPhone_${index}`).value,
+                        Description: document.getElementById(`edit_Description_${index}`).value,
+                        AtFault: document.getElementById(`edit_AtFault_${index}`).value
+                    },
+                    images: await getEditedImages(index)
+                };
+
+                const response = await fetch(CONFIG.GAS_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (jsonError) {
+                    throw new Error('Apps Script did not return JSON. Usually this means the Web App URL is old, private, or not deployed as Execute as Me / Anyone with the link. Response started: ' + text.slice(0, 120));
+                }
+                if (!data.success) throw new Error(data.error || 'Save failed');
+
+                showNotification('Incident updated successfully', 'success');
+                await loadIncidents();
+            } catch (error) {
+                console.error('Save failed:', error);
+                showNotification(`Save failed: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
         }
 
         function exportToCSV() {
@@ -1135,14 +1358,19 @@
                 return;
             }
             
-            const headers = ['Timestamp','Date', 'Time', 'Vehicle', 'Location', 'Type', 'Department', 'Cost Center', 'Driver', 'Phone', 'Description', 'At Fault', 'Image Link', 'Extra Fields'];
-            const rows = filteredIncidents.map(inc => [
-                inc.Timestamp, inc.Date, inc.Time, inc.VehicleReg, inc.Location, inc.AccidentType,
-                inc.Department, inc.CostCenter, inc.DriverName, inc.DriverPhone, inc.Description, inc.AtFault, inc.ImageDriveUrl,
-                getExtraFields(inc).join(' | ')
-            ]);
+            const headers = ['Timestamp','Date', 'Time', 'Vehicle', 'Location', 'Type', 'Department', 'Cost Center', 'Driver', 'Phone', 'Description', 'At Fault', 'Image Link 1', 'Image Link 2', 'Image Link 3', 'Image Link 4', 'Image Link 5', 'Extra Fields'];
+            const rows = filteredIncidents.map(inc => {
+                const imageLinks = getImageLinks(inc);
+                while (imageLinks.length < 5) imageLinks.push('');
+                return [
+                    inc.Timestamp, inc.Date, inc.Time, inc.VehicleReg, inc.Location, inc.AccidentType,
+                    inc.Department, inc.CostCenter, inc.DriverName, inc.DriverPhone, inc.Description, inc.AtFault,
+                    ...imageLinks,
+                    getExtraFields(inc).join(' | ')
+                ];
+            });
             
-            const csv = [headers, ...rows].map(row => row.map(c => `"${c || ''}"`).join(',')).join('\n');
+            const csv = [headers, ...rows].map(row => row.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
