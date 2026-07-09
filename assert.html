@@ -1179,7 +1179,7 @@
       function makeStatusButton(status) {
         const btn = document.createElement("button");
         btn.className = status === "Sold" ? "btn-sm-sold" : "btn-sm-stolen";
-        btn.innerHTML = status === "Sold" ? '<i class="fas fa-dollar-sign"></i>' : '<i class="fas fa-exclamation-triangle"></i>';
+        btn.innerHTML = status === "Sold" ? '<span style="font-weight:900;">R</span>' : '<i class="fas fa-exclamation-triangle"></i>';
         btn.title = "Move to " + status + " window";
         btn.addEventListener("click", function(e) {
           e.stopPropagation();
