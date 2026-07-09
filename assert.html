@@ -626,7 +626,7 @@
   const MAIN_SHEET_NAME = "Asssert Reg";
   const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
   const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfWTlORnkLKmjkBRCMTtYdirTJXGtAslGRXd4sUtBU8irpWLihILOl0O3nHk3Q-EZ7TA/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyf2oje02qyFhxJuUq94ksCTL5a0FQX7D37jKP8wYy_LAf7HnfYtyGcR_3k7D7g0ozu/exec";
 
   const FIELD_IDS = [
     "code","assetClass","purchaseDate","purchasedBy","financing","description",
@@ -878,6 +878,11 @@
     statusEl.style.background = isError ? "rgba(239,68,68,0.1)" : "rgba(212,175,55,0.16)";
   }
 
+  function isActiveAsset(asset) {
+    const status = String(getField(asset, "assetStatus") || "Active").trim().toLowerCase();
+    return status !== "sold" && status !== "stolen";
+  }
+
   function updateDashboard() {
     const classMap = {
       'Drilling': ['drilling', 'drilling plant'],
@@ -894,7 +899,9 @@
     Object.keys(classMap).forEach(key => counts[key] = 0);
 
     Object.keys(classMap).forEach(key => {
-      const source = isEquipmentFilter(key) ? equipmentAssets : mainAssets;
+      // Do not count Sold or Stolen assets in dashboard class totals.
+      // They must only appear in the Sold/Stolen windows below.
+      const source = (isEquipmentFilter(key) ? equipmentAssets : mainAssets).filter(isActiveAsset);
       source.forEach(a => {
         const cls = String(getField(a, "assetClass")).trim().toLowerCase();
         if (classMap[key].some(kw => cls.includes(kw) || cls === kw)) counts[key]++;
@@ -911,7 +918,7 @@
     document.getElementById("cntAdmin").textContent = counts['Admin'];
     document.getElementById("cntProjects").textContent = counts['Projects & Tender'];
 
-    const activeRows = allAssets.filter(a => String(getField(a, "assetStatus") || "Active").toLowerCase() !== "sold" && String(getField(a, "assetStatus") || "Active").toLowerCase() !== "stolen");
+    const activeRows = allAssets.filter(isActiveAsset);
     const stolenRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "stolen");
     const soldRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "sold");
     document.getElementById("totalAssetValue").textContent = money(activeRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
@@ -1248,6 +1255,9 @@
   async function loadAssets() {
     showStatus("Loading dashboard from Assert Reg and Drilling_Equipment...");
     try {
+      // Safe month-end check: Apps Script only deducts VAF installments when today is the last day of the month.
+      // On other days it returns skipped and does not alter the sheet.
+      try { await apiPost({ action: "runMonthEndInstallmentsIfDue", sheetId: SHEET_ID }); } catch(e) { console.warn("Month-end VAF check skipped", e); }
       const results = await Promise.allSettled([
         loadSheetAssets(MAIN_SHEET_NAME),
         loadSheetAssets(EQUIPMENT_SHEET_NAME)
