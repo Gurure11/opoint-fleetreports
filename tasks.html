@@ -124,7 +124,7 @@
 
 <script>
 // Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzQJaemQ1sXp_2Tp_kTF9bG9HOH8XZfO8q_hpR7EJVTc_pu-a595d5yXyrx64BZVji0/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJaldt09G0JS_fcNoAQRyaYCb3S404PZqShPDiFBwkWIgilPi_Do5gtQ-dFdrEIcv0ww/exec';
 let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
 let STATE = {tickets:[], globalTickets:[], dashboardTickets:[], users:[], referenceData:[], summary:{}};
 let LAST_GOOD_STATE = {tickets:[], globalTickets:[], dashboardTickets:[], users:[], referenceData:[], summary:{}};
@@ -134,6 +134,8 @@ let ACTIVE_DATA_VIEW = 'all';
 let AUTO_REFRESH_TIMER = null;
 let LAST_REFRESH_AT = 0;
 const REFRESH_INTERVAL_MS = 45000;
+const INITIAL_BOOTSTRAP_MAX = 120;
+const FULL_LAZY_MAX = 500;
 
 function hasUsableTicketList(data){return data && Array.isArray(data.tickets);}
 function keepLastGoodState(data, opts={}){
@@ -241,10 +243,11 @@ function start(){document.getElementById('login').classList.add('hide');document
 function refresh(){
   const seq=++REQUEST_SEQ;
   ACTIVE_DATA_VIEW='all';
-  postApi('bootstrap',{userId:USER.UserID,max:500}).then(data=>{
+  postApi('bootstrap',{userId:USER.UserID,max:INITIAL_BOOTSTRAP_MAX,dashboardMax:INITIAL_BOOTSTRAP_MAX}).then(data=>{
     if(seq!==REQUEST_SEQ) return; // Prevent older responses from overwriting newer data.
     keepLastGoodState(data,{allowEmpty:false});
     fillLists();applyRoleVisibility();render();startAutoRefresh();LAST_REFRESH_AT=Date.now();
+    setTimeout(()=>loadTicketsView('all',FULL_LAZY_MAX,{silent:true,background:true,dashboardMax:FULL_LAZY_MAX}),350);
   }).catch(e=>{
     hideSync();
     if((LAST_GOOD_STATE.tickets||[]).length){STATE=JSON.parse(JSON.stringify(LAST_GOOD_STATE));render();return alert('Temporary loading issue. The last stable dashboard data has been kept on screen. '+(e.message||e));}
@@ -257,7 +260,7 @@ function loadTicketsView(view, max, opts={}){
   const seq=++REQUEST_SEQ;
   const useBootstrap = !(STATE.users||[]).length && ACTIVE_DATA_VIEW==='all';
   const action = useBootstrap ? 'bootstrap' : 'getTicketsByView';
-  const payload = useBootstrap ? {userId:USER.UserID,max:max||500} : {userId:USER.UserID,view:ACTIVE_DATA_VIEW,max:max||500};
+  const payload = useBootstrap ? {userId:USER.UserID,max:max||INITIAL_BOOTSTRAP_MAX,dashboardMax:opts.dashboardMax||max||INITIAL_BOOTSTRAP_MAX} : {userId:USER.UserID,view:ACTIVE_DATA_VIEW,max:max||300,dashboardMax:opts.dashboardMax||max||300};
   return postApi(action,payload).then(data=>{
     if(seq!==REQUEST_SEQ) return; // Ignore stale late responses.
     keepLastGoodState(data,{allowEmpty:!!opts.allowEmpty});
@@ -274,7 +277,7 @@ function showTab(id){if((id==='review1'||id==='review2')&&!isReviewAllowed(id)){
   // Use local cache for navigation so counters do not disappear during tab changes.
   render();
   const view = id==='review1'?'review1':id==='review2'?'review2':id==='closed'?'closed':id==='task'?'task':id==='performance'?'all':null;
-  if(view && (Date.now()-LAST_REFRESH_AT>REFRESH_INTERVAL_MS)) loadTicketsView(view, id==='performance'?500:300, {silent:true, background:true});
+  if(view && (Date.now()-LAST_REFRESH_AT>REFRESH_INTERVAL_MS)) loadTicketsView(view, id==='performance'?FULL_LAZY_MAX:300, {silent:true, background:true, dashboardMax:id==='performance'?FULL_LAZY_MAX:300});
 }
 function modeChange(){const rec=document.querySelector('[name=mode]:checked').value==='recurring';document.querySelectorAll('.recOnly').forEach(e=>e.classList.toggle('hide',!rec));document.querySelectorAll('.singleOnly').forEach(e=>e.classList.toggle('hide',rec));}
 function activeUsers(){return (STATE.users||[]).filter(u=>String(u.IsActive).toUpperCase()!=='FALSE');}
@@ -371,9 +374,11 @@ function openTicketWindow(kind){
   if(Date.now()-LAST_REFRESH_AT>REFRESH_INTERVAL_MS) loadTicketsView(kind==='all'?'task':kind,300,{silent:true,background:true});
   const el=document.getElementById('taskRows'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
-function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=workflowTickets();const dashboardTickets=executiveDashboardTickets();const sum={critical:0,openOnTime:0,e1:0,e2:0,closed:0,late:0};dashboardTickets.forEach(t=>{if(String(t.Priority)==='Critical'&&t.Status!=='Closed')sum.critical++; if(isOpenOnTime(t))sum.openOnTime++; if(t.CurrentBasket==='Executive1')sum.e1++; if(t.CurrentBasket==='Executive2')sum.e2++; if(t.Status==='Closed'||t.CurrentBasket==='Closed')sum.closed++; if(t.Status!=='Closed'&&isLate(t))sum.late++;});// Dashboard counters are calculated from the global executive dashboard cache when available.
-  // This prevents flickering caused by a delayed or partial server summary.
-  if(document.getElementById('stCritical'))stCritical.textContent=sum.critical; if(document.getElementById('stOpenOnTime'))stOpenOnTime.textContent=sum.openOnTime; stE1.textContent=sum.e1;stE2.textContent=sum.e2;stClosed.textContent=sum.closed;stLate.textContent=sum.late; renderDashboard(dashboardTickets,sum); buildPerfOptions(); renderPerformance();
+function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=workflowTickets();const dashboardTickets=executiveDashboardTickets();const sum={critical:0,openOnTime:0,e1:0,e2:0,closed:0,late:0};dashboardTickets.forEach(t=>{if(String(t.Priority)==='Critical'&&t.Status!=='Closed')sum.critical++; if(isOpenOnTime(t))sum.openOnTime++; if(t.CurrentBasket==='Executive1')sum.e1++; if(t.CurrentBasket==='Executive2')sum.e2++; if(t.Status==='Closed'||t.CurrentBasket==='Closed')sum.closed++; if(t.Status!=='Closed'&&isLate(t))sum.late++;});
+  const serverSum=STATE.summary||{};
+  const cardSum={critical:serverSum.critical??sum.critical,openOnTime:serverSum.openOnTime??sum.openOnTime,e1:serverSum.review1??sum.e1,e2:serverSum.review2??sum.e2,closed:serverSum.closed??sum.closed,late:serverSum.late??sum.late};
+  // Dashboard cards use the stable server summary immediately; lists/charts lazy-load in the background.
+  if(document.getElementById('stCritical'))stCritical.textContent=cardSum.critical; if(document.getElementById('stOpenOnTime'))stOpenOnTime.textContent=cardSum.openOnTime; stE1.textContent=cardSum.e1;stE2.textContent=cardSum.e2;stClosed.textContent=cardSum.closed;stLate.textContent=cardSum.late; renderDashboard(dashboardTickets,cardSum); buildPerfOptions(); if(document.getElementById('performance')?.classList.contains('on')) renderPerformance();
   const filtered=filterTickets(CURRENT_FILTER).filter(t=>(t.Title+t.TicketID+t.AssignedToName+t.Department+t.CostCenter).toLowerCase().includes(s));
   taskRows.innerHTML=(`<tr><td colspan="8" class="filterTitle">Showing: ${esc(filterLabel(CURRENT_FILTER))}</td></tr>`)+ (filtered.map(rowTask).join('')||empty(8));
   review1Rows.innerHTML=isReviewAllowed('review1')?(dashboardTickets.filter(t=>t.CurrentBasket==='Executive1' && t.Status!=='Closed').map(rowReview1).join('')||empty(6)):empty(6);
@@ -459,7 +464,11 @@ function drawActions(t){
   let html='';
   const role=userRoleKey();
   const isAdmin=(role==='admin'||role==='adminmanager');
-  const canSubmit=t.CurrentBasket==='Assignee' && (isMineAsAssignee(t)||isMineAsCreator(t)||isAdmin);
+  const basket=String(t.CurrentBasket||'').trim();
+  const status=String(t.Status||'').trim();
+  const initialUserBasket=(basket===''||basket==='Assignee'||basket==='Open'||basket==='User'||basket==='My Tickets');
+  const alreadySubmitted=!!t.SubmittedAt || basket==='Executive1' || basket==='Executive2' || basket==='Closed' || status==='Submitted' || status==='Executive1 Approved' || status==='Closed';
+  const canSubmit=initialUserBasket && !alreadySubmitted && status!=='Closed' && basket!=='Closed' && (isMineAsAssignee(t)||isAdmin);
   if(canSubmit) html+=`<button class="btn primary" onclick="submitTicket()">Submit Ticket</button><div class="scorebox"><label>Request more time</label><input id="moreTimeDate" type="date"><input id="moreTimeReason" placeholder="Reason for more time"><button class="btn" onclick="requestMoreTime()">Send Request</button></div>`;
   if(hasPendingTimeRequest()&&(isMineAsCreator(t)||role==='executive1'||role==='exec1'||isAdmin)) html+=`<button class="btn good" onclick="approveMoreTime()">Approve More Time Request</button>`;
   if(t.CurrentBasket==='Executive1'&&(role==='executive1'||role==='exec1'||isAdmin)) html+=`<div class="scorebox"><label>Executive1 Score %</label><input id="scoreIn" type="number" min="0" max="100" value="100"><input id="scoreComment" placeholder="Approval / return comment"><button class="btn primary" onclick="approve1()">Approve</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;
