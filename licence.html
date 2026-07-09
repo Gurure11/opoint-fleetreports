@@ -515,7 +515,7 @@
       Replace this with your deployed Apps Script Web App URL after pasting the fixed Apps Script code.
       Example: https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
     */
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxJAmpmg9fKr-ayv1EJ8SLycXaaOA9JSNtuzxGwQoS1kdjTXnN7PjdJSP8yyI3QcgThg/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzCi7QqdEh3-Owdfvzb8I6xzJvzFl_eLWX9goEjYxU7h44w1V7RCKhFVFVPikE74T4bOg/exec';
     let editingRowNumber = null;
     let editingExistingLicenceFileLink = '';
     let transactionLicenceRecords = [];
@@ -826,8 +826,20 @@
 
     function renderStatus(data) {
       data = data || { aboutToExpire: [], expired: [] };
-      renderPeople('aboutToExpireBox', data.aboutToExpire, 'No licences about to expire.', true);
-      renderPeople('expiredBox', data.expired, 'No expired licences.', false);
+
+      // Safety filter: the backend already filters this, but this keeps the dashboard correct
+      // even if an older Apps Script deployment returns all records.
+      const aboutToExpireOnly = normalizeLicenceList(data.aboutToExpire || []).filter(function(p) {
+        const days = Number(p.daysRemaining);
+        return Number.isFinite(days) && days >= 0 && days <= 14;
+      });
+      const expiredOnly = normalizeLicenceList(data.expired || []).filter(function(p) {
+        const days = Number(p.daysRemaining);
+        return Number.isFinite(days) && days < 0;
+      });
+
+      renderPeople('aboutToExpireBox', aboutToExpireOnly, 'No licences about to expire.', true);
+      renderPeople('expiredBox', expiredOnly, 'No expired licences.', false);
     }
 
     function renderPeople(elementId, people, emptyText, limitAboutToExpire) {
@@ -859,7 +871,11 @@
       callServer('getLicenceStatus')
         .then(function(response) {
           const data = normalizeStatusResponse(response);
-          renderPeople('aboutToExpireBox', data.aboutToExpire, 'No licences about to expire.', false);
+          const aboutToExpireOnly = normalizeLicenceList(data.aboutToExpire || []).filter(function(p) {
+            const days = Number(p.daysRemaining);
+            return Number.isFinite(days) && days >= 0 && days <= 14;
+          });
+          renderPeople('aboutToExpireBox', aboutToExpireOnly, 'No licences about to expire.', false);
         })
         .catch(function() {
           document.getElementById('aboutToExpireBox').innerHTML = '<div class="empty">Could not open full about-to-expire list.</div>';
