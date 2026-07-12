@@ -1,11 +1,12 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Distinct Infrastructure · Dashboard</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Distinct Infrastructure · Dashboard</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
+<style>
     :root {
       --primary-blue: #0b2f6b;
       --deep-blue: #071f47;
@@ -488,137 +489,135 @@
 </head>
 <body>
 <div class="container" id="appContainer">
-  <div class="header">
-    <h1>Distinct Infrastructure</h1>
-    <p>Vehicle & Asset Register · Dashboard</p>
-    <p><strong>Google Storage:</strong> Asset Register O/a Distinct Infrastructure</p>
-  </div>
-
-  <!-- DASHBOARD CARDS (clickable) - Focus on Drilling, Yellow, and Small Plant -->
-  <div class="dashboard-grid" id="dashboardCards">
-    <div class="stat-card" data-filter="Drilling"><i class="fas fa-oil-can"></i><div class="count" id="cntDrilling">0</div><div class="label">Drilling Plant</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-filter="Yellow Plant"><i class="fas fa-digging"></i><div class="count" id="cntYellow">0</div><div class="label">Yellow Plant</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-filter="Small Plant"><i class="fas fa-th-list"></i><div class="count" id="cntSmallPlant">0</div><div class="label">Small Plant</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-filter="Trucks"><i class="fas fa-truck"></i><div class="count" id="cntTrucks">0</div><div class="label">Trucks</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-filter="Trailers"><i class="fas fa-trailer"></i><div class="count" id="cntTrailers">0</div><div class="label">Trailers</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-filter="Executive"><i class="fas fa-car"></i><div class="count" id="cntExecutive">0</div><div class="label">Executive Cars</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-filter="Bowser"><i class="fas fa-gas-pump"></i><div class="count" id="cntBowser">0</div><div class="label">Bowsers</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-filter="Admin"><i class="fas fa-building"></i><div class="count" id="cntAdmin">0</div><div class="label">Admin</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-filter="Projects &amp; Tender"><i class="fas fa-briefcase"></i><div class="count" id="cntProjects">0</div><div class="label">Projects &amp; Tender</div><span class="filter-badge">click</span></div>
-  </div>
-
-  <div class="dashboard-grid" id="executiveSummaryCards">
-    <div class="stat-card" data-special-filter="all-active"><i class="fas fa-coins"></i><div class="count" id="totalAssetValue">R 0.00</div><div class="label">Total Vehicle & Equipment Value</div><div class="sub">Active NBV / Value</div></div>
-    <div class="stat-card" data-special-filter="all-active"><i class="fas fa-chart-line"></i><div class="count" id="totalDepreciation">R 0.00</div><div class="label">Total Depreciation To Date</div><div class="sub">Accumulated DPN</div></div>
-    <div class="stat-card" data-special-filter="Stolen"><i class="fas fa-exclamation-triangle"></i><div class="count" id="cntStolen">0</div><div class="label">Stolen Vehicles / Equipment</div><div class="sub" id="valStolen">R 0.00</div><span class="filter-badge">click</span></div>
-    <div class="stat-card" data-special-filter="Sold"><i class="fas fa-hand-holding-usd"></i><div class="count" id="cntSold">0</div><div class="label">Sold Vehicles / Equipment</div><div class="sub" id="valSold">R 0.00</div><span class="filter-badge">click</span></div>
-  </div>
-
-  <!-- ACTION ROW -->
-  <div class="action-row">
-    <div class="btn-group">
-      <button class="btn-gold" id="newEntryBtn"><i class="fas fa-plus-circle"></i> New Entry</button>
-      <button class="btn-outline" id="refreshDashBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-      <button class="btn-outline" id="clearFilterBtn"><i class="fas fa-times-circle"></i> Clear Filter</button>
-    </div>
-    <div class="btn-group">
-      <button class="btn-outline" id="printBtn"><i class="fas fa-print"></i> Print</button>
-      <button class="btn-outline" id="excelBtn"><i class="fas fa-file-excel"></i> CSV</button>
-    </div>
-  </div>
-
-  <!-- ENTRY SECTION -->
-  <div id="entrySection" class="hidden">
-    <h2>
-      <span><i class="fas fa-pen-alt" style="color:var(--gold);"></i> New Asset Entry</span>
-      <button class="btn-back" id="backToDashboardBtn"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
-    </h2>
-      <button type="button" class="btn-outline" onclick="window.location.href='insurance.html'"><i class="fas fa-shield-alt"></i> Insurance Report</button>
-    <form id="assetForm">
-      <div class="form-grid">
-        <div class="form-group"><label>Code</label><select id="code"><option value="">Select Code</option><option>73803</option><option>73802</option><option>82130</option><option>73801</option><option>73800</option></select></div>
-        <div class="form-group"><label>Asset Class</label><select id="assetClass"><option value="">Select Asset Class</option><option>Admin</option><option>Bowser</option><option>Drilling</option><option>Executive</option><option>Projects &amp; Tender</option><option>Small Plant</option><option>Trailers</option><option>Trucks</option><option>Yellow Plant</option></select></div>
-        <div class="form-group"><label>Purchase Date</label><input type="date" id="purchaseDate"></div>
-        <div class="form-group"><label>Purchased by</label><select id="purchasedBy"><option value="">Select Purchased By</option><option>Onpoint</option><option>Aqua Telecoms</option><option>Nkanyezi</option><option>Distinct</option></select></div>
-        <div class="form-group"><label>Financing</label><input type="text" id="financing"></div>
-        <div class="form-group"><label>Description</label><input type="text" id="description"></div>
-        <input type="hidden" id="model">
-        <div class="form-group"><label>Make of Vehicle</label><select id="makeOfVehicle"><option value="">Select Make</option><option>Toyota</option><option>Faw</option><option>Ford</option><option>Foton</option><option>Mahindra</option><option>Isuzu</option><option>Mercedes Benz</option><option>VW</option><option>Nissan</option></select></div>
-        <div class="form-group"><label>Body Type</label><select id="bodyType"><option value="">Select Body Type</option><option>Sedan</option><option>Hatchback</option><option>Truck</option><option>Minibus</option><option>SUV</option><option>Bakkie</option><option>Lorry</option></select></div>
-        <div class="form-group"><label>Registration no</label><input type="text" id="registrationNo"></div>
-        <div class="form-group"><label>Engine no</label><input type="text" id="engineNo"></div>
-        <div class="form-group"><label>Vin no</label><input type="text" id="vinNo"></div>
-        <div class="form-group"><label>Cost</label><input type="text" inputmode="decimal" id="cost"></div>
-        <div class="form-group"><label>Market Value</label><input type="text" inputmode="decimal" id="marketValue"></div>
-        <div class="form-group"><label>ZOHO</label><select id="zoho"><option value="">Select ZOHO</option><option>Yes</option><option>No</option></select></div>
-        <div class="form-group"><label>Location</label><input type="text" id="location"></div>
-        <div class="form-group"><label>Driver/Operator</label><input type="text" id="driverOperator"></div>
-        <div class="form-group"><label>Allocation/Dept</label><input type="text" id="allocationDept"></div>
-        <div class="form-group"><label>Registered Entity</label><input type="text" id="registeredEntity"></div>
-        <div class="form-group"><label>Covered by</label><select id="coveredBy"><option value="">Select Insurance</option><option>Outsurance</option><option>Auto General</option><option>Standard Bank</option><option>Other</option></select></div>
-        <div class="form-group"><label>TRACKING COMPANY</label><select id="trackingCompany"><option value="">Select Tracking</option><option>Netstar</option><option>Car Tracker</option><option>The Both(Car Tracker & Netstar)</option></select></div>
-        <div class="form-group"><label>Installment Amount</label><input type="text" inputmode="decimal" id="installmentAmount"></div>
-        <div class="form-group"><label>Last Installment date</label><input type="date" id="lastInstallmentDate"></div>
-        <div class="form-group"><label>eTag Toll</label><select id="eTagToll"><option value="">Select eTag</option><option>Yes</option><option>No</option></select></div>
-        <div class="form-group"><label>NOTES</label><textarea id="notes"></textarea></div>
-        <div class="form-group"><label>Reg. Boo</label><input type="text" id="regBoo"></div>
-        <div class="form-group"><label>Useful life</label><input type="text" inputmode="decimal" id="usefulLife"></div>
-        <div class="form-group"><label>Recharge</label><input type="text" inputmode="decimal" id="recharge"></div>
-        <div class="form-group"><label>Monthly dpn</label><input type="text" inputmode="decimal" id="monthlyDpn"></div>
-        <div class="form-group"><label>Year</label><select id="year"><option value="">Select Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
-        <div class="form-group"><label>Months Dpn</label><input type="text" inputmode="decimal" id="monthsDpn"></div>
-        <div class="form-group"><label>Accum dpn</label><input type="text" inputmode="decimal" id="accumDpn"></div>
-        <div class="form-group"><label>Residual Value (5% - 10%)</label><input type="text" inputmode="decimal" id="residualValue" placeholder="Auto 10% of Cost if blank"></div>
-        <div class="form-group"><label>NBV</label><input type="text" inputmode="decimal" id="nbv"></div>
-        <div class="form-group"><label>Outstanding VAF</label><input type="text" inputmode="decimal" id="oustandingVaf"></div>
-        <div class="form-group"><label>Value</label><input type="text" inputmode="decimal" id="value"></div>
-        <div class="form-group"><label>Vehicle Reg Book Upload</label><input type="file" id="vehicleRegBookFile" accept="image/*,application/pdf,.doc,.docx"></div>
-        <div class="form-group"><label>Tracking Certificate Upload</label><input type="file" id="trackingCertificateFile" accept="image/*,application/pdf,.doc,.docx"></div>
-        <div class="form-group"><label>Upload up to 5 Images</label><input type="file" id="imageFiles" accept="image/*" multiple><small style="color:var(--muted);margin-top:6px;">Maximum 5 images. Links post to Google Sheet.</small></div>
-        <input type="hidden" id="rowNumber">
-        <input type="hidden" id="vehicleRegBookLink">
-        <input type="hidden" id="trackingCertificateLink">
-        <input type="hidden" id="regBookLink">
-        <input type="hidden" id="imageLinks">
-        <input type="hidden" id="assetStatus">
-        <input type="hidden" id="statusDate">
-        <input type="hidden" id="soldValue">
-      </div>
-      <div class="form-actions">
-        <button type="submit" id="saveBtn">Save Asset</button>
-        <button type="button" class="btn-blue" id="clearBtn">Clear Form</button>
-        <button type="button" class="btn-outline" id="cancelEntryBtn">Cancel</button>
-      </div>
-    </form>
-    <div class="status" id="status"></div>
-  </div>
-
-  <!-- transaction journal -->
-  <div class="table-wrap">
-    <h2 style="color:var(--primary-blue);margin-top:28px;margin-bottom:10px;">
+<div class="header">
+<h1>Distinct Infrastructure</h1>
+<p>Vehicle &amp; Asset Register · Dashboard</p>
+<p><strong>Google Storage:</strong> Asset Register O/a Distinct Infrastructure</p>
+</div>
+<!-- DASHBOARD CARDS (clickable) - Focus on Drilling, Yellow, and Small Plant -->
+<div class="dashboard-grid" id="dashboardCards">
+<div class="stat-card" data-filter="Drilling"><i class="fas fa-oil-can"></i><div class="count" id="cntDrilling">0</div><div class="label">Drilling Plant</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Yellow Plant"><i class="fas fa-digging"></i><div class="count" id="cntYellow">0</div><div class="label">Yellow Plant</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Small Plant"><i class="fas fa-th-list"></i><div class="count" id="cntSmallPlant">0</div><div class="label">Small Plant</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Trucks"><i class="fas fa-truck"></i><div class="count" id="cntTrucks">0</div><div class="label">Trucks</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Trailers"><i class="fas fa-trailer"></i><div class="count" id="cntTrailers">0</div><div class="label">Trailers</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Executive"><i class="fas fa-car"></i><div class="count" id="cntExecutive">0</div><div class="label">Executive Cars</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Bowser"><i class="fas fa-gas-pump"></i><div class="count" id="cntBowser">0</div><div class="label">Bowsers</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Admin"><i class="fas fa-building"></i><div class="count" id="cntAdmin">0</div><div class="label">Admin</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Projects &amp; Tender"><i class="fas fa-briefcase"></i><div class="count" id="cntProjects">0</div><div class="label">Projects &amp; Tender</div><span class="filter-badge">click</span></div>
+</div>
+<div class="dashboard-grid" id="executiveSummaryCards">
+<div class="stat-card" data-special-filter="all-active"><i class="fas fa-coins"></i><div class="count" id="totalAssetValue">R 0.00</div><div class="label">Total Vehicle &amp; Equipment Value</div><div class="sub">Active NBV / Value</div></div>
+<div class="stat-card" data-special-filter="all-active"><i class="fas fa-chart-line"></i><div class="count" id="totalDepreciation">R 0.00</div><div class="label">Total Depreciation To Date</div><div class="sub">Accumulated DPN</div></div>
+<div class="stat-card"><i class="fas fa-money-check-alt"></i><div class="count" id="totalInstallmentsPaid">R 0.00</div><div class="label">Total Installments Paid</div><div class="sub">Cumulative VAF payments</div></div>
+<div class="stat-card" data-special-filter="Stolen"><i class="fas fa-exclamation-triangle"></i><div class="count" id="cntStolen">0</div><div class="label">Stolen Vehicles / Equipment</div><div class="sub" id="valStolen">R 0.00</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-special-filter="Sold"><i class="fas fa-hand-holding-usd"></i><div class="count" id="cntSold">0</div><div class="label">Sold Vehicles / Equipment</div><div class="sub" id="valSold">R 0.00</div><span class="filter-badge">click</span></div>
+</div>
+<!-- ACTION ROW -->
+<div class="action-row">
+<div class="btn-group">
+<button class="btn-gold" id="newEntryBtn"><i class="fas fa-plus-circle"></i> New Entry</button>
+<button class="btn-outline" id="refreshDashBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+<button class="btn-outline" id="clearFilterBtn"><i class="fas fa-times-circle"></i> Clear Filter</button>
+</div>
+<div class="btn-group">
+<button class="btn-outline" id="printBtn"><i class="fas fa-print"></i> Print</button>
+<button class="btn-outline" id="excelBtn"><i class="fas fa-file-excel"></i> CSV</button>
+<button class="btn-outline" id="vehicleLicenceBtn" onclick="window.location.href='vehicle1.html'"><i class="fas fa-id-card"></i> Vehicle Licence</button><button class="btn-outline" id="insuranceBtnMain" onclick="window.location.href='insurance.html'"><i class="fas fa-shield-alt"></i> Insurance</button></div>
+</div>
+<!-- ENTRY SECTION -->
+<div class="hidden" id="entrySection">
+<h2>
+<span><i class="fas fa-pen-alt" style="color:var(--gold);"></i> New Asset Entry</span>
+<button class="btn-back" id="backToDashboardBtn"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+</h2>
+<button class="btn-outline" onclick="window.location.href='insurance.html'" type="button"><i class="fas fa-shield-alt"></i> Insurance Report</button>
+<form id="assetForm">
+<div class="form-grid">
+<div class="form-group"><label>Code</label><select id="code"><option value="">Select Code</option><option>73803</option><option>73802</option><option>82130</option><option>73801</option><option>73800</option></select></div>
+<div class="form-group"><label>Asset Class</label><select id="assetClass"><option value="">Select Asset Class</option><option>Admin</option><option>Bowser</option><option>Drilling</option><option>Executive</option><option>Projects &amp; Tender</option><option>Small Plant</option><option>Trailers</option><option>Trucks</option><option>Yellow Plant</option></select></div>
+<div class="form-group"><label>Purchase Date</label><input id="purchaseDate" type="date"/></div>
+<div class="form-group"><label>Purchased by</label><select id="purchasedBy"><option value="">Select Purchased By</option><option>Onpoint</option><option>Aqua Telecoms</option><option>Nkanyezi</option><option>Distinct</option></select></div>
+<div class="form-group"><label>Financing</label><input id="financing" type="text"/></div>
+<div class="form-group"><label>Description</label><input id="description" type="text"/></div>
+<input id="model" type="hidden"/>
+<div class="form-group"><label>Make of Vehicle</label><select id="makeOfVehicle"><option value="">Select Make</option><option>Toyota</option><option>Faw</option><option>Ford</option><option>Foton</option><option>Mahindra</option><option>Isuzu</option><option>Mercedes Benz</option><option>VW</option><option>Nissan</option></select></div>
+<div class="form-group"><label>Body Type</label><select id="bodyType"><option value="">Select Body Type</option><option>Sedan</option><option>Hatchback</option><option>Truck</option><option>Minibus</option><option>SUV</option><option>Bakkie</option><option>Lorry</option></select></div>
+<div class="form-group"><label>Registration no</label><input id="registrationNo" type="text"/></div>
+<div class="form-group"><label>Engine no</label><input id="engineNo" type="text"/></div>
+<div class="form-group"><label>Vin no</label><input id="vinNo" type="text"/></div>
+<div class="form-group"><label>Cost</label><input id="cost" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Market Value</label><input id="marketValue" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>ZOHO</label><select id="zoho"><option value="">Select ZOHO</option><option>Yes</option><option>No</option></select></div>
+<div class="form-group"><label>Location</label><input id="location" type="text"/></div>
+<div class="form-group"><label>Driver/Operator</label><input id="driverOperator" type="text"/></div>
+<div class="form-group"><label>Allocation/Dept</label><input id="allocationDept" type="text"/></div>
+<div class="form-group"><label>Registered Entity</label><input id="registeredEntity" type="text"/></div>
+<div class="form-group"><label>Covered by</label><select id="coveredBy"><option value="">Select Insurance</option><option>Outsurance</option><option>Auto General</option><option>Standard Bank</option><option>Other</option></select></div>
+<div class="form-group"><label>TRACKING COMPANY</label><select id="trackingCompany"><option value="">Select Tracking</option><option>Netstar</option><option>Car Tracker</option><option>The Both(Car Tracker &amp; Netstar)</option></select></div>
+<div class="form-group"><label>Installment Amount</label><input id="installmentAmount" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Last Installment date</label><input id="lastInstallmentDate" type="date"/></div>
+<div class="form-group"><label>eTag Toll</label><select id="eTagToll"><option value="">Select eTag</option><option>Yes</option><option>No</option></select></div>
+<div class="form-group"><label>NOTES</label><textarea id="notes"></textarea></div>
+<div class="form-group"><label>Reg. Boo</label><input id="regBoo" type="text"/></div>
+<div class="form-group"><label>Useful life</label><input id="usefulLife" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Recharge</label><input id="recharge" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Monthly dpn</label><input id="monthlyDpn" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Year</label><select id="year"><option value="">Select Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
+<div class="form-group"><label>Months Dpn</label><input id="monthsDpn" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Accum dpn</label><input id="accumDpn" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Residual Value (5% - 10%)</label><input id="residualValue" inputmode="decimal" placeholder="Auto 10% of Cost if blank" type="text"/></div>
+<div class="form-group"><label>NBV</label><input id="nbv" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Outstanding VAF</label><input id="oustandingVaf" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Value</label><input id="value" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Vehicle Reg Book Upload</label><input accept="image/*,application/pdf,.doc,.docx" id="vehicleRegBookFile" type="file"/></div>
+<div class="form-group"><label>Tracking Certificate Upload</label><input accept="image/*,application/pdf,.doc,.docx" id="trackingCertificateFile" type="file"/></div>
+<div class="form-group"><label>Vehicle Invoice Upload</label><input accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" id="vehicleInvoiceFile" type="file"/></div>
+<div class="form-group"><label>Upload up to 5 Images</label><input accept="image/*" id="imageFiles" multiple="" type="file"/><small style="color:var(--muted);margin-top:6px;">Maximum 5 images. Links post to Google Sheet.</small></div>
+<input id="rowNumber" type="hidden"/>
+<input id="vehicleRegBookLink" type="hidden"/>
+<input id="trackingCertificateLink" type="hidden"/>
+<input id="vehicleInvoiceLink" type="hidden"/>
+<input id="assetTotalInstallmentsPaid" type="hidden"/>
+<input id="regBookLink" type="hidden"/>
+<input id="imageLinks" type="hidden"/>
+<input id="assetStatus" type="hidden"/>
+<input id="statusDate" type="hidden"/>
+<input id="soldValue" type="hidden"/>
+</div>
+<div class="form-actions">
+<button id="saveBtn" type="submit">Save Asset</button>
+<button class="btn-blue" id="clearBtn" type="button">Clear Form</button>
+<button class="btn-outline" id="cancelEntryBtn" type="button">Cancel</button>
+</div>
+</form>
+<div class="status" id="status"></div>
+</div>
+<!-- transaction journal -->
+<div class="table-wrap">
+<h2 style="color:var(--primary-blue);margin-top:28px;margin-bottom:10px;">
       Transaction Journal
       <span id="filterIndicator" style="font-size:14px;font-weight:normal;color:var(--muted);margin-left:12px;"></span>
-    </h2>
-    <div class="transaction-toolbar" id="transactionToolbar">
-      <div class="filter-box"><label>Search</label><input type="search" id="transactionSearch" placeholder="Search registration, description, make..."></div>
-      <div class="filter-box"><label>Sort</label><select id="transactionSort"><option value="">Default</option><option value="alphaAsc">Alphabet A-Z</option><option value="alphaDesc">Alphabet Z-A</option><option value="dateNewest">Date Newest</option><option value="dateOldest">Date Oldest</option></select></div>
-      <div class="filter-box"><label>Class</label><select id="transactionClassFilter"><option value="">All Classes</option></select></div>
-      <div class="filter-box"><label>Car Model</label><select id="transactionModelFilter"><option value="">All Models</option></select></div>
-      <div class="filter-box"><label>Cost Center</label><select id="transactionCostCenterFilter"><option value="">All Cost Centers</option></select></div>
-      <button type="button" class="btn-blue" id="transactionSearchBtn"><i class="fas fa-search"></i> Search</button>
-      <button type="button" class="btn-outline" id="transactionClearBtn"><i class="fas fa-eraser"></i> Reset</button>
-    </div>
-    <table id="assetTable">
-      <thead><tr>
-        <th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th>
-        <th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>Residual Value</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th><th>Images</th><th>Status</th><th>Status Date</th><th>Sold Value</th>
-        <th class="action-col">Actions</th>
-      </tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
+</h2>
+<div class="transaction-toolbar" id="transactionToolbar">
+<div class="filter-box"><label>Search</label><input id="transactionSearch" placeholder="Search registration, description, make..." type="search"/></div>
+<div class="filter-box"><label>Sort</label><select id="transactionSort"><option value="">Default</option><option value="alphaAsc">Alphabet A-Z</option><option value="alphaDesc">Alphabet Z-A</option><option value="dateNewest">Date Newest</option><option value="dateOldest">Date Oldest</option></select></div>
+<div class="filter-box"><label>Class</label><select id="transactionClassFilter"><option value="">All Classes</option></select></div>
+<div class="filter-box"><label>Car Model</label><select id="transactionModelFilter"><option value="">All Models</option></select></div>
+<div class="filter-box"><label>Cost Center</label><select id="transactionCostCenterFilter"><option value="">All Cost Centers</option></select></div>
+<button class="btn-blue" id="transactionSearchBtn" type="button"><i class="fas fa-search"></i> Search</button>
+<button class="btn-outline" id="transactionClearBtn" type="button"><i class="fas fa-eraser"></i> Reset</button>
 </div>
-
+<table id="assetTable">
+<thead><tr>
+<th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th>
+<th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>Residual Value</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th><th>Vehicle Invoice</th><th>Images</th><th>Status</th><th>Status Date</th><th>Sold Value</th>
+<th class="action-col">Actions</th>
+</tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
 <script>
   // ======================== CONFIG =========================
   const SHEET_ID = "1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw";
@@ -626,7 +625,7 @@
   const MAIN_SHEET_NAME = "Asssert Reg";
   const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
   const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyf2oje02qyFhxJuUq94ksCTL5a0FQX7D37jKP8wYy_LAf7HnfYtyGcR_3k7D7g0ozu/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQuBXv-pLgp9Blf-RnqdRMOtd8E4XH2KxKolrnVj0OhMozqZ32e3E9v7gGJaRnC2uq/exec";
 
   const FIELD_IDS = [
     "code","assetClass","purchaseDate","purchasedBy","financing","description",
@@ -635,7 +634,7 @@
     "allocationDept","registeredEntity","coveredBy","trackingCompany","installmentAmount",
     "lastInstallmentDate","eTagToll","notes","regBoo","usefulLife","recharge",
     "monthlyDpn","year","monthsDpn","accumDpn","residualValue","nbv","oustandingVaf","value",
-    "imageLinks","assetStatus","statusDate","soldValue"
+    "imageLinks","assetStatus","statusDate","soldValue","totalInstallmentsPaid"
   ];
 
   const FIELD_ALIASES = {
@@ -677,6 +676,8 @@
     value: ["value","Value"],
     vehicleRegBookLink: ["vehicleRegBookLink","Vehicle Reg Book","Vehicle Reg Book Link","regBookLink"],
     trackingCertificateLink: ["trackingCertificateLink","Tracking Certificate","Tracking Certificate Link"],
+    vehicleInvoiceLink: ["vehicleInvoiceLink","Vehicle Invoice","Vehicle Invoice Link","Invoice Link"],
+    totalInstallmentsPaid: ["totalInstallmentsPaid","Total Installments Paid","Installments Paid"],
     imageLinks: ["imageLinks", "Image Links", "Images", "Asset Images"],
     assetStatus: ["assetStatus", "Asset Status", "Status"],
     statusDate: ["statusDate", "Status Date"],
@@ -722,7 +723,7 @@
 
 
 
-  const CURRENCY_FIELDS = new Set(["cost","marketValue","installmentAmount","recharge","monthlyDpn","accumDpn","residualValue","nbv","oustandingVaf","value","soldValue"]);
+  const CURRENCY_FIELDS = new Set(["cost","marketValue","installmentAmount","recharge","monthlyDpn","accumDpn","residualValue","nbv","oustandingVaf","value","soldValue","totalInstallmentsPaid"]);
 
   function toNumber(v) {
     if (v === undefined || v === null || v === "") return 0;
@@ -738,6 +739,12 @@
 
   function money(v) {
     return "R " + toNumber(v).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function displayDate(value) {
+    const d = parseAssetDate(value);
+    if (!d) return valueOrBlank(value);
+    return String(d.getDate()).padStart(2, "0") + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + d.getFullYear();
   }
 
   function getAnyNumber(data, keys) {
@@ -771,6 +778,20 @@
     const asAt = new Date(asAtDate.getFullYear(), asAtDate.getMonth(), 1);
     if (asAt < start) return 0;
     return ((asAt.getFullYear() - start.getFullYear()) * 12) + (asAt.getMonth() - start.getMonth()) + 1;
+  }
+
+  function installmentMonthsFromPurchase(purchaseDate, asAtDate = new Date()) {
+    const purchase = parseAssetDate(purchaseDate);
+    if (!purchase || purchase > asAtDate) return 0;
+    return ((asAtDate.getFullYear() - purchase.getFullYear()) * 12)
+      + (asAtDate.getMonth() - purchase.getMonth()) + 1;
+  }
+
+  function calculateTotalInstallmentsPaid(asset, asAtDate = new Date()) {
+    const installment = toNumber(getField(asset, "installmentAmount"));
+    if (installment <= 0) return 0;
+    const months = installmentMonthsFromPurchase(getField(asset, "purchaseDate"), asAtDate);
+    return installment * months;
   }
 
   function applyDepreciationToData(data, options = {}) {
@@ -923,6 +944,9 @@
     const soldRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "sold");
     document.getElementById("totalAssetValue").textContent = money(activeRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
     document.getElementById("totalDepreciation").textContent = money(activeRows.reduce((sum, a) => sum + toNumber(getField(a, "accumDpn")), 0));
+    document.getElementById("totalInstallmentsPaid").textContent = money(
+      allAssets.reduce((sum, asset) => sum + calculateTotalInstallmentsPaid(asset), 0)
+    );
     document.getElementById("cntStolen").textContent = stolenRows.length;
     document.getElementById("valStolen").textContent = money(stolenRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
     document.getElementById("cntSold").textContent = soldRows.length;
@@ -1080,10 +1104,10 @@
 
     rows.forEach(function(data){
       const row = document.createElement("tr");
-      const displayFields = FIELD_IDS.filter(id => !["licenced","typeOfLicence","validityOfLicence","imageLinks","assetStatus","statusDate","soldValue"].includes(id));
+      const displayFields = FIELD_IDS.filter(id => !["licenced","typeOfLicence","validityOfLicence","imageLinks","assetStatus","statusDate","soldValue","totalInstallmentsPaid"].includes(id));
       displayFields.forEach(field => {
         const td = document.createElement("td");
-        td.textContent = CURRENCY_FIELDS.has(field) ? money(getField(data, field)) : valueOrBlank(getField(data, field));
+        td.textContent = CURRENCY_FIELDS.has(field) ? money(getField(data, field)) : (["purchaseDate","lastInstallmentDate"].includes(field) ? displayDate(getField(data, field)) : valueOrBlank(getField(data, field)));
         row.appendChild(td);
       });
 
@@ -1095,13 +1119,17 @@
       trackingTd.innerHTML = linkCell(getField(data, "trackingCertificateLink"), "View Tracking");
       row.appendChild(trackingTd);
 
+      const invoiceTd = document.createElement("td");
+      invoiceTd.innerHTML = linkCell(getField(data, "vehicleInvoiceLink"), "View Invoice");
+      row.appendChild(invoiceTd);
+
       const imagesTd = document.createElement("td");
       imagesTd.innerHTML = linkListCell(getField(data, "imageLinks"), "Image");
       row.appendChild(imagesTd);
 
       ["assetStatus", "statusDate", "soldValue"].forEach(field => {
         const td = document.createElement("td");
-        td.textContent = field === "soldValue" ? money(getField(data, field)) : valueOrBlank(getField(data, field) || (field === "assetStatus" ? "Active" : ""));
+        td.textContent = field === "soldValue" ? money(getField(data, field)) : (field === "statusDate" ? displayDate(getField(data, field)) : valueOrBlank(getField(data, field) || (field === "assetStatus" ? "Active" : "")));
         row.appendChild(td);
       });
 
@@ -1120,6 +1148,8 @@
         document.getElementById("rowNumber").value = data.rowNumber || "";
         document.getElementById("vehicleRegBookLink").value = getField(data, "vehicleRegBookLink") || "";
         document.getElementById("trackingCertificateLink").value = getField(data, "trackingCertificateLink") || "";
+        document.getElementById("vehicleInvoiceLink").value = getField(data, "vehicleInvoiceLink") || "";
+        document.getElementById("assetTotalInstallmentsPaid").value = calculateTotalInstallmentsPaid(data);
         document.getElementById("regBookLink").value = data.regBookLink || "";
         document.getElementById("imageLinks").value = getField(data, "imageLinks") || "";
         document.getElementById("assetStatus").value = getField(data, "assetStatus") || "Active";
@@ -1175,6 +1205,7 @@
 
       const uploadRegBtn = makeUploadButton("Vehicle Reg Book", "Vehicle Reg Book", "vehicleRegBookLink");
       const uploadTrackingBtn = makeUploadButton("Tracking Certificate", "Tracking Certificate", "trackingCertificateLink");
+      const uploadInvoiceBtn = makeUploadButton("Vehicle Invoice", "Vehicle Invoice", "vehicleInvoiceLink");
 
       function makeStatusButton(status) {
         const btn = document.createElement("button");
@@ -1230,6 +1261,7 @@
       actionDiv.appendChild(editBtn);
       actionDiv.appendChild(uploadRegBtn);
       actionDiv.appendChild(uploadTrackingBtn);
+      actionDiv.appendChild(uploadInvoiceBtn);
       actionDiv.appendChild(stolenBtn);
       actionDiv.appendChild(soldBtn);
       actionDiv.appendChild(delBtn);
@@ -1298,6 +1330,8 @@
     if (rowNum) data.rowNumber = rowNum;
     data.vehicleRegBookLink = document.getElementById("vehicleRegBookLink").value || "";
     data.trackingCertificateLink = document.getElementById("trackingCertificateLink").value || "";
+    data.vehicleInvoiceLink = document.getElementById("vehicleInvoiceLink").value || "";
+    data.totalInstallmentsPaid = calculateTotalInstallmentsPaid(data);
     data.regBookLink = document.getElementById("regBookLink").value || "";
     data.action = "saveAsset";
     data.sheetId = SHEET_ID;
@@ -1309,6 +1343,7 @@
       showStatus("Saving asset and documents...");
       data.vehicleRegBookFile = await fileToPayload(document.getElementById("vehicleRegBookFile").files[0]);
       data.trackingCertificateFile = await fileToPayload(document.getElementById("trackingCertificateFile").files[0]);
+      data.vehicleInvoiceFile = await fileToPayload(document.getElementById("vehicleInvoiceFile").files[0]);
       data.imageFiles = await filesToPayloads(document.getElementById("imageFiles").files, 5);
       const response = await apiPost(data);
       if (response.status !== "success") throw new Error(response.message || "Save failed");
@@ -1317,6 +1352,8 @@
       document.getElementById("rowNumber").value = "";
       document.getElementById("vehicleRegBookLink").value = "";
       document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
       document.getElementById("regBookLink").value = "";
       document.getElementById("saveBtn").textContent = "Save Asset";
       await loadAssets();
@@ -1331,6 +1368,8 @@
     document.getElementById("rowNumber").value = "";
     document.getElementById("vehicleRegBookLink").value = "";
     document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     showStatus("Form cleared.");
@@ -1342,6 +1381,8 @@
     document.getElementById("rowNumber").value = "";
     document.getElementById("vehicleRegBookLink").value = "";
     document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
@@ -1353,6 +1394,8 @@
     document.getElementById("rowNumber").value = "";
     document.getElementById("vehicleRegBookLink").value = "";
     document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     showStatus("");
@@ -1366,6 +1409,8 @@
     document.getElementById("rowNumber").value = "";
     document.getElementById("vehicleRegBookLink").value = "";
     document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
     document.getElementById("regBookLink").value = "";
     document.getElementById("saveBtn").textContent = "Save Asset";
     showStatus("");
@@ -1390,7 +1435,7 @@
     if (currentFilter) {
       rows = (isEquipmentFilter(currentFilter) ? equipmentAssets : mainAssets).filter(a => String(getField(a, "assetClass")).toLowerCase().includes(currentFilter.toLowerCase()));
     }
-    const displayFields = FIELD_IDS.filter(id => !["licenced","typeOfLicence","validityOfLicence","imageLinks","assetStatus","statusDate","soldValue"].includes(id));
+    const displayFields = FIELD_IDS.filter(id => !["licenced","typeOfLicence","validityOfLicence","imageLinks","assetStatus","statusDate","soldValue","totalInstallmentsPaid"].includes(id));
     const headers = [...displayFields, "vehicleRegBookLink", "trackingCertificateLink", "imageLinks", "assetStatus", "statusDate", "soldValue"];
     const csvRows = [headers, ...rows.map(row => {
       const vals = displayFields.map(id => valueOrBlank(getField(row, id)));
