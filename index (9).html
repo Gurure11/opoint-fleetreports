@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vehicle Licence Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <style>
+    :root{
+      --blue:#0b2f6b;--blue2:#1768d2;--soft:#edf5ff;--gold:#d4af37;
+      --text:#17324f;--muted:#6f7f92;--line:#dce6f2;--danger:#d93025;
+      --warning:#e38b00;--success:#198754;--shadow:0 18px 45px rgba(11,47,107,.16)
+    }
+    *{box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif}
+    body{margin:0;background:linear-gradient(135deg,#071f47,#1464d2);padding:24px;color:var(--text)}
+    .app{max-width:1450px;margin:auto;background:#fff;border-radius:24px;padding:26px;box-shadow:var(--shadow)}
+    .hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:28px;border-radius:20px;text-align:center}
+    .hero h1{margin:0 0 8px;font-size:36px}.hero p{margin:0;color:#e9f2ff}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin:24px 0}
+    .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:center;box-shadow:0 8px 20px rgba(11,47,107,.08)}
+    .card i{font-size:26px;color:var(--blue2);margin-bottom:8px}.card .num{font-size:30px;font-weight:800;color:var(--blue)}
+    .card .label{font-size:12px;text-transform:uppercase;color:var(--muted);font-weight:700}
+    .card.warning{border-color:#ffd38a;background:#fffaf0}.card.danger{border-color:#ffb9b4;background:#fff7f6}.card.success{border-color:#bfe6cc;background:#f6fff9}
+    .toolbar,.form-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0}
+    button{border:none;border-radius:999px;padding:12px 20px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--gold),#9a7416);color:#071f47}
+    button.blue{background:linear-gradient(135deg,var(--blue2),var(--blue));color:#fff}.danger-btn{background:linear-gradient(135deg,#ef4444,#a31313);color:#fff}.secondary{background:#eef3f9;color:var(--blue);border:1px solid var(--line)}
+    .panel{border:1px solid var(--line);border-radius:18px;padding:20px;background:linear-gradient(180deg,#fff,var(--soft));margin-bottom:22px}
+    .panel h2{margin-top:0;color:var(--blue)}
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+    label{font-size:13px;font-weight:800;color:var(--blue);margin-bottom:6px;display:block}
+    input,select,textarea{width:100%;padding:11px 12px;border:1px solid #bfcde0;border-radius:11px;background:#fff;font-size:14px}
+    textarea{min-height:80px;resize:vertical}.hidden{display:none!important}
+    .statusbar{margin:12px 0;padding:11px 14px;border-left:5px solid var(--gold);background:#fff8da;border-radius:10px;font-weight:700;min-height:20px}
+    .search-row{display:grid;grid-template-columns:2fr repeat(2,minmax(160px,1fr)) auto;gap:10px;margin-bottom:14px}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;max-height:68vh}
+    table{width:100%;min-width:1200px;border-collapse:collapse}th{position:sticky;top:0;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:10px;font-size:12px;text-align:left;white-space:nowrap}td{padding:9px 10px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+    tr:hover{background:#f7fbff}.badge{display:inline-block;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800}.badge.valid{background:#d9f5e4;color:#146c3a}.badge.soon{background:#fff0c7;color:#9b6100}.badge.expired{background:#ffe0de;color:#a3231a}
+    .thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid var(--line)}.actions{display:flex;gap:6px}.actions button{padding:6px 10px;font-size:11px}
+    @media(max-width:800px){body{padding:10px}.app{padding:14px}.hero h1{font-size:26px}.search-row{grid-template-columns:1fr}.toolbar button,.form-actions button{width:100%}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="hero">
+    <h1><i class="fas fa-id-card"></i> Vehicle Licence Dashboard</h1>
+    <p>Google Sheet tab: <strong>vehicle</strong> · Date format: DD-MM-YYYY</p>
+  </div>
+
+  <div class="grid">
+    <div class="card"><i class="fas fa-car"></i><div class="num" id="totalCount">0</div><div class="label">Total Vehicle Licences</div></div>
+    <div class="card success"><i class="fas fa-check-circle"></i><div class="num" id="validCount">0</div><div class="label">Valid</div></div>
+    <div class="card warning" id="aboutCard"><i class="fas fa-clock"></i><div class="num" id="aboutCount">0</div><div class="label">About To Expire (30 Days)</div></div>
+    <div class="card danger"><i class="fas fa-times-circle"></i><div class="num" id="expiredCount">0</div><div class="label">Expired</div></div>
+  </div>
+
+  <div class="toolbar">
+    <button id="newBtn"><i class="fas fa-plus"></i> New Licence</button>
+    <button class="blue" id="refreshBtn"><i class="fas fa-sync"></i> Refresh</button>
+    <button class="secondary" id="sendRemindersBtn"><i class="fas fa-envelope"></i> Send Reminder Emails</button>
+  </div>
+
+  <section class="panel hidden" id="formPanel">
+    <h2 id="formTitle">New Vehicle Licence</h2>
+    <form id="licenceForm">
+      <div class="form-grid">
+        <div><label>Date</label><input type="date" id="date" required></div>
+        <div><label>Vehicle Description</label><input type="text" id="vehicleDescription" required></div>
+        <div><label>Vehicle Registration</label><input type="text" id="vehicleReg" required></div>
+        <div><label>Expiry Date</label><input type="date" id="expiryDate" required></div>
+        <div><label>Reminder Email</label><input type="email" id="reminderEmail" placeholder="fleet@example.com"></div>
+        <div><label>Licence Picture / PDF</label><input type="file" id="pictureFile" accept="image/*,application/pdf"></div>
+        <div style="grid-column:1/-1"><label>Notes</label><textarea id="notes"></textarea></div>
+      </div>
+      <input type="hidden" id="rowNumber"><input type="hidden" id="pictureLink"><input type="hidden" id="pictureFileId">
+      <div class="form-actions">
+        <button type="submit" id="saveBtn">Save Licence</button>
+        <button type="button" class="secondary" id="cancelBtn">Cancel</button>
+      </div>
+    </form>
+    <div class="statusbar" id="status"></div>
+  </section>
+
+  <section class="panel">
+    <h2>About To Expire</h2>
+    <div id="aboutToExpireList">No licences are about to expire.</div>
+  </section>
+
+  <div class="search-row">
+    <input type="search" id="searchInput" placeholder="Search vehicle description or registration">
+    <select id="statusFilter"><option value="">All Statuses</option><option>Valid</option><option>About To Expire</option><option>Expired</option></select>
+    <select id="sortFilter"><option value="expiryAsc">Expiry Soonest</option><option value="expiryDesc">Expiry Latest</option><option value="regAsc">Registration A-Z</option></select>
+    <button class="blue" id="clearFiltersBtn">Reset</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Vehicle Description</th><th>Vehicle Reg</th><th>Expiry Date</th><th>Remaining Days</th><th>Status</th><th>Reminder Email</th><th>Picture</th><th>Reminder Sent</th><th>Notes</th><th>Actions</th></tr></thead>
+      <tbody id="licenceBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw';
+const SHEET_NAME = 'vehicle';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz0jNnaIPZyW2rAiYJ5ImiMWF_TJkjhY-woUZHsRXjVMgCgaXm5tFipIwHIBmeD5M2j/exec';
+let records = [];
+
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+function toISODate(v){ if(!v)return ''; const s=String(v); if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s; const m=s.match(/^(\d{1,2})[-\/]([0-9]{1,2})[-\/](\d{4})$/); if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; const d=new Date(s); return isNaN(d)?'':d.toISOString().slice(0,10); }
+function fmtDate(v){ const iso=toISODate(v); if(!iso)return ''; const [y,m,d]=iso.split('-'); return `${d}-${m}-${y}`; }
+function calcDays(v){ const iso=toISODate(v); if(!iso)return 0; const today=new Date(); today.setHours(0,0,0,0); const ex=new Date(iso+'T00:00:00'); return Math.ceil((ex-today)/86400000); }
+function calcStatus(days){ return days<0?'Expired':days<=30?'About To Expire':'Valid'; }
+function badge(status){ return `<span class="badge ${status==='Valid'?'valid':status==='Expired'?'expired':'soon'}">${esc(status)}</span>`; }
+function checkUrl(){ if(!SCRIPT_URL.startsWith('https://script.google.com/macros/s/')) throw new Error('Paste the deployed Apps Script Web App URL into SCRIPT_URL in the HTML.'); }
+async function api(payload){ checkUrl(); const res=await fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,sheetId:SHEET_ID,sheetName:SHEET_NAME})}); const text=await res.text(); let out; try{out=JSON.parse(text)}catch(e){throw new Error('Apps Script returned invalid JSON. Deploy it as a Web App with access set correctly.')} if(out.status==='error')throw new Error(out.message||'Request failed'); return out; }
+function fileToPayload(file){ return new Promise((resolve,reject)=>{ if(!file)return resolve(null); const r=new FileReader(); r.onerror=()=>reject(new Error('Could not read file')); r.onload=()=>resolve({fileName:file.name,mimeType:file.type||'application/octet-stream',fileData:String(r.result).split(',')[1]}); r.readAsDataURL(file); }); }
+function setStatus(msg,error=false){ $('status').textContent=msg; $('status').style.borderLeftColor=error?'#d93025':'#d4af37'; }
+async function loadRecords(){ try{ $('licenceBody').innerHTML='<tr><td colspan="11">Synchronising...</td></tr>'; const out=await api({action:'list'}); records=Array.isArray(out.data)?out.data:[]; render(); }catch(e){ $('licenceBody').innerHTML=`<tr><td colspan="11">${esc(e.message)}</td></tr>`; } }
+function render(){
+  const q=$('searchInput').value.trim().toLowerCase(), sf=$('statusFilter').value, sort=$('sortFilter').value;
+  let view=records.map(r=>{const days=Number(r.remainingDays??calcDays(r.expiryDate)); return {...r,remainingDays:days,status:r.status||calcStatus(days)}})
+    .filter(r=>(!q||String(r.vehicleDescription).toLowerCase().includes(q)||String(r.vehicleReg).toLowerCase().includes(q))&&(!sf||r.status===sf));
+  view.sort((a,b)=>sort==='expiryDesc'?toISODate(b.expiryDate).localeCompare(toISODate(a.expiryDate)):sort==='regAsc'?String(a.vehicleReg).localeCompare(String(b.vehicleReg)):toISODate(a.expiryDate).localeCompare(toISODate(b.expiryDate)));
+  $('licenceBody').innerHTML=view.length?view.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.vehicleDescription)}</td><td>${esc(r.vehicleReg)}</td><td>${fmtDate(r.expiryDate)}</td><td>${r.remainingDays}</td><td>${badge(r.status)}</td><td>${esc(r.reminderEmail)}</td><td>${r.pictureLink?`<a href="${esc(r.pictureLink)}" target="_blank">View</a>`:'-'}</td><td>${fmtDate(r.reminderSentDate)}</td><td title="${esc(r.notes)}">${esc(r.notes)}</td><td><div class="actions"><button class="blue" onclick="editRow(${r.rowNumber})">Edit</button><button class="danger-btn" onclick="deleteRow(${r.rowNumber})">Delete</button></div></td></tr>`).join(''):'<tr><td colspan="11">No records found.</td></tr>';
+  const all=records.map(r=>{const d=Number(r.remainingDays??calcDays(r.expiryDate));return {...r,remainingDays:d,status:r.status||calcStatus(d)}});
+  $('totalCount').textContent=all.length; $('validCount').textContent=all.filter(r=>r.status==='Valid').length; $('aboutCount').textContent=all.filter(r=>r.status==='About To Expire').length; $('expiredCount').textContent=all.filter(r=>r.status==='Expired').length;
+  const about=all.filter(r=>r.status==='About To Expire').sort((a,b)=>a.remainingDays-b.remainingDays);
+  $('aboutToExpireList').innerHTML=about.length?about.map(r=>`<div style="padding:9px 0;border-bottom:1px solid #dce6f2"><strong>${esc(r.vehicleReg)}</strong> — ${esc(r.vehicleDescription)} — expires ${fmtDate(r.expiryDate)} (${r.remainingDays} days)</div>`).join(''):'No licences are about to expire.';
+}
+function resetForm(){ $('licenceForm').reset(); $('rowNumber').value=''; $('pictureLink').value=''; $('pictureFileId').value=''; $('formTitle').textContent='New Vehicle Licence'; $('date').value=new Date().toISOString().slice(0,10); }
+function openForm(){ $('formPanel').classList.remove('hidden'); $('formPanel').scrollIntoView({behavior:'smooth'}); }
+function editRow(rowNumber){ const r=records.find(x=>Number(x.rowNumber)===Number(rowNumber)); if(!r)return; resetForm(); $('formTitle').textContent='Edit Vehicle Licence'; ['date','vehicleDescription','vehicleReg','expiryDate','reminderEmail','notes','pictureLink','pictureFileId','rowNumber'].forEach(id=>{ $(id).value=id==='date'||id==='expiryDate'?toISODate(r[id]):(r[id]??''); }); openForm(); }
+async function deleteRow(rowNumber){ if(!confirm('Delete this vehicle licence record?'))return; try{ await api({action:'delete',rowNumber}); await loadRecords(); }catch(e){ alert(e.message); } }
+$('licenceForm').addEventListener('submit',async e=>{ e.preventDefault(); try{ setStatus('Synchronising and saving...'); $('saveBtn').disabled=true; const file=await fileToPayload($('pictureFile').files[0]); const payload={action:'save',rowNumber:$('rowNumber').value,date:$('date').value,vehicleDescription:$('vehicleDescription').value.trim(),vehicleReg:$('vehicleReg').value.trim(),expiryDate:$('expiryDate').value,reminderEmail:$('reminderEmail').value.trim(),notes:$('notes').value.trim(),pictureLink:$('pictureLink').value,pictureFileId:$('pictureFileId').value,pictureFile:file}; await api(payload); setStatus('Vehicle licence saved successfully.'); resetForm(); $('formPanel').classList.add('hidden'); await loadRecords(); }catch(e){setStatus(e.message,true)}finally{$('saveBtn').disabled=false;} });
+$('newBtn').onclick=()=>{resetForm();openForm()}; $('cancelBtn').onclick=()=>{$('formPanel').classList.add('hidden');resetForm()}; $('refreshBtn').onclick=loadRecords; $('sendRemindersBtn').onclick=async()=>{try{const out=await api({action:'sendReminders'});alert(out.message||'Reminder process completed.');await loadRecords()}catch(e){alert(e.message)}};
+['searchInput','statusFilter','sortFilter'].forEach(id=>$(id).addEventListener(id==='searchInput'?'input':'change',render)); $('clearFiltersBtn').onclick=()=>{$('searchInput').value='';$('statusFilter').value='';$('sortFilter').value='expiryAsc';render()}; $('aboutCard').onclick=()=>{$('statusFilter').value='About To Expire';render();$('licenceBody').scrollIntoView({behavior:'smooth'})};
+resetForm(); loadRecords();
+</script>
+</body>
+</html>
