@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Construction Company Database</title>
+  <style>
+    :root {
+      --primary: #176b3a;
+      --primary-dark: #0f4d29;
+      --primary-light: #e8f5ec;
+      --accent: #d9a520;
+      --danger: #c62828;
+      --warning: #ef6c00;
+      --success: #2e7d32;
+      --info: #1565c0;
+      --bg: #f4f7f5;
+      --card: #ffffff;
+      --text: #183229;
+      --muted: #6b7f76;
+      --border: #dbe5df;
+      --shadow: 0 10px 30px rgba(18, 76, 43, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app-header {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: white;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .header-content {
+      max-width: 1500px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .brand h1 {
+      margin: 0 0 6px;
+      font-size: clamp(24px, 3vw, 38px);
+    }
+
+    .brand p {
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    .connection {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #ffca28;
+      box-shadow: 0 0 0 4px rgba(255,202,40,0.2);
+    }
+
+    .dot.connected {
+      background: #7cff87;
+      box-shadow: 0 0 0 4px rgba(124,255,135,0.2);
+    }
+
+    .dot.disconnected {
+      background: #ff6b6b;
+      box-shadow: 0 0 0 4px rgba(255,107,107,0.2);
+    }
+
+    main {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .stat-value {
+      font-size: 30px;
+      font-weight: 800;
+      margin-top: 8px;
+      color: var(--primary-dark);
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 22px;
+    }
+
+    .panel-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .toolbar {
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: 2fr repeat(4, minmax(150px, 1fr)) auto;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      background: #fbfdfb;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      font: inherit;
+      background: white;
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(23, 107, 58, 0.12);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 16px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(0,0,0,.12);
+    }
+
+    .btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: #eef3f0; color: var(--text); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-small { padding: 8px 10px; font-size: 13px; }
+
+    .table-wrap {
+      width: 100%;
+      overflow: auto;
+      max-height: 620px;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 1900px;
+      width: 100%;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: var(--primary-dark);
+      color: white;
+      white-space: nowrap;
+    }
+
+    tbody tr:hover { background: var(--primary-light); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      background: #eef2ef;
+    }
+
+    .badge.lead { background: #e3f2fd; color: #0d47a1; }
+    .badge.contacted { background: #fff3e0; color: #a64b00; }
+    .badge.quoted { background: #ede7f6; color: #4527a0; }
+    .badge.won { background: #e8f5e9; color: #1b5e20; }
+    .badge.lost { background: #ffebee; color: #b71c1c; }
+    .badge.in-progress { background: #e0f7fa; color: #006064; }
+
+    .actions {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 45px 20px;
+      font-weight: 700;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(7, 30, 18, .62);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .modal.show { display: block; }
+
+    .modal-card {
+      width: min(1100px, 100%);
+      margin: 30px auto;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.28);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      padding: 18px 22px;
+      background: var(--primary-dark);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-head h3 { margin: 0; }
+
+    .close-btn {
+      border: none;
+      background: rgba(255,255,255,.14);
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    form { padding: 22px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 7px;
+      color: var(--primary-dark);
+    }
+
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 2000;
+      min-width: 260px;
+      max-width: 420px;
+      background: #173e2a;
+      color: white;
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 14px 35px rgba(0,0,0,.24);
+      display: none;
+    }
+
+    .toast.show { display: block; }
+    .toast.error { background: #a61b1b; }
+
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      background: rgba(255,255,255,.74);
+      backdrop-filter: blur(3px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-overlay.show { display: flex; }
+
+    .loader-card {
+      background: white;
+      border-radius: 16px;
+      padding: 22px 28px;
+      box-shadow: var(--shadow);
+      font-weight: 800;
+      color: var(--primary-dark);
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard { grid-template-columns: repeat(2, 1fr); }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: repeat(2, 1fr); }
+      .span-3 { grid-column: span 2; }
+    }
+
+    @media (max-width: 650px) {
+      main { padding: 14px; }
+      .dashboard { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .span-2, .span-3 { grid-column: span 1; }
+      .form-actions { flex-direction: column-reverse; }
+      .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-content">
+      <div class="brand">
+        <h1>Construction Company Database</h1>
+        <p>Client, project opportunity, quotation and follow-up management</p>
+      </div>
+      <div class="connection">
+        <span id="connectionDot" class="dot"></span>
+        <span id="connectionText">Checking connection…</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="dashboard">
+      <div class="stat-card">
+        <div class="stat-label">Total Clients</div>
+        <div id="totalClients" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Opportunities</div>
+        <div id="activeOpportunities" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Quotations Sent</div>
+        <div id="quotesSent" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Follow-Ups Due</div>
+        <div id="followUpsDue" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Estimated Pipeline</div>
+        <div id="pipelineValue" class="stat-value">R 0.00</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Client & Project Records</h2>
+        <button class="btn btn-primary" onclick="openAddModal()">＋ Add New Client</button>
+      </div>
+
+      <div class="toolbar">
+        <input id="searchInput" type="search" placeholder="Search company, person, phone, email, service…" oninput="applyFilters()" />
+        <select id="statusFilter" onchange="applyFilters()">
+          <option value="">All Statuses</option>
+          <option>Lead</option>
+          <option>Contacted</option>
+          <option>Qualified</option>
+          <option>Quotation Sent</option>
+          <option>Negotiation</option>
+          <option>Won</option>
+          <option>Lost</option>
+          <option>In Progress</option>
+          <option>Completed</option>
+          <option>On Hold</option>
+        </select>
+        <select id="provinceFilter" onchange="applyFilters()">
+          <option value="">All Provinces / Locations</option>
+        </select>
+        <select id="industryFilter" onchange="applyFilters()">
+          <option value="">All Project Types</option>
+        </select>
+        <select id="assignedFilter" onchange="applyFilters()">
+          <option value="">All Assigned Staff</option>
+        </select>
+        <button class="btn btn-secondary" onclick="loadData()">↻ Refresh</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Client ID</th>
+              <th>Company Name</th>
+              <th>Contact Person</th>
+              <th>Position</th>
+              <th>Phone Number</th>
+              <th>Email Address</th>
+              <th>Industry / Project Type</th>
+              <th>Province / Location</th>
+              <th>Services Required</th>
+              <th>Last Contact</th>
+              <th>Next Follow-Up</th>
+              <th>Quotation Sent</th>
+              <th>Estimated Project Value</th>
+              <th>Status</th>
+              <th>Assigned To</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="recordsBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty" style="display:none;">No construction client records found.</div>
+      </div>
+    </section>
+  </main>
+
+  <div id="recordModal" class="modal" onclick="backdropClose(event)">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="modalTitle">Add New Client</h3>
+        <button class="close-btn" type="button" onclick="closeModal()">×</button>
+      </div>
+
+      <form id="recordForm" onsubmit="saveRecord(event)">
+        <input type="hidden" id="rowNumber" />
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="clientId">Client ID</label>
+            <input id="clientId" placeholder="Auto-generated if blank" />
+          </div>
+
+          <div class="form-group">
+            <label for="companyName">Company Name *</label>
+            <input id="companyName" required />
+          </div>
+
+          <div class="form-group">
+            <label for="contactPerson">Contact Person</label>
+            <input id="contactPerson" />
+          </div>
+
+          <div class="form-group">
+            <label for="position">Position</label>
+            <input id="position" />
+          </div>
+
+          <div class="form-group">
+            <label for="phoneNumber">Phone Number</label>
+            <input id="phoneNumber" type="tel" />
+          </div>
+
+          <div class="form-group">
+            <label for="emailAddress">Email Address</label>
+            <input id="emailAddress" type="email" />
+          </div>
+
+          <div class="form-group">
+            <label for="industryProjectType">Industry / Project Type</label>
+            <input id="industryProjectType" placeholder="Roadworks, civil, buildings…" />
+          </div>
+
+          <div class="form-group">
+            <label for="provinceLocation">Province / Location</label>
+            <input id="provinceLocation" placeholder="Gauteng, Pretoria…" />
+          </div>
+
+          <div class="form-group">
+            <label for="servicesRequired">Services Required</label>
+            <input id="servicesRequired" placeholder="Earthworks, electrical, concrete…" />
+          </div>
+
+          <div class="form-group">
+            <label for="lastContactDate">Last Contact Date</label>
+            <input id="lastContactDate" type="date" />
+          </div>
+
+          <div class="form-group">
+            <label for="nextFollowUpDate">Next Follow-Up Date</label>
+            <input id="nextFollowUpDate" type="date" />
+          </div>
+
+          <div class="form-group">
+            <label for="quotationSent">Quotation Sent</label>
+            <select id="quotationSent">
+              <option value="">Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="estimatedProjectValue">Estimated Project Value (R)</label>
+            <input id="estimatedProjectValue" inputmode="decimal" placeholder="0.00" />
+          </div>
+
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status">
+              <option value="Lead">Lead</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Qualified">Qualified</option>
+              <option value="Quotation Sent">Quotation Sent</option>
+              <option value="Negotiation">Negotiation</option>
+              <option value="Won">Won</option>
+              <option value="Lost">Lost</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+              <option value="On Hold">On Hold</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="assignedTo">Assigned To</label>
+            <input id="assignedTo" />
+          </div>
+
+          <div class="form-group span-3">
+            <label for="notes">Notes</label>
+            <textarea id="notes" rows="4"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button id="saveBtn" type="submit" class="btn btn-primary">Save Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loader-card">Synchronising with Google Sheets…</div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    /*
+      IMPORTANT:
+      After deploying the Apps Script as a Web App, paste its /exec URL below.
+      Example:
+      const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxp-MfPp6SMUDHfDpnikf47l-bxM50GjvlTPEQAmGthORnJuQpT_jDFVN0nl9qp2lpo/exec';
+    */
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxp-MfPp6SMUDHfDpnikf47l-bxM50GjvlTPEQAmGthORnJuQpT_jDFVN0nl9qp2lpo/exec';
+
+    let allRecords = [];
+    let filteredRecords = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkConnection();
+      loadData();
+    });
+
+    async function apiRequest(action, payload = null) {
+      if (!SCRIPT_URL || SCRIPT_URL.includes('PASTE_YOUR')) {
+        throw new Error('Please paste your deployed Apps Script Web App URL into SCRIPT_URL in the HTML file.');
+      }
+
+      const options = payload
+        ? {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action, ...payload })
+          }
+        : { method: 'GET' };
+
+      const url = payload
+        ? SCRIPT_URL
+        : `${SCRIPT_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}`;
+
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+      const result = await response.json();
+      if (!result.success) throw new Error(result.message || 'Request failed.');
+      return result;
+    }
+
+    async function checkConnection() {
+      const dot = document.getElementById('connectionDot');
+      const text = document.getElementById('connectionText');
+
+      try {
+        await apiRequest('ping');
+        dot.className = 'dot connected';
+        text.textContent = 'Live connection';
+      } catch (error) {
+        dot.className = 'dot disconnected';
+        text.textContent = 'Not connected';
+      }
+    }
+
+    async function loadData() {
+      setLoading(true);
+      try {
+        const result = await apiRequest('list');
+        allRecords = Array.isArray(result.data) ? result.data : [];
+        populateFilters();
+        applyFilters();
+        updateDashboard();
+        await checkConnection();
+      } catch (error) {
+        showToast(error.message, true);
+        allRecords = [];
+        applyFilters();
+        updateDashboard();
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+      const province = document.getElementById('provinceFilter').value;
+      const industry = document.getElementById('industryFilter').value;
+      const assigned = document.getElementById('assignedFilter').value;
+
+      filteredRecords = allRecords.filter(record => {
+        const haystack = Object.values(record).join(' ').toLowerCase();
+        return (!search || haystack.includes(search))
+          && (!status || record.status === status)
+          && (!province || record.provinceLocation === province)
+          && (!industry || record.industryProjectType === industry)
+          && (!assigned || record.assignedTo === assigned);
+      });
+
+      renderTable();
+    }
+
+    function populateFilters() {
+      fillSelect('provinceFilter', uniqueValues('provinceLocation'), 'All Provinces / Locations');
+      fillSelect('industryFilter', uniqueValues('industryProjectType'), 'All Project Types');
+      fillSelect('assignedFilter', uniqueValues('assignedTo'), 'All Assigned Staff');
+    }
+
+    function uniqueValues(field) {
+      return [...new Set(allRecords.map(r => (r[field] || '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b));
+    }
+
+    function fillSelect(id, values, firstLabel) {
+      const select = document.getElementById(id);
+      const current = select.value;
+      select.innerHTML = `<option value="">${escapeHtml(firstLabel)}</option>` +
+        values.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join('');
+      if (values.includes(current)) select.value = current;
+    }
+
+    function renderTable() {
+      const body = document.getElementById('recordsBody');
+      const empty = document.getElementById('emptyState');
+
+      if (!filteredRecords.length) {
+        body.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      body.innerHTML = filteredRecords.map(record => `
+        <tr>
+          <td><strong>${escapeHtml(record.clientId || '')}</strong></td>
+          <td>${escapeHtml(record.companyName || '')}</td>
+          <td>${escapeHtml(record.contactPerson || '')}</td>
+          <td>${escapeHtml(record.position || '')}</td>
+          <td>${escapeHtml(record.phoneNumber || '')}</td>
+          <td>${record.emailAddress ? `<a href="mailto:${escapeAttr(record.emailAddress)}">${escapeHtml(record.emailAddress)}</a>` : ''}</td>
+          <td>${escapeHtml(record.industryProjectType || '')}</td>
+          <td>${escapeHtml(record.provinceLocation || '')}</td>
+          <td>${escapeHtml(record.servicesRequired || '')}</td>
+          <td>${formatDateDisplay(record.lastContactDate)}</td>
+          <td>${formatDateDisplay(record.nextFollowUpDate)}</td>
+          <td>${escapeHtml(record.quotationSent || '')}</td>
+          <td>${formatCurrency(record.estimatedProjectValue)}</td>
+          <td><span class="badge ${statusClass(record.status)}">${escapeHtml(record.status || '')}</span></td>
+          <td>${escapeHtml(record.assignedTo || '')}</td>
+          <td title="${escapeAttr(record.notes || '')}">${escapeHtml(shorten(record.notes || '', 80))}</td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-warning btn-small" onclick="editRecord(${record.rowNumber})">Edit</button>
+              <button class="btn btn-danger btn-small" onclick="deleteRecord(${record.rowNumber}, '${escapeJs(record.companyName || '')}')">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateDashboard() {
+      const activeStatuses = ['Lead', 'Contacted', 'Qualified', 'Quotation Sent', 'Negotiation', 'In Progress', 'On Hold'];
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      const active = allRecords.filter(r => activeStatuses.includes(r.status)).length;
+      const quotes = allRecords.filter(r => String(r.quotationSent).toLowerCase() === 'yes').length;
+      const due = allRecords.filter(r => {
+        if (!r.nextFollowUpDate) return false;
+        const d = parseDate(r.nextFollowUpDate);
+        return d && d <= today && !['Won', 'Lost', 'Completed'].includes(r.status);
+      }).length;
+      const pipeline = allRecords
+        .filter(r => !['Lost', 'Completed'].includes(r.status))
+        .reduce((sum, r) => sum + parseMoney(r.estimatedProjectValue), 0);
+
+      document.getElementById('totalClients').textContent = allRecords.length;
+      document.getElementById('activeOpportunities').textContent = active;
+      document.getElementById('quotesSent').textContent = quotes;
+      document.getElementById('followUpsDue').textContent = due;
+      document.getElementById('pipelineValue').textContent = formatCurrency(pipeline);
+    }
+
+    function openAddModal() {
+      document.getElementById('recordForm').reset();
+      document.getElementById('rowNumber').value = '';
+      document.getElementById('modalTitle').textContent = 'Add New Client';
+      document.getElementById('status').value = 'Lead';
+      document.getElementById('recordModal').classList.add('show');
+    }
+
+    function editRecord(rowNumber) {
+      const record = allRecords.find(r => Number(r.rowNumber) === Number(rowNumber));
+      if (!record) return showToast('Record not found.', true);
+
+      document.getElementById('rowNumber').value = record.rowNumber || '';
+      document.getElementById('clientId').value = record.clientId || '';
+      document.getElementById('companyName').value = record.companyName || '';
+      document.getElementById('contactPerson').value = record.contactPerson || '';
+      document.getElementById('position').value = record.position || '';
+      document.getElementById('phoneNumber').value = record.phoneNumber || '';
+      document.getElementById('emailAddress').value = record.emailAddress || '';
+      document.getElementById('industryProjectType').value = record.industryProjectType || '';
+      document.getElementById('provinceLocation').value = record.provinceLocation || '';
+      document.getElementById('servicesRequired').value = record.servicesRequired || '';
+      document.getElementById('lastContactDate').value = formatDateInput(record.lastContactDate);
+      document.getElementById('nextFollowUpDate').value = formatDateInput(record.nextFollowUpDate);
+      document.getElementById('quotationSent').value = record.quotationSent || '';
+      document.getElementById('estimatedProjectValue').value = record.estimatedProjectValue || '';
+      document.getElementById('status').value = record.status || 'Lead';
+      document.getElementById('assignedTo').value = record.assignedTo || '';
+      document.getElementById('notes').value = record.notes || '';
+
+      document.getElementById('modalTitle').textContent = 'Edit Client Record';
+      document.getElementById('recordModal').classList.add('show');
+    }
+
+    async function saveRecord(event) {
+      event.preventDefault();
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+
+      const rowNumber = document.getElementById('rowNumber').value;
+      const record = {
+        clientId: document.getElementById('clientId').value.trim(),
+        companyName: document.getElementById('companyName').value.trim(),
+        contactPerson: document.getElementById('contactPerson').value.trim(),
+        position: document.getElementById('position').value.trim(),
+        phoneNumber: document.getElementById('phoneNumber').value.trim(),
+        emailAddress: document.getElementById('emailAddress').value.trim(),
+        industryProjectType: document.getElementById('industryProjectType').value.trim(),
+        provinceLocation: document.getElementById('provinceLocation').value.trim(),
+        servicesRequired: document.getElementById('servicesRequired').value.trim(),
+        lastContactDate: document.getElementById('lastContactDate').value,
+        nextFollowUpDate: document.getElementById('nextFollowUpDate').value,
+        quotationSent: document.getElementById('quotationSent').value,
+        estimatedProjectValue: normalizeMoneyInput(document.getElementById('estimatedProjectValue').value),
+        status: document.getElementById('status').value,
+        assignedTo: document.getElementById('assignedTo').value.trim(),
+        notes: document.getElementById('notes').value.trim()
+      };
+
+      try {
+        setLoading(true);
+        const action = rowNumber ? 'update' : 'create';
+        await apiRequest(action, { rowNumber: rowNumber ? Number(rowNumber) : null, record });
+        showToast(rowNumber ? 'Record updated successfully.' : 'Client added successfully.');
+        closeModal();
+        await loadData();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setLoading(false);
+        saveBtn.disabled = false;
+      }
+    }
+
+    async function deleteRecord(rowNumber, companyName) {
+      const confirmed = confirm(`Delete the record for "${companyName}"? This cannot be undone.`);
+      if (!confirmed) return;
+
+      try {
+        setLoading(true);
+        await apiRequest('delete', { rowNumber: Number(rowNumber) });
+        showToast('Record deleted successfully.');
+        await loadData();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('recordModal').classList.remove('show');
+    }
+
+    function backdropClose(event) {
+      if (event.target.id === 'recordModal') closeModal();
+    }
+
+    function setLoading(show) {
+      document.getElementById('loadingOverlay').classList.toggle('show', show);
+    }
+
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast show${isError ? ' error' : ''}`;
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.remove('show'), 3800);
+    }
+
+    function parseMoney(value) {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+      const cleaned = String(value || '')
+        .replace(/\s/g, '')
+        .replace(/[R$]/g, '')
+        .replace(/,/g, '');
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function normalizeMoneyInput(value) {
+      let cleaned = String(value || '').trim().replace(/\s/g, '').replace(/[R$]/g, '');
+      if (cleaned.includes(',') && !cleaned.includes('.')) cleaned = cleaned.replace(',', '.');
+      else cleaned = cleaned.replace(/,/g, '');
+      const number = Number(cleaned);
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('en-ZA', {
+        style: 'currency',
+        currency: 'ZAR',
+        minimumFractionDigits: 2
+      }).format(parseMoney(value));
+    }
+
+    function parseDate(value) {
+      if (!value) return null;
+      const raw = String(value).trim();
+      const iso = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
+      if (iso) {
+        const [y,m,d] = raw.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      }
+      const d = new Date(raw);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatDateDisplay(value) {
+      const d = parseDate(value);
+      if (!d) return '';
+      return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+    }
+
+    function formatDateInput(value) {
+      const d = parseDate(value);
+      if (!d) return '';
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function statusClass(status) {
+      const s = String(status || '').toLowerCase();
+      if (s === 'lead') return 'lead';
+      if (s === 'contacted' || s === 'qualified') return 'contacted';
+      if (s === 'quotation sent' || s === 'negotiation') return 'quoted';
+      if (s === 'won' || s === 'completed') return 'won';
+      if (s === 'lost') return 'lost';
+      if (s === 'in progress') return 'in-progress';
+      return '';
+    }
+
+    function shorten(text, max) {
+      const s = String(text || '');
+      return s.length > max ? s.slice(0, max - 1) + '…' : s;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
+    }
+
+    function escapeJs(value) {
+      return String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r?\n/g, ' ');
+    }
+  </script>
+</body>
+</html>
