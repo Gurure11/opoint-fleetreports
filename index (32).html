@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Incident Register</title>
+  <style>
+    :root {
+      --green-950: #052e16;
+      --green-900: #14532d;
+      --green-800: #166534;
+      --green-700: #15803d;
+      --green-600: #16a34a;
+      --green-100: #dcfce7;
+      --green-50: #f0fdf4;
+      --white: #ffffff;
+      --slate-900: #0f172a;
+      --slate-700: #334155;
+      --slate-500: #64748b;
+      --slate-300: #cbd5e1;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --red-600: #dc2626;
+      --amber-500: #f59e0b;
+      --shadow: 0 12px 28px rgba(15, 23, 42, 0.11);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, rgba(34, 197, 94, .22), transparent 30%),
+        linear-gradient(135deg, var(--green-950), var(--green-800) 52%, var(--green-700));
+      color: var(--slate-900);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+
+    .app-shell {
+      width: min(1480px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 50px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--white);
+      margin-bottom: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border-radius: 17px;
+      background: rgba(255,255,255,.16);
+      border: 1px solid rgba(255,255,255,.28);
+      font-size: 28px;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand h1 {
+      font-size: clamp(1.35rem, 2.7vw, 2.15rem);
+      margin: 0;
+      line-height: 1.1;
+    }
+
+    .brand p {
+      margin: 6px 0 0;
+      color: rgba(255,255,255,.78);
+      font-size: .93rem;
+    }
+
+    .connection {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.13);
+      border: 1px solid rgba(255,255,255,.22);
+      font-size: .87rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .connection-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--amber-500);
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, .17);
+    }
+
+    .connection.connected .connection-dot {
+      background: #4ade80;
+      box-shadow: 0 0 0 4px rgba(74, 222, 128, .18);
+    }
+
+    .connection.disconnected .connection-dot {
+      background: #f87171;
+      box-shadow: 0 0 0 4px rgba(248, 113, 113, .18);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 138px;
+      padding: 20px;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.96);
+      box-shadow: var(--shadow);
+    }
+
+    .stat-card::after {
+      content: "";
+      position: absolute;
+      width: 92px;
+      height: 92px;
+      right: -26px;
+      top: -28px;
+      border-radius: 50%;
+      background: var(--green-100);
+    }
+
+    .stat-label {
+      position: relative;
+      z-index: 1;
+      color: var(--slate-500);
+      font-size: .83rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      font-weight: 800;
+    }
+
+    .stat-value {
+      position: relative;
+      z-index: 1;
+      margin-top: 15px;
+      font-size: clamp(1.55rem, 2.4vw, 2.15rem);
+      font-weight: 900;
+      color: var(--green-900);
+      line-height: 1;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(330px, 420px) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(255,255,255,.98);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--slate-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.08rem;
+    }
+
+    .panel-header p {
+      margin: 5px 0 0;
+      color: var(--slate-500);
+      font-size: .86rem;
+    }
+
+    .form-body { padding: 22px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--slate-700);
+      font-size: .82rem;
+      font-weight: 800;
+    }
+
+    .required { color: var(--red-600); }
+
+    input, select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--slate-300);
+      border-radius: 11px;
+      background: var(--white);
+      padding: 10px 12px;
+      color: var(--slate-900);
+      outline: none;
+      transition: .18s ease;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--green-600);
+      box-shadow: 0 0 0 4px rgba(22, 163, 74, .12);
+    }
+
+    .money-wrap { position: relative; }
+
+    .money-wrap span {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--slate-500);
+      font-weight: 800;
+    }
+
+    .money-wrap input { padding-left: 31px; }
+
+    .form-actions {
+      display: flex;
+      gap: 11px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 11px;
+      min-height: 44px;
+      padding: 10px 16px;
+      font-weight: 850;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { cursor: not-allowed; opacity: .62; transform: none; }
+
+    .btn-primary {
+      flex: 1;
+      background: linear-gradient(135deg, var(--green-800), var(--green-600));
+      color: var(--white);
+      box-shadow: 0 8px 18px rgba(22, 101, 52, .22);
+    }
+
+    .btn-secondary {
+      background: var(--slate-100);
+      color: var(--slate-700);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search {
+      min-width: min(300px, 100%);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 685px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 1280px;
+    }
+
+    th, td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--slate-200);
+      text-align: left;
+      font-size: .82rem;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--green-50);
+      color: var(--green-900);
+      font-size: .76rem;
+      text-transform: uppercase;
+      letter-spacing: .035em;
+    }
+
+    tbody tr:hover { background: #f8fafc; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--green-100);
+      color: var(--green-900);
+      font-weight: 850;
+      font-size: .74rem;
+    }
+
+    .status-badge.closed,
+    .status-badge.completed {
+      background: #e0f2fe;
+      color: #075985;
+    }
+
+    .status-badge.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 7px;
+    }
+
+    .icon-btn {
+      border: 0;
+      padding: 7px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: .76rem;
+      font-weight: 850;
+    }
+
+    .edit-btn {
+      background: var(--green-100);
+      color: var(--green-900);
+    }
+
+    .delete-btn {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .empty {
+      padding: 46px 20px;
+      text-align: center;
+      color: var(--slate-500);
+    }
+
+    .loader-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      display: none;
+      place-items: center;
+      background: rgba(5, 46, 22, .62);
+      backdrop-filter: blur(3px);
+    }
+
+    .loader-overlay.show { display: grid; }
+
+    .loader-card {
+      padding: 22px 28px;
+      border-radius: 16px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+      text-align: center;
+      font-weight: 850;
+      color: var(--green-900);
+    }
+
+    .spinner {
+      width: 34px;
+      height: 34px;
+      margin: 0 auto 12px;
+      border: 4px solid var(--green-100);
+      border-top-color: var(--green-700);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast-container {
+      position: fixed;
+      z-index: 1000;
+      right: 18px;
+      bottom: 18px;
+      display: grid;
+      gap: 10px;
+      width: min(380px, calc(100% - 36px));
+    }
+
+    .toast {
+      background: var(--slate-900);
+      color: var(--white);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      font-weight: 700;
+      animation: slideIn .22s ease;
+    }
+
+    .toast.success { background: var(--green-800); }
+    .toast.error { background: #991b1b; }
+
+    @keyframes slideIn {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @media (max-width: 1120px) {
+      .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+      .content-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      .app-shell { width: min(100% - 18px, 1480px); padding-top: 16px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .panel-header { align-items: flex-start; flex-direction: column; }
+      .toolbar, .search { width: 100%; }
+    }
+  </style>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKKq6tFRrsVLUB0l5T4WXjxTL2_4HgVIrLQte11c7vgAiOb7vDtMfqkBnzu1rc9U_U/exec";
+</script>
+
+
+<script>
+  async function apiRequest(action, payload) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+
+    try {
+      let response;
+
+      if (payload === undefined) {
+        const separator = SCRIPT_URL.includes('?') ? '&' : '?';
+        const url = SCRIPT_URL + separator + 'action=' + encodeURIComponent(action) + '&_=' + Date.now();
+        response = await fetch(url, {
+          method: 'GET',
+          cache: 'no-store',
+          redirect: 'follow',
+          signal: controller.signal
+        });
+      } else {
+        response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, payload }),
+          redirect: 'follow',
+          signal: controller.signal
+        });
+      }
+
+      const text = await response.text();
+      let result;
+
+      try {
+        result = JSON.parse(text);
+      } catch (_) {
+        throw new Error(
+          'The Web App did not return JSON. Redeploy the latest Apps Script version and allow access to anyone with the link.'
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(result.message || ('Request failed with HTTP ' + response.status));
+      }
+
+      return result;
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        throw new Error('Connection timed out. Check the Apps Script deployment and internet connection.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  function apiGet(action) {
+    return apiRequest(action);
+  }
+
+  function apiPost(action, payload) {
+    return apiRequest(action, payload);
+  }
+</script>
+
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">🚘</div>
+        <div>
+          <h1>Vehicle Incident Register</h1>
+          <p>Capture, monitor and manage vehicle accident records.</p>
+        </div>
+      </div>
+
+      <div id="connectionStatus" class="connection">
+        <span class="connection-dot"></span>
+        <span id="connectionText">Checking connection...</span>
+      </div>
+    </header>
+
+    <section class="dashboard-grid">
+      <article class="stat-card">
+        <div class="stat-label">Total Insurance Payment</div>
+        <div id="totalInsurancePayment" class="stat-value">R 0.00</div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-label">Total Number of Incidents</div>
+        <div id="totalIncidents" class="stat-value">0</div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-label">Staff Payments</div>
+        <div id="totalStaffPayments" class="stat-value">R 0.00</div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-label">Company Payments</div>
+        <div id="totalCompanyPayments" class="stat-value">R 0.00</div>
+      </article>
+    </section>
+
+    <main class="content-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 id="formTitle">New Incident Entry</h2>
+            <p>Complete all required incident information.</p>
+          </div>
+        </div>
+
+        <form id="incidentForm" class="form-body">
+          <input type="hidden" id="incidentId">
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="date">Date <span class="required">*</span></label>
+              <input id="date" type="date" required>
+            </div>
+
+            <div class="field">
+              <label for="staffName">Staff Name <span class="required">*</span></label>
+              <input id="staffName" type="text" placeholder="Enter staff name" required>
+            </div>
+
+            <div class="field">
+              <label for="costCenter">Cost Center <span class="required">*</span></label>
+              <input id="costCenter" type="text" placeholder="Enter cost center" required>
+            </div>
+
+            <div class="field">
+              <label for="vehicleMake">Vehicle Make <span class="required">*</span></label>
+              <input id="vehicleMake" type="text" placeholder="e.g. Toyota Hilux" required>
+            </div>
+
+            <div class="field">
+              <label for="regNo">Reg No <span class="required">*</span></label>
+              <input id="regNo" type="text" placeholder="Vehicle registration" required>
+            </div>
+
+            <div class="field">
+              <label for="status">Status <span class="required">*</span></label>
+              <select id="status" required>
+                <option value="">Select status</option>
+                <option>Reported</option>
+                <option>Under Assessment</option>
+                <option>Repair in Progress</option>
+                <option>Pending Insurance</option>
+                <option>Completed</option>
+                <option>Closed</option>
+              </select>
+            </div>
+
+            <div class="field full">
+              <label for="location">Location of Accident <span class="required">*</span></label>
+              <input id="location" type="text" placeholder="Enter accident location" required>
+            </div>
+
+            <div class="field">
+              <label for="totalRepairCost">Total Repair Cost</label>
+              <div class="money-wrap">
+                <span>R</span>
+                <input id="totalRepairCost" type="text" inputmode="decimal" value="0.00">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="staffPayment">Staff Payment</label>
+              <div class="money-wrap">
+                <span>R</span>
+                <input id="staffPayment" type="text" inputmode="decimal" value="0.00">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="companyPayment">Company Payment</label>
+              <div class="money-wrap">
+                <span>R</span>
+                <input id="companyPayment" type="text" inputmode="decimal" value="0.00">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="insurance">Insurance Payment</label>
+              <div class="money-wrap">
+                <span>R</span>
+                <input id="insurance" type="text" inputmode="decimal" value="0.00">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button id="saveButton" class="btn btn-primary" type="submit">Save Incident</button>
+            <button id="cancelEditButton" class="btn btn-secondary" type="button" hidden>Cancel Edit</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Incident Register</h2>
+            <p>All records fetched directly from Google Sheets.</p>
+          </div>
+
+          <div class="toolbar">
+            <input id="searchInput" class="search" type="search" placeholder="Search staff, vehicle, reg, cost center...">
+            <button id="refreshButton" class="btn btn-secondary" type="button">Refresh</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Staff Name</th>
+                <th>Cost Center</th>
+                <th>Vehicle Make</th>
+                <th>Reg No</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Total Repair Cost</th>
+                <th>Staff Payment</th>
+                <th>Company Payment</th>
+                <th>Insurance</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="incidentTableBody"></tbody>
+          </table>
+
+          <div id="emptyState" class="empty" hidden>No incident records found.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="loader" class="loader-overlay">
+    <div class="loader-card">
+      <div class="spinner"></div>
+      <div id="loaderText">Synchronising...</div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    const state = {
+      records: [],
+      filteredRecords: [],
+      editingId: ''
+    };
+
+    const currencyFormatter = new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      minimumFractionDigits: 2
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setToday();
+      bindEvents();
+      checkConnection();
+      loadRecords();
+      setInterval(checkConnection, 60000);
+    });
+
+    function bindEvents() {
+      document.getElementById('incidentForm').addEventListener('submit', handleSubmit);
+      document.getElementById('cancelEditButton').addEventListener('click', resetForm);
+      document.getElementById('refreshButton').addEventListener('click', loadRecords);
+      document.getElementById('searchInput').addEventListener('input', applySearch);
+
+      ['totalRepairCost', 'staffPayment', 'companyPayment', 'insurance'].forEach(id => {
+        const input = document.getElementById(id);
+        input.addEventListener('blur', () => {
+          input.value = parseMoney(input.value).toFixed(2);
+        });
+      });
+    }
+
+    async function checkConnection() {
+      try {
+        const result = await apiGet('health');
+        const connected = Boolean(result && result.success);
+        setConnection(connected, connected ? 'Live connection' : (result && result.message));
+        return connected;
+      } catch (error) {
+        setConnection(false, getErrorMessage(error));
+        return false;
+      }
+    }
+
+    function setConnection(connected, message) {
+      const status = document.getElementById('connectionStatus');
+      const text = document.getElementById('connectionText');
+
+      status.classList.remove('connected', 'disconnected');
+      status.classList.add(connected ? 'connected' : 'disconnected');
+      text.textContent = connected ? 'Live connection' : (message || 'Connection failed');
+    }
+
+    async function loadRecords() {
+      showLoader('Fetching incident records...');
+
+      try {
+        const result = await apiGet('list');
+
+        if (!result || !result.success) {
+          throw new Error(result && result.message ? result.message : 'Unable to load records.');
+        }
+
+        state.records = Array.isArray(result.records) ? result.records : [];
+        updateDashboard(result.summary || {});
+        applySearch();
+        setConnection(true, 'Live connection');
+      } catch (error) {
+        setConnection(false, getErrorMessage(error));
+        showToast(getErrorMessage(error), 'error');
+      } finally {
+        hideLoader();
+      }
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+
+      const payload = {
+        incidentId: document.getElementById('incidentId').value.trim(),
+        date: document.getElementById('date').value,
+        staffName: document.getElementById('staffName').value.trim(),
+        costCenter: document.getElementById('costCenter').value.trim(),
+        vehicleMake: document.getElementById('vehicleMake').value.trim(),
+        regNo: document.getElementById('regNo').value.trim(),
+        location: document.getElementById('location').value.trim(),
+        status: document.getElementById('status').value,
+        totalRepairCost: parseMoney(document.getElementById('totalRepairCost').value),
+        staffPayment: parseMoney(document.getElementById('staffPayment').value),
+        companyPayment: parseMoney(document.getElementById('companyPayment').value),
+        insurance: parseMoney(document.getElementById('insurance').value)
+      };
+
+      const validationError = validateClientPayload(payload);
+      if (validationError) {
+        showToast(validationError, 'error');
+        return;
+      }
+
+      setSaveState(true);
+      showLoader(payload.incidentId ? 'Updating incident...' : 'Saving incident...');
+
+      try {
+        const result = await apiPost('save', payload);
+
+        if (!result || !result.success) {
+          throw new Error(result && result.message ? result.message : 'Unable to save incident.');
+        }
+
+        setConnection(true, 'Live connection');
+        showToast(result.message, 'success');
+        resetForm();
+        await loadRecords();
+      } catch (error) {
+        setConnection(false, getErrorMessage(error));
+        showToast(getErrorMessage(error), 'error');
+      } finally {
+        hideLoader();
+        setSaveState(false);
+      }
+    }
+
+    function editRecord(incidentId) {
+      const record = state.records.find(item => item.incidentId === incidentId);
+      if (!record) return;
+
+      state.editingId = incidentId;
+      document.getElementById('incidentId').value = record.incidentId;
+      document.getElementById('date').value = record.date || '';
+      document.getElementById('staffName').value = record.staffName || '';
+      document.getElementById('costCenter').value = record.costCenter || '';
+      document.getElementById('vehicleMake').value = record.vehicleMake || '';
+      document.getElementById('regNo').value = record.regNo || '';
+      document.getElementById('location').value = record.location || '';
+      document.getElementById('status').value = record.status || '';
+      document.getElementById('totalRepairCost').value = Number(record.totalRepairCost || 0).toFixed(2);
+      document.getElementById('staffPayment').value = Number(record.staffPayment || 0).toFixed(2);
+      document.getElementById('companyPayment').value = Number(record.companyPayment || 0).toFixed(2);
+      document.getElementById('insurance').value = Number(record.insurance || 0).toFixed(2);
+
+      document.getElementById('formTitle').textContent = 'Edit Incident Entry';
+      document.getElementById('saveButton').textContent = 'Update Incident';
+      document.getElementById('cancelEditButton').hidden = false;
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deleteRecord(incidentId) {
+      const record = state.records.find(item => item.incidentId === incidentId);
+      const description = record ? `${record.regNo} - ${record.staffName}` : 'this incident';
+
+      if (!confirm(`Delete ${description}? This action cannot be undone.`)) return;
+
+      showLoader('Deleting incident...');
+
+      try {
+        const result = await apiPost('delete', { incidentId });
+
+        if (!result || !result.success) {
+          throw new Error(result && result.message ? result.message : 'Unable to delete incident.');
+        }
+
+        setConnection(true, 'Live connection');
+        showToast(result.message, 'success');
+
+        if (state.editingId === incidentId) {
+          resetForm();
+        }
+
+        await loadRecords();
+      } catch (error) {
+        setConnection(false, getErrorMessage(error));
+        showToast(getErrorMessage(error), 'error');
+      } finally {
+        hideLoader();
+      }
+    }
+
+    function applySearch() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+      state.filteredRecords = !query
+        ? [...state.records]
+        : state.records.filter(record => {
+            const searchable = [
+              record.date,
+              record.staffName,
+              record.costCenter,
+              record.vehicleMake,
+              record.regNo,
+              record.location,
+              record.status
+            ].join(' ').toLowerCase();
+
+            return searchable.includes(query);
+          });
+
+      renderTable();
+    }
+
+    function renderTable() {
+      const body = document.getElementById('incidentTableBody');
+      const empty = document.getElementById('emptyState');
+
+      if (!state.filteredRecords.length) {
+        body.innerHTML = '';
+        empty.hidden = false;
+        return;
+      }
+
+      empty.hidden = true;
+      body.innerHTML = state.filteredRecords.map(record => `
+        <tr>
+          <td>${escapeHtml(formatDisplayDate(record.date))}</td>
+          <td>${escapeHtml(record.staffName)}</td>
+          <td>${escapeHtml(record.costCenter)}</td>
+          <td>${escapeHtml(record.vehicleMake)}</td>
+          <td><strong>${escapeHtml(record.regNo)}</strong></td>
+          <td>${escapeHtml(record.location)}</td>
+          <td><span class="status-badge ${statusClass(record.status)}">${escapeHtml(record.status)}</span></td>
+          <td>${formatCurrency(record.totalRepairCost)}</td>
+          <td>${formatCurrency(record.staffPayment)}</td>
+          <td>${formatCurrency(record.companyPayment)}</td>
+          <td>${formatCurrency(record.insurance)}</td>
+          <td>
+            <div class="row-actions">
+              <button class="icon-btn edit-btn" type="button" onclick="editRecord('${escapeJs(record.incidentId)}')">Edit</button>
+              <button class="icon-btn delete-btn" type="button" onclick="deleteRecord('${escapeJs(record.incidentId)}')">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateDashboard(summary) {
+      document.getElementById('totalInsurancePayment').textContent =
+        formatCurrency(summary.totalInsurancePayment || 0);
+
+      document.getElementById('totalIncidents').textContent =
+        Number(summary.totalIncidents || 0).toLocaleString('en-ZA');
+
+      document.getElementById('totalStaffPayments').textContent =
+        formatCurrency(summary.totalStaffPayments || 0);
+
+      document.getElementById('totalCompanyPayments').textContent =
+        formatCurrency(summary.totalCompanyPayments || 0);
+    }
+
+    function resetForm() {
+      state.editingId = '';
+      document.getElementById('incidentForm').reset();
+      document.getElementById('incidentId').value = '';
+      document.getElementById('formTitle').textContent = 'New Incident Entry';
+      document.getElementById('saveButton').textContent = 'Save Incident';
+      document.getElementById('cancelEditButton').hidden = true;
+
+      setToday();
+      ['totalRepairCost', 'staffPayment', 'companyPayment', 'insurance'].forEach(id => {
+        document.getElementById(id).value = '0.00';
+      });
+    }
+
+    function setToday() {
+      const dateInput = document.getElementById('date');
+      if (!dateInput.value) {
+        const today = new Date();
+        const local = new Date(today.getTime() - today.getTimezoneOffset() * 60000);
+        dateInput.value = local.toISOString().slice(0, 10);
+      }
+    }
+
+    function validateClientPayload(payload) {
+      const required = [
+        ['date', 'Date'],
+        ['staffName', 'Staff Name'],
+        ['costCenter', 'Cost Center'],
+        ['vehicleMake', 'Vehicle Make'],
+        ['regNo', 'Reg No'],
+        ['location', 'Location of accident'],
+        ['status', 'Status']
+      ];
+
+      for (const [key, label] of required) {
+        if (!String(payload[key] || '').trim()) {
+          return `${label} is required.`;
+        }
+      }
+
+      return '';
+    }
+
+    function parseMoney(value) {
+      const raw = String(value ?? '')
+        .trim()
+        .replace(/\s/g, '')
+        .replace(/R/gi, '');
+
+      if (!raw) return 0;
+
+      let normalized = raw;
+      const hasComma = normalized.includes(',');
+      const hasDot = normalized.includes('.');
+
+      if (hasComma && hasDot) {
+        if (normalized.lastIndexOf(',') > normalized.lastIndexOf('.')) {
+          normalized = normalized.replace(/\./g, '').replace(',', '.');
+        } else {
+          normalized = normalized.replace(/,/g, '');
+        }
+      } else if (hasComma) {
+        normalized = normalized.replace(',', '.');
+      }
+
+      normalized = normalized.replace(/[^\d.-]/g, '');
+      const number = Number(normalized);
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatCurrency(value) {
+      return currencyFormatter.format(Number(value || 0));
+    }
+
+    function formatDisplayDate(value) {
+      if (!value) return '';
+      const parts = String(value).split('-');
+      if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      return value;
+    }
+
+    function statusClass(value) {
+      return String(value || '').trim().toLowerCase().replace(/\s+/g, '-');
+    }
+
+    function showLoader(message) {
+      document.getElementById('loaderText').textContent = message || 'Synchronising...';
+      document.getElementById('loader').classList.add('show');
+    }
+
+    function hideLoader() {
+      document.getElementById('loader').classList.remove('show');
+    }
+
+    function setSaveState(isSaving) {
+      const button = document.getElementById('saveButton');
+      button.disabled = isSaving;
+      if (isSaving) button.textContent = state.editingId ? 'Updating...' : 'Saving...';
+    }
+
+    function showToast(message, type = '') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 4200);
+    }
+
+    function getErrorMessage(error) {
+      if (!error) return 'An unexpected error occurred.';
+      return error.message || String(error);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeJs(value) {
+      return String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '')
+        .replace(/\n/g, '\\n');
+    }
+  </script>
+
+</body>
+</html>
