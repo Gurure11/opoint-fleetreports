@@ -667,7 +667,7 @@
 <div class="form-group"><label>Vehicle Reg Book Upload</label><input accept="image/*,application/pdf,.doc,.docx" id="vehicleRegBookFile" type="file"/></div>
 <div class="form-group"><label>Tracking Certificate Upload</label><input accept="image/*,application/pdf,.doc,.docx" id="trackingCertificateFile" type="file"/></div>
 <div class="form-group"><label>Vehicle Invoice Upload</label><input accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" id="vehicleInvoiceFile" type="file"/></div>
-<div class="form-group"><label>Upload up to 5 Images</label><input accept="image/*" id="imageFiles" multiple="" type="file"/><small style="color:var(--muted);margin-top:6px;">Maximum 5 images. Links post to Google Sheet.</small></div>
+<div class="form-group"><label>Upload or Take up to 5 Images</label><input accept="image/*" id="imageFiles" multiple="" type="file"/><input accept="image/*" capture="environment" id="cameraImageFiles" multiple="" type="file" style="margin-top:8px;"/><small style="color:var(--muted);margin-top:6px;">Choose existing images or use the camera to take photos. Maximum 5 images in total. Links post to Google Sheet.</small></div>
 <input id="rowNumber" type="hidden"/>
 <input id="vehicleRegBookLink" type="hidden"/>
 <input id="trackingCertificateLink" type="hidden"/>
@@ -737,7 +737,7 @@
   const MAIN_SHEET_NAME = "Asssert Reg";
   const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
   const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPQVj5SGT_HTXaUpBG7o3dfbesDFxwoxDUcdvFsU1IKsuBC9El0P9KKfjuzjtQnmVB/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyj2hV5GhU_Tjhz7IHaDVlMeSgh3-tOqHTAoMpCpPf74qJYiOIA_SwbKtQLF4bPtH8/exec";
 
   const FIELD_IDS = [
     "code","assetClass","purchaseDate","purchasedBy","financing","description",
@@ -1577,7 +1577,10 @@
       data.vehicleRegBookFile = await fileToPayload(document.getElementById("vehicleRegBookFile").files[0]);
       data.trackingCertificateFile = await fileToPayload(document.getElementById("trackingCertificateFile").files[0]);
       data.vehicleInvoiceFile = await fileToPayload(document.getElementById("vehicleInvoiceFile").files[0]);
-      data.imageFiles = await filesToPayloads(document.getElementById("imageFiles").files, 5);
+      data.imageFiles = await filesToPayloads([
+        ...document.getElementById("imageFiles").files,
+        ...document.getElementById("cameraImageFiles").files
+      ], 5);
       const response = await apiPost(data);
       if (response.status !== "success") throw new Error(response.message || "Save failed");
       showStatus(rowNum ? "✅ Asset Updated Successfully" : "✅ Asset Saved Successfully");
