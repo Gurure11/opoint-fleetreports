@@ -495,7 +495,7 @@
   </style>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pqILJ3jniJKIAIrZCbUMpZNdo9BpYz-xOxIQKH1o1drAMRV2_/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfdZw8YEGJzIGgdhz3WxGa-Qosc3dKelj-m9a2cnZb7JHDTij8/exec";
 </script>
 
 
@@ -630,11 +630,14 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
                   <th>Vehicle Make</th>
                   <th>Reg No</th>
                   <th>Location</th>
-                  <th>Status</th>
+                  <th>Nature of Incident</th>
                   <th>Total Repair Cost</th>
                   <th>Staff Payment</th>
                   <th>Company Payment</th>
                   <th>Insurance</th>
+                  <th>Police Report Number</th>
+                  <th>Insurance That Paid Claim</th>
+                  <th>Invoice</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -693,16 +696,8 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
               </div>
 
               <div class="field">
-                <label for="status">Status <span class="required">*</span></label>
-                <select id="status" required>
-                  <option value="">Select status</option>
-                  <option>Reported</option>
-                  <option>Under Assessment</option>
-                  <option>Repair in Progress</option>
-                  <option>Pending Insurance</option>
-                  <option>Completed</option>
-                  <option>Closed</option>
-                </select>
+                <label for="natureOfIncident">Nature of Incident <span class="required">*</span></label>
+                <input id="natureOfIncident" type="text" placeholder="e.g. Collision, Theft, Damage" required>
               </div>
 
               <div class="field full">
@@ -728,6 +723,25 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
               <div class="field">
                 <label for="insurance">Insurance Payment</label>
                 <div class="money-wrap"><span>R</span><input id="insurance" type="text" inputmode="decimal" value="0.00"></div>
+              </div>
+
+              <div class="field">
+                <label for="policeReportNumber">Police Report Number</label>
+                <input id="policeReportNumber" type="text" placeholder="Enter police report or case number">
+              </div>
+
+              <div class="field">
+                <label for="insurancePaidClaim">Insurance That Paid Claim</label>
+                <input id="insurancePaidClaim" type="text" placeholder="Enter insurer name">
+              </div>
+
+              <div class="field full">
+                <label for="invoiceFile">Upload Invoice</label>
+                <input id="invoiceFile" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx">
+                <input id="existingInvoiceLink" type="hidden">
+                <div id="currentInvoiceWrap" style="margin-top:8px;font-size:.82rem;" hidden>
+                  Current invoice: <a id="currentInvoiceLink" href="#" target="_blank" rel="noopener">Open invoice</a>
+                </div>
               </div>
             </div>
 
@@ -852,6 +866,14 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
     async function handleSubmit(event) {
       event.preventDefault();
 
+      let invoice = null;
+      try {
+        invoice = await readInvoiceFile();
+      } catch (error) {
+        showToast(getErrorMessage(error), 'error');
+        return;
+      }
+
       const payload = {
         incidentId: document.getElementById('incidentId').value.trim(),
         date: document.getElementById('date').value,
@@ -860,11 +882,15 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
         vehicleMake: document.getElementById('vehicleMake').value.trim(),
         regNo: document.getElementById('regNo').value.trim(),
         location: document.getElementById('location').value.trim(),
-        status: document.getElementById('status').value,
+        natureOfIncident: document.getElementById('natureOfIncident').value.trim(),
         totalRepairCost: parseMoney(document.getElementById('totalRepairCost').value),
         staffPayment: parseMoney(document.getElementById('staffPayment').value),
         companyPayment: parseMoney(document.getElementById('companyPayment').value),
-        insurance: parseMoney(document.getElementById('insurance').value)
+        insurance: parseMoney(document.getElementById('insurance').value),
+        policeReportNumber: document.getElementById('policeReportNumber').value.trim(),
+        insurancePaidClaim: document.getElementById('insurancePaidClaim').value.trim(),
+        existingInvoiceLink: document.getElementById('existingInvoiceLink').value.trim(),
+        invoice
       };
 
       const validationError = validateClientPayload(payload);
@@ -910,7 +936,10 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
       document.getElementById('vehicleMake').value = record.vehicleMake || '';
       document.getElementById('regNo').value = record.regNo || '';
       document.getElementById('location').value = record.location || '';
-      document.getElementById('status').value = record.status || '';
+      document.getElementById('natureOfIncident').value = record.natureOfIncident || record.status || '';
+      document.getElementById('policeReportNumber').value = record.policeReportNumber || '';
+      document.getElementById('insurancePaidClaim').value = record.insurancePaidClaim || '';
+      setCurrentInvoice(record.invoiceLink || '');
       document.getElementById('totalRepairCost').value = Number(record.totalRepairCost || 0).toFixed(2);
       document.getElementById('staffPayment').value = Number(record.staffPayment || 0).toFixed(2);
       document.getElementById('companyPayment').value = Number(record.companyPayment || 0).toFixed(2);
@@ -966,7 +995,9 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
               record.vehicleMake,
               record.regNo,
               record.location,
-              record.status
+              record.natureOfIncident || record.status,
+              record.policeReportNumber,
+              record.insurancePaidClaim
             ].join(' ').toLowerCase();
 
             return searchable.includes(query);
@@ -994,11 +1025,14 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
           <td>${escapeHtml(record.vehicleMake)}</td>
           <td><strong>${escapeHtml(record.regNo)}</strong></td>
           <td>${escapeHtml(record.location)}</td>
-          <td><span class="status-badge ${statusClass(record.status)}">${escapeHtml(record.status)}</span></td>
+          <td><span class="status-badge">${escapeHtml(record.natureOfIncident || record.status)}</span></td>
           <td>${formatCurrency(record.totalRepairCost)}</td>
           <td>${formatCurrency(record.staffPayment)}</td>
           <td>${formatCurrency(record.companyPayment)}</td>
           <td>${formatCurrency(record.insurance)}</td>
+          <td>${escapeHtml(record.policeReportNumber || '')}</td>
+          <td>${escapeHtml(record.insurancePaidClaim || '')}</td>
+          <td>${record.invoiceLink ? `<a href="${escapeHtml(record.invoiceLink)}" target="_blank" rel="noopener">View Invoice</a>` : ''}</td>
           <td>
             <div class="row-actions">
               <button class="icon-btn edit-btn" type="button" onclick="editRecord('${escapeJs(record.incidentId)}')">Edit</button>
@@ -1032,6 +1066,8 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
       document.getElementById('cancelEditButton').hidden = true;
 
       setToday();
+      document.getElementById('invoiceFile').value = '';
+      setCurrentInvoice('');
       ['totalRepairCost', 'staffPayment', 'companyPayment', 'insurance'].forEach(id => {
         document.getElementById(id).value = '0.00';
       });
@@ -1046,6 +1082,39 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
       }
     }
 
+    function readInvoiceFile() {
+      const file = document.getElementById('invoiceFile').files[0];
+      if (!file) return Promise.resolve(null);
+
+      const maxBytes = 10 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        return Promise.reject(new Error('Invoice file must be 10 MB or smaller.'));
+      }
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = String(reader.result || '');
+          resolve({
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            data: result.includes(',') ? result.split(',')[1] : result
+          });
+        };
+        reader.onerror = () => reject(new Error('Unable to read the selected invoice file.'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function setCurrentInvoice(url) {
+      const link = document.getElementById('currentInvoiceLink');
+      const wrap = document.getElementById('currentInvoiceWrap');
+      const hidden = document.getElementById('existingInvoiceLink');
+      hidden.value = url || '';
+      link.href = url || '#';
+      wrap.hidden = !url;
+    }
+
     function validateClientPayload(payload) {
       const required = [
         ['date', 'Date'],
@@ -1054,7 +1123,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDnFa8BwpLWJCUBO3pq
         ['vehicleMake', 'Vehicle Make'],
         ['regNo', 'Reg No'],
         ['location', 'Location of accident'],
-        ['status', 'Status']
+        ['natureOfIncident', 'Nature of Incident']
       ];
 
       for (const [key, label] of required) {
