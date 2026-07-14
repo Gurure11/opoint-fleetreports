@@ -422,6 +422,8 @@
     .row-actions .btn-sm-delete { background: #ef4444; color: white; }
     .row-actions .btn-sm-stolen { background: #f97316; color: white; }
     .row-actions .btn-sm-sold { background: #16a34a; color: white; }
+    .row-actions .btn-sm-staff { background: #7c3aed; color: white; }
+    .row-actions .btn-sm-restore { background: #0f766e; color: white; }
 
     .regbook-link {
       font-size: 10px;
@@ -603,6 +605,7 @@
 <div class="stat-card summary-compact"><i class="fas fa-money-check-alt"></i><div class="count" id="totalInstallmentsPaid">R 0.00</div><div class="label">Total Installments Paid</div><div class="sub">Cumulative VAF payments</div></div>
 <div class="stat-card" data-special-filter="Stolen"><i class="fas fa-exclamation-triangle"></i><div class="count" id="cntStolen">0</div><div class="label">Stolen Vehicles / Equipment</div><div class="sub" id="valStolen">R 0.00</div><span class="filter-badge">click</span></div>
 <div class="stat-card" data-special-filter="Sold"><i class="fas fa-hand-holding-usd"></i><div class="count" id="cntSold">0</div><div class="label">Sold Vehicles / Equipment</div><div class="sub" id="valSold">R 0.00</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-special-filter="Staff Vehicle Finance"><i class="fas fa-user-tag"></i><div class="count" id="cntStaffFinance">0</div><div class="label">Staff Vehicle Finance</div><div class="sub" id="valStaffFinance">R 0.00</div><span class="filter-badge">click</span></div>
 </div>
 <!-- ACTION ROW -->
 <div class="action-row">
@@ -734,7 +737,7 @@
   const MAIN_SHEET_NAME = "Asssert Reg";
   const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
   const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjJuQe0H5HEnwZVy5QQqr3r_eb-gkxBE9EWaTZvbJc_UGdI4yaknqFVa3oBMPEYO1Q/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygrnuABUy1pda3lsO0iMqrSsfcUwQZC0FkKBBP9o6G-M0QmYAjYVaUd8cm6UDCZAo/exec";
 
   const FIELD_IDS = [
     "code","assetClass","purchaseDate","purchasedBy","financing","description",
@@ -1103,7 +1106,7 @@
 
   function isActiveAsset(asset) {
     const status = String(getField(asset, "assetStatus") || "Active").trim().toLowerCase();
-    return status !== "sold" && status !== "stolen";
+    return status !== "sold" && status !== "stolen" && status !== "staff vehicle finance";
   }
 
   function updateDashboard() {
@@ -1144,6 +1147,7 @@
     const activeRows = allAssets.filter(isActiveAsset);
     const stolenRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "stolen");
     const soldRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "sold");
+    const staffFinanceRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "staff vehicle finance");
     document.getElementById("totalAssetValue").textContent = money(activeRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
     document.getElementById("totalDepreciation").textContent = money(activeRows.reduce((sum, a) => sum + toNumber(getField(a, "accumDpn")), 0));
     document.getElementById("totalInstallmentsPaid").textContent = money(
@@ -1153,6 +1157,8 @@
     document.getElementById("valStolen").textContent = money(stolenRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
     document.getElementById("cntSold").textContent = soldRows.length;
     document.getElementById("valSold").textContent = money(soldRows.reduce((sum, a) => sum + (toNumber(getField(a, "soldValue")) || calcAssetValue(a)), 0));
+    document.getElementById("cntStaffFinance").textContent = staffFinanceRows.length;
+    document.getElementById("valStaffFinance").textContent = money(staffFinanceRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
 
     document.querySelectorAll('.stat-card[data-filter]').forEach(card => {
       const filter = card.dataset.filter;
@@ -1243,7 +1249,7 @@
 
   function renderCurrentTransactionTable() {
     readTransactionControls();
-    renderTable(getCurrentBaseRows(), currentFilter && !["all-active", "Sold", "Stolen"].includes(currentFilter) ? currentFilter : null);
+    renderTable(getCurrentBaseRows(), currentFilter && !["all-active", "Sold", "Stolen", "Staff Vehicle Finance"].includes(currentFilter) ? currentFilter : null);
   }
 
   function resetTransactionControls() {
@@ -1252,7 +1258,7 @@
       if (el) el.value = "";
     });
     transactionControls.search = transactionControls.sort = transactionControls.assetClass = transactionControls.model = transactionControls.costCenter = "";
-    renderTable(getCurrentBaseRows(), currentFilter && !["all-active", "Sold", "Stolen"].includes(currentFilter) ? currentFilter : null);
+    renderTable(getCurrentBaseRows(), currentFilter && !["all-active", "Sold", "Stolen", "Staff Vehicle Finance"].includes(currentFilter) ? currentFilter : null);
   }
 
   function applyFilter(filter) {
@@ -1269,7 +1275,7 @@
     document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('filter-active', c.dataset.specialFilter === status));
     document.getElementById('filterIndicator').textContent = status === 'all-active' ? 'Filter: Active Assets' : `Filter: ${status}`;
     const rows = status === 'all-active'
-      ? allAssets.filter(a => !['sold','stolen'].includes(String(getField(a, "assetStatus") || "Active").toLowerCase()))
+      ? allAssets.filter(a => !['sold','stolen','staff vehicle finance'].includes(String(getField(a, "assetStatus") || "Active").toLowerCase()))
       : allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === status.toLowerCase());
     renderTable(rows);
   }
@@ -1411,15 +1417,23 @@
 
       function makeStatusButton(status) {
         const btn = document.createElement("button");
-        btn.className = status === "Sold" ? "btn-sm-sold" : "btn-sm-stolen";
-        btn.innerHTML = status === "Sold" ? '<span style="font-weight:900;">R</span>' : '<i class="fas fa-exclamation-triangle"></i>';
-        btn.title = "Move to " + status + " window";
+        const isActiveRestore = status === "Active";
+        btn.className = status === "Sold" ? "btn-sm-sold"
+          : status === "Stolen" ? "btn-sm-stolen"
+          : status === "Staff Vehicle Finance" ? "btn-sm-staff"
+          : "btn-sm-restore";
+        btn.innerHTML = status === "Sold" ? '<span style="font-weight:900;">R</span>'
+          : status === "Stolen" ? '<i class="fas fa-exclamation-triangle"></i>'
+          : status === "Staff Vehicle Finance" ? '<i class="fas fa-user-tag"></i>'
+          : '<i class="fas fa-undo"></i>';
+        btn.title = isActiveRestore ? "Move back to Main Pool" : "Move to " + status + " window";
         btn.addEventListener("click", function(e) {
           e.stopPropagation();
           let soldValue = "";
           if (status === "Sold") soldValue = prompt("Enter sold value", calcAssetValue(data));
           if (status === "Sold" && soldValue === null) return;
-          if (!confirm("Move this asset to " + status + " window?")) return;
+          const question = isActiveRestore ? "Move this asset back to the Main Pool?" : "Move this asset to " + status + " window?";
+          if (!confirm(question)) return;
           apiPost({
             action: "moveAssetStatus",
             rowNumber: data.rowNumber,
@@ -1435,8 +1449,11 @@
         return btn;
       }
 
+      const currentStatus = String(getField(data, "assetStatus") || "Active").trim().toLowerCase();
       const stolenBtn = makeStatusButton("Stolen");
       const soldBtn = makeStatusButton("Sold");
+      const staffFinanceBtn = makeStatusButton("Staff Vehicle Finance");
+      const restoreBtn = makeStatusButton("Active");
 
       const delBtn = document.createElement("button");
       delBtn.className = "btn-sm-delete";
@@ -1464,8 +1481,13 @@
       actionDiv.appendChild(uploadRegBtn);
       actionDiv.appendChild(uploadTrackingBtn);
       actionDiv.appendChild(uploadInvoiceBtn);
-      actionDiv.appendChild(stolenBtn);
-      actionDiv.appendChild(soldBtn);
+      if (currentStatus === "active" || currentStatus === "") {
+        actionDiv.appendChild(stolenBtn);
+        actionDiv.appendChild(soldBtn);
+        actionDiv.appendChild(staffFinanceBtn);
+      } else {
+        actionDiv.appendChild(restoreBtn);
+      }
       actionDiv.appendChild(delBtn);
       actionCell.appendChild(actionDiv);
       row.appendChild(actionCell);
