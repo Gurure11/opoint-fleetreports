@@ -1,605 +1,1712 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Onpoint-base MIS Ticket Workflow</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Distinct Infrastructure · Dashboard</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet"/>
 <style>
-:root{--bg:#F1F4F7;--card:#fff;--line:#E0E6ED;--ink:#17202B;--muted:#647184;--brand:#00A8F0;--brand2:#0B79B0;--soft:#E6F6FE;--good:#159766;--warn:#C6841A;--bad:#D14343;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink)}button,input,select,textarea{font:inherit}.hide{display:none!important}.top{background:#fff;border-top:3px solid var(--brand);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}.wrap{max-width:1240px;margin:auto;padding:0 20px}.top .wrap{height:64px;display:flex;align-items:center;gap:14px}.logo{width:34px;height:34px;border-radius:9px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800}.brand h1{font-size:17px;margin:0}.brand p{font-size:12px;margin:2px 0 0;color:var(--muted)}.sp{flex:1}.pill{font-family:var(--mono);font-size:11px;border:1px solid #BFE6F8;background:var(--soft);color:var(--brand2);padding:5px 9px;border-radius:99px}.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer}.btn:hover{border-color:var(--brand)}.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn.good{border-color:#BFE8D3;color:var(--good)}.btn.bad{border-color:#F2C6C6;color:var(--bad)}.hero{padding:22px 0}.grid{display:grid;gap:14px}.cards{grid-template-columns:repeat(6,1fr)}.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px}.stat .l{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.stat .v{font-family:var(--mono);font-size:30px;font-weight:700;margin-top:6px}.tabs{display:flex;gap:4px;overflow:auto;border-bottom:1px solid var(--line);margin-top:8px}.tab{border:0;background:transparent;color:var(--muted);padding:13px 15px;cursor:pointer;border-bottom:3px solid transparent}.tab.on{color:var(--ink);border-bottom-color:var(--brand);font-weight:700}.section{display:none;padding:18px 0 50px}.section.on{display:block}.panel{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden}.panel h2{font-size:15px;margin:0;padding:14px 16px;border-bottom:1px solid var(--line)}table{width:100%;border-collapse:collapse;font-size:13px}th{font-family:var(--mono);font-size:10px;text-transform:uppercase;color:var(--muted);text-align:left;background:#F8FAFC;padding:11px;border-bottom:1px solid var(--line)}td{padding:11px;border-bottom:1px solid var(--line);color:#334155}tr:hover td{background:#FAFCFF}.status{font-family:var(--mono);font-size:10px;border-radius:5px;padding:3px 7px;text-transform:uppercase}.s-open{background:#EEF2F6;color:#475569}.s-review{background:var(--soft);color:var(--brand2)}.s-closed{background:#E7F7EE;color:var(--good)}.s-late{background:#FDECEC;color:var(--bad)}.priority-Critical{color:var(--bad);font-weight:700}.priority-High{color:var(--warn);font-weight:700}.login{min-height:100vh;display:grid;place-items:center;padding:20px}.loginbox{width:420px;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 18px 50px rgba(15,25,45,.08)}.loginbox h1{margin:0 0 6px;font-size:22px}.loginbox p{margin:0 0 20px;color:var(--muted);font-size:13px}.f{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.f label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}.f input,.f select,.f textarea{border:1px solid #CDD6E0;border-radius:8px;padding:9px 10px;background:#fff}.f textarea{min-height:82px;resize:vertical}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.wide{grid-column:1/-1}.err{color:var(--bad);font-size:12px;min-height:16px}.ok{color:var(--good);font-size:12px}.drawer{position:fixed;right:0;top:0;height:100vh;width:560px;max-width:96vw;background:#fff;border-left:1px solid var(--line);box-shadow:-20px 0 60px rgba(15,25,45,.2);z-index:20;transform:translateX(105%);transition:.2s;display:flex;flex-direction:column}.drawer.open{transform:translateX(0)}.scrim{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:19;display:none}.scrim.open{display:block}.dh{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}.dh b{font-family:var(--mono);font-size:12px;color:var(--brand2)}.dh button{margin-left:auto}.db{padding:18px;overflow:auto;flex:1}.kv{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:12px 0}.kv div{background:#fff;padding:10px}.kv small{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase}.kv b{display:block;margin-top:4px;font-size:13px}.comments{display:flex;flex-direction:column;gap:8px}.comment{border:1px solid var(--line);border-radius:9px;padding:10px}.comment .meta{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:4px}.actions{border-top:1px solid var(--line);padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap}.scorebox{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.scorebox input{width:90px}.fileline{font-size:12px;margin-top:7px;color:var(--muted)}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.toolbar input,.toolbar select{border:1px solid #CDD6E0;border-radius:8px;padding:7px 9px}.muted{color:var(--muted)}.ro{background:#F8FAFC!important;color:#647184}.copybar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.dashgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.barrow{display:flex;align-items:center;gap:10px;margin:9px 0}.barrow .lbl{width:135px;font-size:12px;color:var(--muted)}.barrow .track{flex:1;height:12px;background:#EEF2F6;border-radius:99px;overflow:hidden}.barrow .fill{height:100%;background:var(--brand)}.barrow .num{font-family:var(--mono);font-size:12px;width:45px;text-align:right}@media(max-width:900px){.dashgrid{grid-template-columns:1fr}}@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.formgrid{grid-template-columns:1fr}.wide{grid-column:auto}.wrap{padding:0 14px}table{min-width:900px}.scroll{overflow:auto}}
+    :root {
+      --primary-blue: #0b2f6b;
+      --deep-blue: #071f47;
+      --bright-blue: #1464d2;
+      --soft-blue: #eaf3ff;
+      --gold: #d4af37;
+      --gold-light: #ffe7a3;
+      --gold-deep: #9a7416;
+      --white: #ffffff;
+      --text: #12304f;
+      --muted: #6b7a90;
+      --line: rgba(20,68,126,0.16);
+      --shadow: 0 20px 60px rgba(7,31,71,0.18);
+      --card-radius: 22px;
+      --transition: 0.2s ease;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+    body {
+      min-height:100vh;
+      background: radial-gradient(circle at top left, rgba(212,175,55,0.32), transparent 30%),
+                  linear-gradient(135deg, var(--deep-blue) 0%, var(--primary-blue) 45%, var(--bright-blue) 100%);
+      padding:24px;
+      color:var(--text);
+      overflow-x:hidden;
+    }
+    body::before {
+      content:"";
+      position:fixed;
+      inset:-30%;
+      background:linear-gradient(120deg, transparent, rgba(255,255,255,0.12), transparent);
+      animation:shine 8s linear infinite;
+      pointer-events:none;
+    }
+    @keyframes shine {
+      0%{transform:translateX(-40%) rotate(10deg)}
+      100%{transform:translateX(40%) rotate(10deg)}
+    }
+    .container {
+      max-width:1400px;
+      margin:auto;
+      background:rgba(255,255,255,0.96);
+      padding:28px;
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      border:1px solid rgba(255,255,255,0.5);
+      animation:pageIn 0.75s ease both;
+    }
+    @keyframes pageIn {
+      from{opacity:0; transform:translateY(18px)}
+      to{opacity:1; transform:translateY(0)}
+    }
+    .header {
+      text-align:center;
+      margin-bottom:28px;
+      padding:28px 20px;
+      border-radius:22px;
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+      color:white;
+      box-shadow:0 14px 35px rgba(11,47,107,0.28);
+      position:relative;
+      overflow:hidden;
+    }
+    .header::after {
+      content:"";
+      position:absolute;
+      width:180px;
+      height:180px;
+      border-radius:50%;
+      background:rgba(212,175,55,0.25);
+      right:-50px;
+      top:-70px;
+      animation:floatOrb 5s ease-in-out infinite alternate;
+    }
+    @keyframes floatOrb {
+      from{transform:translateY(0) scale(1)}
+      to{transform:translateY(22px) scale(1.08)}
+    }
+    .header h1 { color:white; margin-bottom:8px; font-size:clamp(26px, 4vw, 42px); letter-spacing:0.5px; }
+    .header p { color:#eef6ff; font-size:14px; line-height:1.5; position:relative; z-index:1; }
+    .header strong { color:var(--gold-light); }
+    .header-logo {
+      display:block;
+      width:min(384px, 88%);
+      height:auto;
+      margin:0 auto 14px;
+      position:relative;
+      z-index:1;
+      filter:drop-shadow(0 8px 18px rgba(0,0,0,0.2));
+    }
 
-/* OLD APPROVER NAVIGATION STYLE COPIED INTO NEW LIVE HTML */
-.asat{font-family:var(--mono);font-size:11px;color:var(--muted)}
-.viewas{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);font-weight:600}
-.viewas .role{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--brand2);background:var(--soft);border:1px solid #CDEBFA;padding:3px 8px;border-radius:5px;font-weight:500}
-.tabs{position:sticky;top:64px;z-index:4;background:var(--bg);box-shadow:0 6px 9px -8px rgba(20,30,50,.22)}
-.tab.active,.tab.on{color:var(--ink);font-weight:700;border-bottom-color:var(--brand)}
-.tab.tab-cta{color:var(--brand2);font-weight:700}.tab.tab-cta.on,.tab.tab-cta.active{background:var(--soft)}
-.syncbar{position:fixed;right:18px;bottom:18px;z-index:100;background:#fff;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:9px;padding:10px 14px;box-shadow:0 10px 30px rgba(20,30,50,.13);font-size:12.5px;color:var(--ink)}
-.syncbar.hide{display:none!important}.syncbar b{font-family:var(--mono);color:var(--brand2)}
+    /* Keep the three long executive-summary headings and values inside their cards. */
+    .stat-card.summary-compact .count {
+      font-size: clamp(20px, 2.2vw, 26px);
+      white-space: nowrap;
+    }
+    .stat-card.summary-compact .label {
+      font-size: 11px;
+      line-height: 1.25;
+      letter-spacing: 0.15px;
+    }
+
+    /* ----- DASHBOARD CARDS (clickable) ----- */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 18px;
+      margin: 28px 0 24px 0;
+    }
+    .stat-card {
+      background: white;
+      padding: 18px 12px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 18px rgba(11,47,107,0.06);
+      text-align: center;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      backdrop-filter: blur(2px);
+      background: rgba(255,255,255,0.85);
+      cursor: pointer;
+      position: relative;
+    }
+    .stat-card:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 18px 30px rgba(11,47,107,0.18);
+      border-color: var(--gold);
+    }
+    .stat-card:active {
+      transform: scale(0.96);
+    }
+    .stat-card i {
+      font-size: 28px;
+      color: var(--bright-blue);
+      background: var(--soft-blue);
+      padding: 10px;
+      border-radius: 50%;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+    .stat-card .count {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary-blue);
+      line-height: 1.2;
+    }
+    .stat-card .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .stat-card .sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .stat-card .filter-badge {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 10px;
+      background: var(--gold);
+      color: #071f47;
+      padding: 2px 8px;
+      border-radius: 10px;
+      opacity: 0.7;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 0 22px 0;
+      gap: 12px;
+    }
+    .action-row .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+      color: #071f47;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 10px 24px rgba(154,116,22,0.28);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-gold:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px rgba(154,116,22,0.36);
+      filter: saturate(1.1);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary-blue);
+      color: var(--primary-blue);
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-outline:hover {
+      background: var(--primary-blue);
+      color: white;
+    }
+    .btn-back {
+      background: linear-gradient(135deg, #6c7a8a, #4a5568);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-back:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+    }
+
+    /* form section */
+    #entrySection {
+      margin-top: 28px;
+      border-top: 2px dashed var(--line);
+      padding-top: 20px;
+    }
+    #entrySection h2 {
+      color: var(--primary-blue);
+      margin-bottom: 16px;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .form-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap:16px;
+      margin-bottom:22px;
+    }
+    .form-group {
+      display:flex;
+      flex-direction:column;
+      padding:14px;
+      background:linear-gradient(180deg, #ffffff, var(--soft-blue));
+      border:1px solid var(--line);
+      border-radius:18px;
+      transition:transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      animation:cardIn 0.45s ease both;
+    }
+    .form-group:hover {
+      transform:translateY(-3px);
+      box-shadow:0 14px 28px rgba(11,47,107,0.12);
+      border-color:rgba(212,175,55,0.7);
+    }
+    @keyframes cardIn {
+      from{opacity:0; transform:translateY(10px)}
+      to{opacity:1; transform:translateY(0)}
+    }
+    label {
+      margin-bottom:7px;
+      font-weight:bold;
+      color:var(--primary-blue);
+      font-size:13px;
+    }
+    input, select, textarea {
+      width:100%;
+      padding:12px 13px;
+      border:1px solid rgba(11,47,107,0.22);
+      border-radius:12px;
+      font-size:14px;
+      background:white;
+      color:var(--text);
+      transition:border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline:none;
+      border-color:var(--gold);
+      box-shadow:0 0 0 4px rgba(212,175,55,0.2);
+      transform:translateY(-1px);
+    }
+    textarea { min-height:44px; resize:vertical; }
+    .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    button {
+      background:linear-gradient(135deg, var(--gold), var(--gold-deep));
+      color:#071f47;
+      border:none;
+      padding:14px 30px;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:15px;
+      font-weight:800;
+      box-shadow:0 12px 26px rgba(154,116,22,0.28);
+      transition:transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    }
+    button:hover {
+      transform:translateY(-3px);
+      box-shadow:0 18px 34px rgba(154,116,22,0.36);
+      filter:saturate(1.1);
+    }
+    .btn-blue {
+      background:linear-gradient(135deg, var(--bright-blue), var(--primary-blue));
+      color:white;
+    }
+    .btn-danger {
+      background:linear-gradient(135deg, #ef4444, #991b1b);
+      color:white;
+    }
+    .status {
+      margin-top:16px;
+      font-weight:bold;
+      color:var(--primary-blue);
+      background:rgba(212,175,55,0.16);
+      border-left:5px solid var(--gold);
+      padding:12px 14px;
+      border-radius:12px;
+      min-height:20px;
+    }
+    .table-wrap {
+      width:100%;
+      overflow:auto;
+      border-radius:18px;
+      border:1px solid var(--line);
+      margin-top:20px;
+      box-shadow:0 10px 24px rgba(11,47,107,0.08);
+      max-height:72vh;
+    }
+    table {
+      width:100%;
+      min-width:700px;
+      border-collapse:collapse;
+      background:white;
+      table-layout:auto;
+    }
+    th {
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+      color:white;
+      padding:9px;
+      text-align:left;
+      font-size:11px;
+      line-height:1.15;
+      white-space:nowrap;
+      border-bottom:2px solid var(--gold);
+      position:sticky;
+      top:0;
+      z-index:2;
+    }
+    td {
+      padding:8px 9px;
+      border-bottom:1px solid var(--line);
+      font-size:11px;
+      line-height:1.15;
+      color:var(--text);
+      white-space:nowrap;
+      max-width:170px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    tr:hover { background:#f4f8ff; }
+    .hidden { display:none !important; }
+    
+    /* Actions column - moved to right */
+    .action-col {
+      min-width: 110px;
+      text-align: right;
+      position:sticky;
+      right:0;
+      background:#fff;
+      z-index:1;
+    }
+    .action-col .row-actions {
+      display: flex;
+      gap: 4px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .row-actions button {
+      padding: 4px 8px;
+      font-size: 10px;
+      margin: 0;
+      border-radius: 14px;
+    }
+    .row-actions .btn-sm-edit { background: var(--bright-blue); color: white; }
+    .row-actions .btn-sm-edit:hover { filter: brightness(1.1); }
+    .row-actions .btn-sm-upload { background: var(--gold); color: #071f47; }
+    .row-actions .btn-sm-upload:hover { filter: brightness(1.1); }
+    .row-actions .btn-sm-delete { background: #ef4444; color: white; }
+    .row-actions .btn-sm-stolen { background: #f97316; color: white; }
+    .row-actions .btn-sm-sold { background: #16a34a; color: white; }
+
+    .regbook-link {
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .regbook-link a {
+      color: var(--bright-blue);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--bright-blue);
+    }
+    .regbook-link a:hover { color: var(--gold-deep); }
 
 
-.card.clickable{cursor:pointer;transition:.15s}.card.clickable:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,25,45,.10);border-color:var(--brand)}
-.stat.critical{border-left:5px solid var(--bad)}.stat.ontime{border-left:5px solid var(--good)}.stat.late{border-left:5px solid var(--bad)}.stat.review{border-left:5px solid var(--brand)}
-.stat.critical .v,.stat.late .v{color:var(--bad)}.stat.ontime .v{color:var(--good)}
-.ticket-link{font-family:var(--mono);font-weight:700;color:var(--brand2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
-.ticket-link:hover{color:var(--bad);background:#FFF1F1;border-radius:4px}
-.barrow.clickable{cursor:pointer;border-radius:8px;padding:3px}.barrow.clickable:hover{background:#F4FAFE}.barrow.good .fill{background:var(--good)}.barrow.bad .fill{background:var(--bad)}.barrow.warn .fill{background:var(--warn)}
-.allUserCompare{grid-column:1/-1}.allUserCompare .barrow .lbl{width:190px;color:var(--ink);font-weight:600}.allUserCompare .barrow .track{height:18px}.allUserCompare .barrow .num{width:58px;font-weight:700}.allUserCompare .barrow.good .fill{background:var(--good)}.allUserCompare .barrow.bad .fill{background:var(--bad)}.allUserCompare .barrow.warn .fill{background:var(--warn)}
+    th.action-col {
+      z-index:3;
+      background:linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+    }
+    #assetTable td:nth-child(6),
+    #assetTable td:nth-child(11),
+    #assetTable td:nth-child(12),
+    #assetTable td:nth-child(17),
+    #assetTable td:nth-child(18),
+    #assetTable td:nth-child(19),
+    #assetTable td:nth-child(25) {
+      max-width:130px;
+    }
 
-.filterTitle{font-family:var(--mono);font-size:11px;color:var(--brand2);margin:0 0 10px}.printOnly{display:none}.score-final-red{color:#D14343!important;font-weight:800}.score-final-green{color:#159766!important;font-weight:800}.score-final-blue{color:#0B79B0!important;font-weight:800}.score-final-black{color:#000!important;font-weight:800}@media print{header,.tabs,.toolbar,.btn,.actions,#syncbar,#scrim,#drawer{display:none!important}.section{display:block!important}.section:not(.printTarget){display:none!important}.panel{border:0}.printOnly{display:block}.wrap{max-width:none}.card{break-inside:avoid}}
+    .filter-active {
+      border-color: var(--gold) !important;
+      box-shadow: 0 0 0 3px rgba(212,175,55,0.3) !important;
+    }
 
 
-/* LIGHTWEIGHT HTML CHATBOT - answers from the loaded task data only */
-.chatbotFab{position:fixed;right:18px;bottom:74px;z-index:101;border:0;background:var(--brand);color:#fff;border-radius:999px;padding:12px 16px;font-weight:700;box-shadow:0 10px 26px rgba(15,25,45,.22);cursor:pointer}
-.chatbotBox{position:fixed;right:18px;bottom:126px;width:380px;max-width:calc(100vw - 36px);max-height:70vh;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 55px rgba(15,25,45,.22);z-index:101;display:none;overflow:hidden}
-.chatbotBox.open{display:flex;flex-direction:column}
-.chatbotHead{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
-.chatbotHead b{font-family:var(--mono);font-size:12px;color:var(--brand2)}
-.chatbotHead button{margin-left:auto}
-.chatbotBody{padding:12px;overflow:auto;display:flex;flex-direction:column;gap:8px;min-height:220px}
-.chatMsg{border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:13px;line-height:1.35}
-.chatMsg.bot{background:#F8FAFC}.chatMsg.user{background:var(--soft);border-color:#BFE6F8;align-self:flex-end}
-.chatbotInput{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
-.chatbotInput input{flex:1;border:1px solid #CDD6E0;border-radius:8px;padding:9px 10px}
-.chatHints{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.chatHints button{font-size:11px;padding:5px 7px}
+    .transaction-toolbar {
+      display: grid;
+      grid-template-columns: 1.3fr repeat(4, minmax(145px, 1fr)) auto auto;
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+      margin: 8px 0 14px 0;
+      background: linear-gradient(180deg, #ffffff, var(--soft-blue));
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+    .transaction-toolbar .filter-box {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .transaction-toolbar label {
+      margin-bottom: 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.25px;
+    }
+    .transaction-toolbar input,
+    .transaction-toolbar select {
+      padding: 9px 10px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+    .transaction-toolbar button {
+      padding: 10px 16px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
 
-</style>
+    @media (max-width: 768px) {
+      body { padding:12px; }
+      .container { padding:16px; border-radius:20px; }
+      .dashboard-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .action-row { flex-direction: column; align-items: stretch; }
+      .btn-gold, .btn-outline { justify-content: center; }
+      .form-actions { flex-direction: column; }
+      .form-actions button { width: 100%; justify-content: center; }
+      .action-col .row-actions { justify-content: center; }
+      .transaction-toolbar { grid-template-columns: 1fr; }
+      .transaction-toolbar button { width: 100%; justify-content: center; }
+    }
+    /* Image cropping modal */
+    .crop-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(7,31,71,0.84);
+      backdrop-filter: blur(5px);
+    }
+    .crop-modal.hidden { display: none !important; }
+    .crop-dialog {
+      width: min(960px, 100%);
+      max-height: 94vh;
+      overflow: auto;
+      background: white;
+      border-radius: 22px;
+      box-shadow: 0 26px 80px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.7);
+    }
+    .crop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      color: white;
+      background: linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+      border-radius: 22px 22px 0 0;
+    }
+    .crop-header h3 { margin: 0; font-size: 18px; }
+    .crop-close {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.16);
+      color: white;
+      box-shadow: none;
+    }
+    .crop-stage {
+      height: min(62vh, 560px);
+      background: #eef4fb;
+      padding: 12px;
+    }
+    .crop-stage img {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .crop-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--line);
+    }
+    .crop-controls button { padding: 10px 16px; font-size: 13px; }
+    .crop-controls .crop-primary { margin-left: auto; }
+    .crop-help {
+      width: 100%;
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media print {
+      body { background:white; }
+      .header, .action-row, #entrySection, .toolbar, .connection-panel, .status, .btn-gold, .btn-outline { display:none !important; }
+      .container { box-shadow:none; border:none; max-width:none; padding:0; }
+    }
+  </style>
 </head>
 <body>
-<div id="login" class="login">
-  <div class="loginbox">
-    <div class="logo">OB</div><br>
-    <h1>Onpoint-base Login</h1>
-    <p>Connected to Google Sheet: <b>Onpoint-base</b></p>
-    <div class="f"><label>Username / Email / UserID</label><input id="loginUser" placeholder="admin or your Users tab username"></div>
-    <div class="f"><label>Password</label><input id="loginPass" type="password" placeholder="Password value or admin123"></div>
-    <button class="btn primary" onclick="login()">Login</button><button class="btn" style="margin-left:8px" onclick="setupNow()">Repair / Setup Sheets</button>
-    <div id="loginErr" class="err"></div>
-  </div>
+<div class="container" id="appContainer">
+<div class="header">
+<img class="header-logo" src="data:image/png;base64,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" alt="Distinct Infrastructure logo"/>
+<h1>Distinct Infrastructure</h1>
+<p>Vehicle &amp; Asset Register · Dashboard</p>
+<p><strong>Google Storage:</strong> Asset Register O/a Distinct Infrastructure</p>
 </div>
-
-<div id="app" class="hide">
-<header class="top">
-  <div class="wrap">
-    <div class="brand"><div class="logo">OB</div><div><div class="t"><b>OnpointBase</b> <span>· MIS Tickets</span></div><p id="navSub" class="asat">Live workflow dashboard</p></div></div>
-    <div class="sp"></div>
-    <div class="asat" id="asAt">Synchronised: —</div>
-    <div class="viewas">Logged in as <span id="userPill" class="role"></span></div>
-    <button class="btn" onclick="logout()">Logout</button>
-  </div>
-</header>
-<main class="wrap">
-  <div class="hero">
-    <div class="grid cards">
-      <div class="card stat clickable critical" onclick="openTicketWindow('critical')"><div class="l">Critical Tickets</div><div id="stCritical" class="v">0</div></div>
-      <div class="card stat clickable ontime" onclick="openTicketWindow('openOnTime')"><div class="l">Open &amp; Ontime</div><div id="stOpenOnTime" class="v">0</div></div>
-      <div class="card stat clickable review reviewOnly" onclick="openTicketWindow('review1')"><div class="l">Review Basket Executive1</div><div id="stE1" class="v">0</div></div>
-      <div class="card stat clickable review reviewOnly" onclick="openTicketWindow('review2')"><div class="l">Review Basket Executive2</div><div id="stE2" class="v">0</div></div>
-      <div class="card stat clickable late" onclick="openTicketWindow('openLate')"><div class="l">Open and Late Tickets</div><div id="stLate" class="v">0</div></div>
-      <div class="card stat clickable" onclick="openTicketWindow('closed')"><div class="l">Closed Tickets</div><div id="stClosed" class="v">0</div></div>
+<!-- DASHBOARD CARDS (clickable) - Focus on Drilling, Yellow, and Small Plant -->
+<div class="dashboard-grid" id="dashboardCards">
+<div class="stat-card" data-filter="Drilling"><i class="fas fa-oil-can"></i><div class="count" id="cntDrilling">0</div><div class="label">Drilling Plant</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Yellow Plant"><i class="fas fa-digging"></i><div class="count" id="cntYellow">0</div><div class="label">Yellow Plant</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Small Plant"><i class="fas fa-th-list"></i><div class="count" id="cntSmallPlant">0</div><div class="label">Small Plant</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Trucks"><i class="fas fa-truck"></i><div class="count" id="cntTrucks">0</div><div class="label">Trucks</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Trailers"><i class="fas fa-trailer"></i><div class="count" id="cntTrailers">0</div><div class="label">Trailers</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Executive"><i class="fas fa-car"></i><div class="count" id="cntExecutive">0</div><div class="label">Executive Cars</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Bowser"><i class="fas fa-gas-pump"></i><div class="count" id="cntBowser">0</div><div class="label">Bowsers</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Admin"><i class="fas fa-building"></i><div class="count" id="cntAdmin">0</div><div class="label">Admin</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-filter="Projects &amp; Tender"><i class="fas fa-briefcase"></i><div class="count" id="cntProjects">0</div><div class="label">Projects &amp; Tender</div><span class="filter-badge">click</span></div>
+</div>
+<div class="dashboard-grid" id="executiveSummaryCards">
+<div class="stat-card summary-compact" data-special-filter="all-active"><i class="fas fa-coins"></i><div class="count" id="totalAssetValue">R 0.00</div><div class="label">Total Vehicle &amp; Equipment Value</div><div class="sub">Active NBV / Value</div></div>
+<div class="stat-card summary-compact" data-special-filter="all-active"><i class="fas fa-chart-line"></i><div class="count" id="totalDepreciation">R 0.00</div><div class="label">Total Depreciation To Date</div><div class="sub">Accumulated DPN</div></div>
+<div class="stat-card summary-compact"><i class="fas fa-money-check-alt"></i><div class="count" id="totalInstallmentsPaid">R 0.00</div><div class="label">Total Installments Paid</div><div class="sub">Cumulative VAF payments</div></div>
+<div class="stat-card" data-special-filter="Stolen"><i class="fas fa-exclamation-triangle"></i><div class="count" id="cntStolen">0</div><div class="label">Stolen Vehicles / Equipment</div><div class="sub" id="valStolen">R 0.00</div><span class="filter-badge">click</span></div>
+<div class="stat-card" data-special-filter="Sold"><i class="fas fa-hand-holding-usd"></i><div class="count" id="cntSold">0</div><div class="label">Sold Vehicles / Equipment</div><div class="sub" id="valSold">R 0.00</div><span class="filter-badge">click</span></div>
+</div>
+<!-- ACTION ROW -->
+<div class="action-row">
+<div class="btn-group">
+<button class="btn-gold" id="newEntryBtn"><i class="fas fa-plus-circle"></i> New Entry</button>
+<button class="btn-outline" id="refreshDashBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+<button class="btn-outline" id="clearFilterBtn"><i class="fas fa-times-circle"></i> Clear Filter</button>
+</div>
+<div class="btn-group">
+<button class="btn-outline" id="printBtn"><i class="fas fa-print"></i> Print</button>
+<button class="btn-outline" id="excelBtn"><i class="fas fa-file-excel"></i> CSV</button>
+<button class="btn-outline" id="vehicleLicenceBtn" onclick="window.location.href='vehicle1.html'"><i class="fas fa-id-card"></i> Vehicle Licence</button><button class="btn-outline" id="insuranceBtnMain" onclick="window.location.href='insurance.html'"><i class="fas fa-shield-alt"></i> Insurance</button></div>
+</div>
+<!-- ENTRY SECTION -->
+<div class="hidden" id="entrySection">
+<h2>
+<span><i class="fas fa-pen-alt" style="color:var(--gold);"></i> New Asset Entry</span>
+<button class="btn-back" id="backToDashboardBtn"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+</h2>
+<button class="btn-outline" onclick="window.location.href='insurance.html'" type="button"><i class="fas fa-shield-alt"></i> Insurance Report</button>
+<form id="assetForm">
+<div class="form-grid">
+<div class="form-group"><label>Code</label><select id="code"><option value="">Select Code</option><option>73803</option><option>73802</option><option>82130</option><option>73801</option><option>73800</option></select></div>
+<div class="form-group"><label>Asset Class</label><select id="assetClass"><option value="">Select Asset Class</option><option>Admin</option><option>Bowser</option><option>Drilling</option><option>Executive</option><option>Projects &amp; Tender</option><option>Small Plant</option><option>Trailers</option><option>Trucks</option><option>Yellow Plant</option></select></div>
+<div class="form-group"><label>Purchase Date</label><input id="purchaseDate" type="date"/></div>
+<div class="form-group"><label>Purchased by</label><select id="purchasedBy"><option value="">Select Purchased By</option><option>Onpoint</option><option>Aqua Telecoms</option><option>Nkanyezi</option><option>Distinct</option></select></div>
+<div class="form-group"><label>Financing</label><input id="financing" type="text"/></div>
+<div class="form-group"><label>Description</label><input id="description" type="text"/></div>
+<input id="model" type="hidden"/>
+<div class="form-group"><label>Make of Vehicle</label><select id="makeOfVehicle"><option value="">Select Make</option><option>Toyota</option><option>Faw</option><option>Ford</option><option>Foton</option><option>Mahindra</option><option>Isuzu</option><option>Mercedes Benz</option><option>VW</option><option>Nissan</option></select></div>
+<div class="form-group"><label>Body Type</label><select id="bodyType"><option value="">Select Body Type</option><option>Sedan</option><option>Hatchback</option><option>Truck</option><option>Minibus</option><option>SUV</option><option>Bakkie</option><option>Lorry</option></select></div>
+<div class="form-group"><label>Registration no</label><input id="registrationNo" type="text"/></div>
+<div class="form-group"><label>Engine no</label><input id="engineNo" type="text"/></div>
+<div class="form-group"><label>Vin no</label><input id="vinNo" type="text"/></div>
+<div class="form-group"><label>Cost</label><input id="cost" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Market Value</label><input id="marketValue" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>ZOHO</label><select id="zoho"><option value="">Select ZOHO</option><option>Yes</option><option>No</option></select></div>
+<div class="form-group"><label>Location</label><input id="location" type="text"/></div>
+<div class="form-group"><label>Driver/Operator</label><input id="driverOperator" type="text"/></div>
+<div class="form-group"><label>Allocation/Dept</label><input id="allocationDept" type="text"/></div>
+<div class="form-group"><label>Registered Entity</label><input id="registeredEntity" type="text"/></div>
+<div class="form-group"><label>Covered by</label><select id="coveredBy"><option value="">Select Insurance</option><option>Outsurance</option><option>Auto General</option><option>Standard Bank</option><option>Other</option></select></div>
+<div class="form-group"><label>TRACKING COMPANY</label><select id="trackingCompany"><option value="">Select Tracking</option><option>Netstar</option><option>Car Tracker</option><option>The Both(Car Tracker &amp; Netstar)</option></select></div>
+<div class="form-group"><label>Installment Amount</label><input id="installmentAmount" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Last Installment date</label><input id="lastInstallmentDate" type="date"/></div>
+<div class="form-group"><label>eTag Toll</label><select id="eTagToll"><option value="">Select eTag</option><option>Yes</option><option>No</option></select></div>
+<div class="form-group"><label>NOTES</label><textarea id="notes"></textarea></div>
+<div class="form-group"><label>Reg. Boo</label><input id="regBoo" type="text"/></div>
+<div class="form-group"><label>Useful life</label><input id="usefulLife" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Recharge</label><input id="recharge" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Monthly dpn</label><input id="monthlyDpn" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Year</label><select id="year"><option value="">Select Year</option><option value="2000">2000</option><option value="2001">2001</option><option value="2002">2002</option><option value="2003">2003</option><option value="2004">2004</option><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option><option value="2036">2036</option><option value="2037">2037</option><option value="2038">2038</option><option value="2039">2039</option><option value="2040">2040</option><option value="2041">2041</option><option value="2042">2042</option><option value="2043">2043</option><option value="2044">2044</option><option value="2045">2045</option></select></div>
+<div class="form-group"><label>Months Dpn</label><input id="monthsDpn" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Accum dpn</label><input id="accumDpn" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Residual Value (5% - 10%)</label><input id="residualValue" inputmode="decimal" placeholder="Auto 10% of Cost if blank" type="text"/></div>
+<div class="form-group"><label>NBV</label><input id="nbv" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Outstanding VAF</label><input id="oustandingVaf" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Value</label><input id="value" inputmode="decimal" type="text"/></div>
+<div class="form-group"><label>Vehicle Reg Book Upload</label><input accept="image/*,application/pdf,.doc,.docx" id="vehicleRegBookFile" type="file"/></div>
+<div class="form-group"><label>Tracking Certificate Upload</label><input accept="image/*,application/pdf,.doc,.docx" id="trackingCertificateFile" type="file"/></div>
+<div class="form-group"><label>Vehicle Invoice Upload</label><input accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" id="vehicleInvoiceFile" type="file"/></div>
+<div class="form-group"><label>Upload up to 5 Images</label><input accept="image/*" id="imageFiles" multiple="" type="file"/><small style="color:var(--muted);margin-top:6px;">Maximum 5 images. Links post to Google Sheet.</small></div>
+<input id="rowNumber" type="hidden"/>
+<input id="vehicleRegBookLink" type="hidden"/>
+<input id="trackingCertificateLink" type="hidden"/>
+<input id="vehicleInvoiceLink" type="hidden"/>
+<input id="assetTotalInstallmentsPaid" type="hidden"/>
+<input id="regBookLink" type="hidden"/>
+<input id="imageLinks" type="hidden"/>
+<input id="assetStatus" type="hidden"/>
+<input id="statusDate" type="hidden"/>
+<input id="soldValue" type="hidden"/>
+</div>
+<div class="form-actions">
+<button id="saveBtn" type="submit">Save Asset</button>
+<button class="btn-blue" id="clearBtn" type="button">Clear Form</button>
+<button class="btn-outline" id="cancelEntryBtn" type="button">Cancel</button>
+</div>
+</form>
+<div class="status" id="status"></div>
+</div>
+<!-- transaction journal -->
+<div class="table-wrap">
+<h2 style="color:var(--primary-blue);margin-top:28px;margin-bottom:10px;">
+      Transaction Journal
+      <span id="filterIndicator" style="font-size:14px;font-weight:normal;color:var(--muted);margin-left:12px;"></span>
+</h2>
+<div class="transaction-toolbar" id="transactionToolbar">
+<div class="filter-box"><label>Search</label><input id="transactionSearch" placeholder="Search registration, description, make..." type="search"/></div>
+<div class="filter-box"><label>Sort</label><select id="transactionSort"><option value="">Default</option><option value="alphaAsc">Alphabet A-Z</option><option value="alphaDesc">Alphabet Z-A</option><option value="dateNewest">Date Newest</option><option value="dateOldest">Date Oldest</option></select></div>
+<div class="filter-box"><label>Class</label><select id="transactionClassFilter"><option value="">All Classes</option></select></div>
+<div class="filter-box"><label>Car Model</label><select id="transactionModelFilter"><option value="">All Models</option></select></div>
+<div class="filter-box"><label>Cost Center</label><select id="transactionCostCenterFilter"><option value="">All Cost Centers</option></select></div>
+<button class="btn-blue" id="transactionSearchBtn" type="button"><i class="fas fa-search"></i> Search</button>
+<button class="btn-outline" id="transactionClearBtn" type="button"><i class="fas fa-eraser"></i> Reset</button>
+</div>
+<table id="assetTable">
+<thead><tr>
+<th>Code</th><th>Asset Class</th><th>Purchase Date</th><th>Purchased by</th><th>Financing</th><th>Description</th><th>Model</th><th>Make of Vehicle</th><th>Body Type</th><th>Registration no</th><th>Engine no</th><th>Vin no</th><th>Cost</th><th>Market Value</th><th>ZOHO</th><th>Location</th><th>Driver/Operator</th>
+<th>Allocation/Dept</th><th>Registered Entity</th><th>Covered by</th><th>TRACKING COMPANY</th><th>Installment Amount</th><th>Last Installment date</th><th>eTag Toll</th><th>NOTES</th><th>Reg. Boo</th><th>Useful life</th><th>Recharge</th><th>Monthly dpn</th><th>Year</th><th>Months Dpn</th><th>Accum dpn</th><th>Residual Value</th><th>NBV</th><th>Outstanding VAF</th><th>Value</th><th>Vehicle Reg Book</th><th>Tracking Certificate</th><th>Vehicle Invoice</th><th>Images</th><th>Status</th><th>Status Date</th><th>Sold Value</th>
+<th class="action-col">Actions</th>
+</tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+<div class="crop-modal hidden" id="imageCropModal" role="dialog" aria-modal="true" aria-labelledby="cropModalTitle">
+  <div class="crop-dialog">
+    <div class="crop-header">
+      <h3 id="cropModalTitle"><i class="fas fa-crop-alt"></i> Crop Image Before Upload</h3>
+      <button class="crop-close" id="cropCloseBtn" type="button" title="Cancel"><i class="fas fa-times"></i></button>
     </div>
-    <div class="tabs" id="tabs">
-      <button class="tab tab-cta" data-tab="new" onclick="showTab('new')">+ Create ticket</button>
-      <button class="tab active on" data-tab="dashboard" onclick="showTab('dashboard')">Executive</button>
-      <button class="tab reviewOnly" data-tab="review1" onclick="showTab('review1')">Review</button>
-      <button class="tab reviewOnly" data-tab="review2" onclick="showTab('review2')">Approvals</button>
-      <button class="tab" data-tab="task" onclick="showTab('task')">My tickets</button>
-      <button class="tab" data-tab="task" onclick="showTab('task')">Critical</button>
-      <button class="tab" data-tab="task" onclick="showTab('task')">Assigned</button>
-      <button class="tab" data-tab="task" onclick="showTab('task')">Open &amp; late</button>
-      <button class="tab" data-tab="closed" onclick="showTab('closed')">Closed on time</button>
-      <button class="tab" data-tab="dashboard" onclick="showTab('dashboard')">Scorecards</button>
-      <button class="tab" data-tab="performance" onclick="showTab('performance')">Performance</button>
-      <button class="tab" data-tab="dashboard" onclick="showTab('dashboard')">Explore</button>
-      <button class="tab" data-tab="dashboard" onclick="showTab('dashboard')">Activity</button>
+    <div class="crop-stage"><img alt="Image selected for cropping" id="cropImagePreview"/></div>
+    <div class="crop-controls">
+      <button class="btn-blue" id="cropRotateLeftBtn" type="button"><i class="fas fa-undo"></i> Rotate Left</button>
+      <button class="btn-blue" id="cropRotateRightBtn" type="button"><i class="fas fa-redo"></i> Rotate Right</button>
+      <button class="btn-outline" id="cropResetBtn" type="button"><i class="fas fa-sync"></i> Reset</button>
+      <button class="btn-outline" id="cropOriginalBtn" type="button"><i class="fas fa-image"></i> Use Original</button>
+      <button class="crop-primary" id="cropApplyBtn" type="button"><i class="fas fa-crop-alt"></i> Crop &amp; Continue</button>
+      <p class="crop-help">Drag the image, resize the crop box, zoom with the mouse wheel or touch gestures, then continue.</p>
     </div>
   </div>
-
-  <section id="dashboard" class="section on"><div class="panel"><h2>Workflow Dashboard</h2><div style="padding:16px"><p class="muted">Live overview from tickets visible to the logged-in user. Click any card, graph or bar to open the represented ticket data.</p><div id="dashBody" class="dashgrid"></div><div id="dashList" style="margin-top:14px"></div></div></div></section>
-
-  <section id="performance" class="section"><div class="panel"><h2>Performance</h2><div style="padding:16px"><div class="toolbar"><select id="perfMode" onchange="renderPerformance()"><option value="individual">Individual Performance</option><option value="department">Department Performance</option><option value="costcenter">Cost Center Performance</option></select><select id="perfValue" onchange="renderPerformance()"></select><button class="btn" onclick="printPerformance()">Print Report</button></div><p class="muted">Select an individual, department or cost center, then print the selected report.</p><div id="perfBody" class="dashgrid"></div><div id="perfList" style="margin-top:14px"></div></div></div></section>
-
-  <section id="task" class="section"><div class="toolbar"><input id="searchTask" oninput="render()" placeholder="Search tickets"><button class="btn" onclick="refresh()">Refresh</button></div><div class="panel"><h2>Task Drawer</h2><div class="scroll"><table><thead><tr><th>Ref</th><th>Title</th><th>Assignee</th><th>Due</th><th>Timelapse</th><th>Status</th><th>Priority</th><th>Action</th></tr></thead><tbody id="taskRows"></tbody></table></div></div></section>
-  <section id="review1" class="section"><div class="panel"><h2>Executive1 Review Basket</h2><div class="scroll"><table><thead><tr><th>Ref</th><th>Title</th><th>Submitted</th><th>System Score</th><th>Assignee</th><th>Action</th></tr></thead><tbody id="review1Rows"></tbody></table></div></div></section>
-  <section id="review2" class="section"><div class="panel"><h2>Executive2 Review Basket</h2><div class="scroll"><table><thead><tr><th>Ref</th><th>Title</th><th>System Score</th><th>Executive1 Score</th><th>Submission Timing</th><th>Action</th></tr></thead><tbody id="review2Rows"></tbody></table></div></div></section>
-  <section id="closed" class="section"><div class="panel"><h2>Closed Tickets</h2><div class="scroll"><table><thead><tr><th>Ref</th><th>Title</th><th>Closed</th><th>Timing</th><th>System</th><th>Exec1</th><th>Exec2</th><th>Final %</th></tr></thead><tbody id="closedRows"></tbody></table></div></div></section>
-
-  <section id="new" class="section">
-    <div class="panel"><h2>Create New Ticket / Recurring Ticket</h2><div style="padding:16px">
-      <div class="toolbar"><label><input type="radio" name="mode" value="single" checked onchange="modeChange()"> Single Ticket</label><label><input type="radio" name="mode" value="recurring" onchange="modeChange()"> Recurring Ticket</label></div>
-      <div class="formgrid">
-        <div class="f wide"><label>Title *</label><input id="ntTitle"></div>
-        <div class="f wide"><label>Description</label><textarea id="ntDesc"></textarea></div>
-        <div class="f"><label>Assign To *</label><select id="ntAssignee" onchange="assigneeChanged()"></select></div>
-        <div class="f"><label>Assignee Email</label><input id="ntAssigneeEmail" class="ro" readonly></div>
-        <div class="f"><label>Assignee Phone</label><input id="ntAssigneePhone" class="ro" readonly></div>
-        <div class="f"><label>Assignee WhatsApp</label><input id="ntAssigneeWhatsApp" class="ro" readonly></div>
-        <div class="f"><label>Department</label><input id="ntDept" class="ro" readonly></div>
-        <div class="f"><label>Cost Center</label><input id="ntCostCenter" class="ro" readonly></div>
-        <div class="f"><label>Priority</label><select id="ntPriority"><option>Low</option><option selected>Normal</option><option>High</option><option>Critical</option></select></div>
-        <div class="f wide"><label>WhatsApp task copy</label><textarea id="ntWhatsAppCopy" class="ro" readonly></textarea><div class="copybar"><button type="button" class="btn" onclick="copyNewTaskWhatsApp()">Copy WhatsApp Message</button><button type="button" class="btn good" onclick="openNewTaskWhatsApp()">Open WhatsApp</button></div></div>
-        <div class="f singleOnly"><label>Issue Date</label><input id="ntIssue" type="date"></div>
-        <div class="f singleOnly"><label>Due Date *</label><input id="ntDue" type="date"></div>
-        <div class="f recOnly hide"><label>Start Date *</label><input id="rtStart" type="date"></div>
-        <div class="f recOnly hide"><label>Frequency</label><select id="rtFreq"><option>Daily</option><option selected>Weekly</option><option>Monthly</option></select></div>
-        <div class="f recOnly hide"><label>Due after days</label><input id="rtDueDays" type="number" value="1"></div>
-        <div class="f recOnly hide"><label>Occurrences</label><input id="rtOcc" type="number" value="4"></div>
-      </div>
-      <button class="btn primary" onclick="createTicket()">Create Ticket</button><span id="newMsg" class="ok"></span><div id="newErr" class="err"></div>
-    </div></div>
-  </section>
-</main>
 </div>
-
-<div id="scrim" class="scrim" onclick="closeDrawer()"></div>
-<aside id="drawer" class="drawer"><div class="dh"><b id="dRef"></b><span id="dStatus" class="status"></span><button class="btn" onclick="closeDrawer()">Close</button></div><div id="dBody" class="db"></div><div id="dActions" class="actions"></div></aside>
-
-<button id="chatbotFab" class="chatbotFab" onclick="toggleChatbot()">Ask Bot</button>
-<div id="chatbotBox" class="chatbotBox">
-  <div class="chatbotHead"><b>Onpoint Task Chatbot</b><span class="muted">HTML helper</span><button class="btn" onclick="toggleChatbot()">Close</button></div>
-  <div id="chatbotBody" class="chatbotBody">
-    <div class="chatMsg bot">Ask me about tickets loaded in this dashboard, the workflow, Brighton submit access, Executive1/Executive2 baskets, late tickets, critical tickets, or performance.</div>
-    <div class="chatHints"><button class="btn" onclick="chatQuick('How many tickets are waiting for Executive1?')">Executive1 basket</button><button class="btn" onclick="chatQuick('Show Brighton tickets')">Brighton tickets</button><button class="btn" onclick="chatQuick('Explain submit workflow')">Submit workflow</button></div>
-  </div>
-  <div class="chatbotInput"><input id="chatbotQ" placeholder="Type a question about this dashboard" onkeydown="if(event.key==='Enter') askChatbot()"><button class="btn primary" onclick="askChatbot()">Ask</button></div>
-</div>
-
-<div id="syncbar" class="syncbar hide"><b>Synchronising...</b> please wait</div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <script>
-// Replace this with your deployed Apps Script Web App URL.
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyHxWafY_Vpsr9OyTc3wQTrGVCCvG76hx9szmy8YdClk8V42uB24GJRsQDwM-De4zel/exec';
-let USER = JSON.parse(localStorage.getItem('ob_user') || 'null');
-let STATE = {tickets:[], globalTickets:[], dashboardTickets:[], users:[], referenceData:[], summary:{}};
-let LAST_GOOD_STATE = {tickets:[], globalTickets:[], dashboardTickets:[], users:[], referenceData:[], summary:{}};
-let CURRENT_FILTER = 'all';
-let REQUEST_SEQ = 0;
-let ACTIVE_DATA_VIEW = 'all';
-let AUTO_REFRESH_TIMER = null;
-let LAST_REFRESH_AT = 0;
-const REFRESH_INTERVAL_MS = 45000;
+  // ======================== CONFIG =========================
+  const SHEET_ID = "1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw";
+  const DRIVE_FOLDER_ID = "1wMxg8AdipSeDI5lmL8PNECzD_U3CVC8W";
+  const MAIN_SHEET_NAME = "Asssert Reg";
+  const EQUIPMENT_SHEET_NAME = "Drilling_Equipment";
+  const EQUIPMENT_FILTERS = ["Drilling", "Yellow Plant", "Small Plant"];
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjJuQe0H5HEnwZVy5QQqr3r_eb-gkxBE9EWaTZvbJc_UGdI4yaknqFVa3oBMPEYO1Q/exec";
 
-function hasUsableTicketList(data){return data && Array.isArray(data.tickets);}
-function keepLastGoodState(data, opts={}){
-  if(!data) return STATE;
-  const allowEmpty = !!opts.allowEmpty;
-  const next = {...STATE};
-  if(Array.isArray(data.users) && (data.users.length || !LAST_GOOD_STATE.users.length)) next.users = data.users;
-  if(Array.isArray(data.referenceData)) next.referenceData = data.referenceData;
-  if(data.summary && typeof data.summary === 'object') next.summary = data.summary;
-  const incomingGlobal = Array.isArray(data.globalTickets) ? data.globalTickets : (Array.isArray(data.dashboardTickets) ? data.dashboardTickets : null);
-  if(incomingGlobal){
-    if(incomingGlobal.length || allowEmpty || !(LAST_GOOD_STATE.globalTickets||[]).length){
-      next.globalTickets = incomingGlobal;
-      next.dashboardTickets = incomingGlobal;
-    }else{
-      next.globalTickets = LAST_GOOD_STATE.globalTickets || [];
-      next.dashboardTickets = LAST_GOOD_STATE.dashboardTickets || LAST_GOOD_STATE.globalTickets || [];
+  const FIELD_IDS = [
+    "code","assetClass","purchaseDate","purchasedBy","financing","description",
+    "model","makeOfVehicle","bodyType","registrationNo","engineNo","vinNo","cost","marketValue",
+    "zoho","location","driverOperator",
+    "allocationDept","registeredEntity","coveredBy","trackingCompany","installmentAmount",
+    "lastInstallmentDate","eTagToll","notes","regBoo","usefulLife","recharge",
+    "monthlyDpn","year","monthsDpn","accumDpn","residualValue","nbv","oustandingVaf","value",
+    "imageLinks","assetStatus","statusDate","soldValue","totalInstallmentsPaid"
+  ];
+
+  const FIELD_ALIASES = {
+    code: ["code","Code"],
+    assetClass: ["assetClass","Asset Class","AssetClass"],
+    purchaseDate: ["purchaseDate","Purchase Date"],
+    purchasedBy: ["purchasedBy","Purchased by","Purchased By"],
+    financing: ["financing","Financing"],
+    description: ["description","Description"],
+    model: ["model","Model"],
+    makeOfVehicle: ["makeOfVehicle","Make of Vehicle","Make Of Vehicle"],
+    bodyType: ["bodyType","Body Type"],
+    registrationNo: ["registrationNo","Registration no","Registration No"],
+    engineNo: ["engineNo","Engine no","Engine No"],
+    vinNo: ["vinNo","Vin no","Vin No"],
+    cost: ["cost","Cost","purchasePrice","Purchase Price"],
+    residualValue: ["residualValue","Residual Value","residual","Residual"],
+    marketValue: ["marketValue","Market Value"],
+    zoho: ["zoho","ZOHO"],
+    location: ["location","Location"],
+    driverOperator: ["driverOperator","Driver/Operator","Driver Operator"],
+    allocationDept: ["allocationDept","Allocation/Dept","Allocation Dept"],
+    registeredEntity: ["registeredEntity","Registered Entity"],
+    coveredBy: ["coveredBy","Covered by","Covered By"],
+    trackingCompany: ["trackingCompany","TRACKING COMPANY","Tracking Company"],
+    installmentAmount: ["installmentAmount","Installment Amount"],
+    lastInstallmentDate: ["lastInstallmentDate","Last Installment date","Last Installment Date"],
+    eTagToll: ["eTagToll","eTag Toll","ETag Toll"],
+    notes: ["notes","NOTES","Notes"],
+    regBoo: ["regBoo","Reg. Boo","Reg Book"],
+    usefulLife: ["usefulLife","Useful life","Useful Life"],
+    recharge: ["recharge","Recharge"],
+    monthlyDpn: ["monthlyDpn","Monthly dpn","Monthly Dpn"],
+    year: ["year","Year"],
+    monthsDpn: ["monthsDpn","Months Dpn"],
+    accumDpn: ["accumDpn","Accum dpn","Accum Dpn"],
+    nbv: ["nbv","NBV"],
+    oustandingVaf: ["oustandingVaf","Outstanding VAF","Outstanding Vaf"],
+    value: ["value","Value"],
+    vehicleRegBookLink: ["vehicleRegBookLink","Vehicle Reg Book","Vehicle Reg Book Link","regBookLink"],
+    trackingCertificateLink: ["trackingCertificateLink","Tracking Certificate","Tracking Certificate Link"],
+    vehicleInvoiceLink: ["vehicleInvoiceLink","Vehicle Invoice","Vehicle Invoice Link","Invoice Link"],
+    totalInstallmentsPaid: ["totalInstallmentsPaid","Total Installments Paid","Installments Paid"],
+    imageLinks: ["imageLinks", "Image Links", "Images", "Asset Images"],
+    assetStatus: ["assetStatus", "Asset Status", "Status"],
+    statusDate: ["statusDate", "Status Date"],
+    soldValue: ["soldValue", "Sold Value"],
+    costCenter: ["costCenter", "Cost Center", "Cost Centre", "CostCenter", "CostCentre", "allocationDept", "Allocation/Dept", "registeredEntity", "Registered Entity", "purchasedBy", "Purchased by", "Purchased By"]
+  };
+
+  let mainAssets = [];
+  let equipmentAssets = [];
+  let allAssets = [];
+  let currentFilter = null;
+  const transactionControls = { search: "", sort: "", assetClass: "", model: "", costCenter: "" };
+
+  function getField(row, field) {
+    const aliases = FIELD_ALIASES[field] || [field];
+    for (const key of aliases) {
+      if (row && row[key] !== undefined && row[key] !== null && row[key] !== "") return row[key];
     }
+    return "";
   }
-  if(Array.isArray(data.tickets)){
-    if(data.tickets.length || allowEmpty || !LAST_GOOD_STATE.tickets.length){
-      next.tickets = data.tickets;
-    }else{
-      next.tickets = LAST_GOOD_STATE.tickets;
+
+  function setFormValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const val = valueOrBlank(value);
+    if (el.tagName === "SELECT" && val && ![...el.options].some(o => o.value == val || o.textContent == val)) {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val;
+      el.appendChild(opt);
     }
+    el.value = val;
   }
-  STATE = next;
-  if((STATE.tickets||[]).length || allowEmpty) LAST_GOOD_STATE = JSON.parse(JSON.stringify(STATE));
-  return STATE;
-}
-function updateTicketInCache(ticketId, patch){
-  if(!ticketId) return;
-  const apply = arr => (arr||[]).map(t => String(t.TicketID)===String(ticketId) ? {...t, ...patch} : t);
-  STATE.tickets = apply(STATE.tickets);
-  STATE.globalTickets = apply(STATE.globalTickets);
-  STATE.dashboardTickets = apply(STATE.dashboardTickets);
-  LAST_GOOD_STATE.tickets = apply(LAST_GOOD_STATE.tickets);
-  LAST_GOOD_STATE.globalTickets = apply(LAST_GOOD_STATE.globalTickets);
-  LAST_GOOD_STATE.dashboardTickets = apply(LAST_GOOD_STATE.dashboardTickets);
-  render();
-}
-function startAutoRefresh(){
-  if(AUTO_REFRESH_TIMER) clearInterval(AUTO_REFRESH_TIMER);
-  AUTO_REFRESH_TIMER = setInterval(()=>{
-    if(!USER) return;
-    loadTicketsView(ACTIVE_DATA_VIEW || 'all', 500, {silent:true, background:true});
-  }, REFRESH_INTERVAL_MS);
-}
 
-function showSync(msg){const el=document.getElementById('syncbar'); if(el){el.classList.remove('hide'); el.innerHTML='<b>'+esc(msg||'Synchronising...')+'</b> please wait';}}
-function hideSync(){const el=document.getElementById('syncbar'); if(el) el.classList.add('hide');}
-function markSynced(){const el=document.getElementById('asAt'); if(el) el.textContent='Synchronised: '+new Date().toLocaleString();}
-function api(action, data={}){
-  if(!SCRIPT_URL || SCRIPT_URL.includes('PASTE_')) return Promise.reject(new Error('Replace SCRIPT_URL with your Apps Script Web App URL.'));
-  showSync('Synchronising '+action+'...');
-  const payload = encodeURIComponent(JSON.stringify({...data, action}));
-  const cb = 'cb_' + Math.random().toString(36).slice(2);
-  return new Promise((resolve,reject)=>{
-    const s=document.createElement('script');
-    let finished=false;
-    const cleanup=()=>{try{delete window[cb];}catch(e){} try{s.remove();}catch(e){} hideSync(); markSynced();};
-    const timer=setTimeout(()=>{if(finished)return; finished=true; cleanup(); reject(new Error('Apps Script JSONP connection timed out. For uploads, use smaller files or redeploy the latest Apps Script as Web App: Execute as Me, Anyone with the link.'));}, 60000);
-    window[cb]=(res)=>{if(finished)return; finished=true; clearTimeout(timer); cleanup(); res && res.ok ? resolve(res.data) : reject(new Error((res && res.error) || 'Request failed'));};
-    s.onerror=()=>{if(finished)return; finished=true; clearTimeout(timer); cleanup(); reject(new Error('Apps Script JSONP connection failed. Check deployment permissions, SCRIPT_URL, and file chunk size.'));};
-    s.src = SCRIPT_URL + '?callback=' + cb + '&payload=' + payload;
-    document.body.appendChild(s);
-  });
-}
+  function valueOrBlank(v) {
+    if (v === undefined || v === null) return "";
+    if (typeof v === "string" && v.includes("T")) {
+      const d = new Date(v);
+      if (!isNaN(d)) return d.toISOString().split('T')[0];
+    }
+    return v;
+  }
 
-async function postApi(action, data={}){
-  if(!SCRIPT_URL || SCRIPT_URL.includes('PASTE_')) throw new Error('Replace SCRIPT_URL with your Apps Script Web App URL.');
-  showSync('Synchronising '+action+'...');
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), 65000);
-  try{
-    const payload = JSON.stringify({...data, action});
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'text/plain;charset=utf-8'},
-      body: payload,
-      redirect: 'follow',
-      signal: controller.signal
+
+
+  const CURRENCY_FIELDS = new Set(["cost","marketValue","installmentAmount","recharge","monthlyDpn","accumDpn","residualValue","nbv","oustandingVaf","value","soldValue","totalInstallmentsPaid"]);
+
+  function toNumber(v) {
+    if (v === undefined || v === null || v === "") return 0;
+    let s = String(v).trim().replace(/\s/g, "").replace(/R/gi, "");
+    if (s.includes(",") && s.includes(".")) {
+      s = s.lastIndexOf(",") > s.lastIndexOf(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+    } else if (s.includes(",")) {
+      s = s.replace(",", ".");
+    }
+    const n = Number(s.replace(/[^0-9.\-]/g, ""));
+    return isNaN(n) ? 0 : n;
+  }
+
+  function money(v) {
+    return "R " + toNumber(v).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function displayDate(value) {
+    const d = parseAssetDate(value);
+    if (!d) return valueOrBlank(value);
+    return String(d.getDate()).padStart(2, "0") + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + d.getFullYear();
+  }
+
+  function getAnyNumber(data, keys) {
+    for (const key of keys) {
+      const direct = data && data[key];
+      const aliasValue = getField(data, key);
+      const n = toNumber(direct !== undefined && direct !== null && direct !== "" ? direct : aliasValue);
+      if (n) return n;
+    }
+    return 0;
+  }
+
+  function parseAssetDate(value) {
+    if (!value) return null;
+    if (value instanceof Date && !isNaN(value)) return value;
+    const text = String(value).trim();
+    let d = new Date(text);
+    if (!isNaN(d)) return d;
+    const m = text.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+    if (m) {
+      d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      if (!isNaN(d)) return d;
+    }
+    return null;
+  }
+
+  function depreciationMonthsFromPurchase(purchaseDate, asAtDate = new Date()) {
+    const p = parseAssetDate(purchaseDate);
+    if (!p) return 0;
+    const start = new Date(p.getFullYear(), p.getMonth(), 1);
+    const asAt = new Date(asAtDate.getFullYear(), asAtDate.getMonth(), 1);
+    if (asAt < start) return 0;
+    return ((asAt.getFullYear() - start.getFullYear()) * 12) + (asAt.getMonth() - start.getMonth()) + 1;
+  }
+
+  function installmentMonthsFromPurchase(purchaseDate, asAtDate = new Date()) {
+    const purchase = parseAssetDate(purchaseDate);
+    if (!purchase || purchase > asAtDate) return 0;
+    return ((asAtDate.getFullYear() - purchase.getFullYear()) * 12)
+      + (asAtDate.getMonth() - purchase.getMonth()) + 1;
+  }
+
+  function calculateTotalInstallmentsPaid(asset, asAtDate = new Date()) {
+    const installment = toNumber(getField(asset, "installmentAmount"));
+    if (installment <= 0) return 0;
+    const months = installmentMonthsFromPurchase(getField(asset, "purchaseDate"), asAtDate);
+    return installment * months;
+  }
+
+  function applyDepreciationToData(data, options = {}) {
+    const purchasePrice = getAnyNumber(data, ["purchasePrice", "Purchase Price", "cost", "Cost"]);
+    let residualValue = getAnyNumber(data, ["residualValue", "Residual Value", "residual", "Residual"]);
+    const usefulLifeYears = getAnyNumber(data, ["usefulLife", "Useful life", "Useful Life"]);
+    const purchaseDate = getField(data, "purchaseDate") || data.purchaseDate || data["Purchase Date"];
+    const manualMonthlyText = data.monthlyDpn !== undefined && data.monthlyDpn !== null ? String(data.monthlyDpn).trim() : "";
+    const manualMonthlyDpn = manualMonthlyText === "" ? null : toNumber(manualMonthlyText);
+
+    // Residual Value formula: if blank, use 10% of Cost. User may still edit/save any value.
+    if (!residualValue && purchasePrice > 0) {
+      residualValue = purchasePrice * 0.10;
+      data.residualValue = residualValue;
+    }
+
+    if (purchasePrice <= 0 || usefulLifeYears <= 0) {
+      if (manualMonthlyDpn === null) data.monthlyDpn = "";
+      data.monthsDpn = data.monthsDpn || 0;
+      data.accumDpn = data.accumDpn || 0;
+      data.nbv = data.nbv || purchasePrice;
+      data.value = data.value || purchasePrice;
+      return data;
+    }
+
+    const depreciableAmount = Math.max(0, purchasePrice - residualValue);
+    const calculatedMonthlyDpn = depreciableAmount / usefulLifeYears / 12;
+    const monthlyDpn = manualMonthlyDpn === null ? calculatedMonthlyDpn : manualMonthlyDpn;
+    const usefulLifeMonths = Math.max(1, Math.round(usefulLifeYears * 12));
+    const monthsDpn = data.monthsDpn !== undefined && String(data.monthsDpn).trim() !== "" ? toNumber(data.monthsDpn) : Math.min(depreciationMonthsFromPurchase(purchaseDate), usefulLifeMonths);
+    const accumDpn = data.accumDpn !== undefined && String(data.accumDpn).trim() !== "" ? toNumber(data.accumDpn) : Math.min(depreciableAmount, monthlyDpn * monthsDpn);
+    const nbv = data.nbv !== undefined && String(data.nbv).trim() !== "" ? toNumber(data.nbv) : Math.max(residualValue, purchasePrice - accumDpn);
+
+    data.monthsDpn = monthsDpn;
+    data.monthlyDpn = manualMonthlyDpn === null ? calculatedMonthlyDpn : data.monthlyDpn;
+    data.accumDpn = accumDpn;
+    data.nbv = nbv;
+    data.value = data.value !== undefined && String(data.value).trim() !== "" ? data.value : nbv;
+    return data;
+  }
+
+  function linkListCell(links, label) {
+    const parts = String(links || "").split(/\s*\|\s*/).filter(Boolean).slice(0, 5);
+    if (!parts.length) return `<span style="color:#aaa;">—</span>`;
+    return parts.map((link, i) => `<div class="regbook-link"><a href="${link}" target="_blank"><i class="fas fa-image"></i> ${label || 'Image'} ${i + 1}</a></div>`).join("");
+  }
+
+  function calcAssetValue(row) {
+    return toNumber(getField(row, "value")) || toNumber(getField(row, "nbv")) || toNumber(getField(row, "marketValue")) || toNumber(getField(row, "cost"));
+  }
+
+  function isEquipmentFilter(filter) {
+    return EQUIPMENT_FILTERS.some(f => f.toLowerCase() === String(filter || "").toLowerCase());
+  }
+
+  function sheetForAsset(asset) {
+    const cls = String(getField(asset, "assetClass") || "").toLowerCase();
+    return EQUIPMENT_FILTERS.some(f => cls.includes(f.toLowerCase())) ? EQUIPMENT_SHEET_NAME : MAIN_SHEET_NAME;
+  }
+
+  function apiPost(payload) {
+    return fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(res => res.json());
+  }
+
+  let cropperInstance = null;
+  let cropQueue = Promise.resolve();
+
+  function isImageFile(file) {
+    return !!file && String(file.type || "").toLowerCase().startsWith("image/");
+  }
+
+  function cropImageFile(file) {
+    if (!isImageFile(file)) return Promise.resolve(file);
+
+    // Serialise crop dialogs so multi-image selections are cropped one at a time.
+    const task = () => new Promise((resolve, reject) => {
+      const modal = document.getElementById("imageCropModal");
+      const preview = document.getElementById("cropImagePreview");
+      const objectUrl = URL.createObjectURL(file);
+      let finished = false;
+
+      const cleanup = () => {
+        if (cropperInstance) {
+          cropperInstance.destroy();
+          cropperInstance = null;
+        }
+        URL.revokeObjectURL(objectUrl);
+        modal.classList.add("hidden");
+        preview.removeAttribute("src");
+      };
+
+      const complete = (result, error) => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        error ? reject(error) : resolve(result);
+      };
+
+      preview.onload = () => {
+        if (typeof Cropper === "undefined") {
+          complete(file, null); // Graceful fallback if the crop library cannot load.
+          return;
+        }
+        cropperInstance = new Cropper(preview, {
+          viewMode: 1,
+          dragMode: "move",
+          autoCropArea: 0.9,
+          responsive: true,
+          restore: false,
+          background: false,
+          movable: true,
+          zoomable: true,
+          rotatable: true,
+          scalable: true
+        });
+      };
+
+      document.getElementById("cropRotateLeftBtn").onclick = () => cropperInstance && cropperInstance.rotate(-90);
+      document.getElementById("cropRotateRightBtn").onclick = () => cropperInstance && cropperInstance.rotate(90);
+      document.getElementById("cropResetBtn").onclick = () => cropperInstance && cropperInstance.reset();
+      document.getElementById("cropOriginalBtn").onclick = () => complete(file, null);
+      document.getElementById("cropCloseBtn").onclick = () => complete(null, new Error("Image cropping cancelled"));
+      document.getElementById("cropApplyBtn").onclick = () => {
+        if (!cropperInstance) return complete(file, null);
+        const canvas = cropperInstance.getCroppedCanvas({
+          maxWidth: 2400,
+          maxHeight: 2400,
+          imageSmoothingEnabled: true,
+          imageSmoothingQuality: "high",
+          fillColor: "#ffffff"
+        });
+        if (!canvas) return complete(null, new Error("Could not crop image"));
+        const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
+        const quality = outputType === "image/jpeg" ? 0.92 : undefined;
+        canvas.toBlob(blob => {
+          if (!blob) return complete(null, new Error("Could not prepare cropped image"));
+          const baseName = String(file.name || "image").replace(/\.[^.]+$/, "");
+          const extension = outputType === "image/png" ? ".png" : ".jpg";
+          complete(new File([blob], baseName + "_cropped" + extension, {
+            type: outputType,
+            lastModified: Date.now()
+          }), null);
+        }, outputType, quality);
+      };
+
+      modal.classList.remove("hidden");
+      preview.src = objectUrl;
     });
-    const txt = await res.text();
-    let json;
-    try{ json = JSON.parse(txt); }
-    catch(parseErr){ throw new Error('Upload response was not valid JSON. Make sure the Apps Script is deployed as Web App: Execute as Me, Anyone with the link, and deploy a New version. Response: '+txt.slice(0,180)); }
-    if(!json.ok) throw new Error(json.error || 'Upload failed.');
-    markSynced();
-    return json.data;
-  }catch(err){
-    if(err && err.name === 'AbortError') throw new Error(action+' timed out. Redeploy the fixed Apps Script as a New version and run Repair / Setup Sheets once.');
-    throw new Error(err.message || 'Request failed. Check Apps Script deployment permissions and Drive folder access.');
-  }finally{
-    clearTimeout(timer);
-    hideSync();
-  }
-}
 
-function initDates(){const d=new Date(); const iso=d.toISOString().slice(0,10); ['ntIssue','ntDue','rtStart'].forEach(id=>{const el=document.getElementById(id); if(el) el.value=iso;});}
-function login(){document.getElementById('loginErr').textContent='Synchronising login...';postApi('login',{username:loginUser.value.trim(),password:loginPass.value.trim()}).then(u=>{USER=u;localStorage.setItem('ob_user',JSON.stringify(u));start();alert('Login successful.');}).catch(e=>loginErr.textContent=e.message);}
-function setupNow(){document.getElementById('loginErr').textContent='Repairing sheets...';postApi('setup',{}).then(()=>{loginErr.textContent='Sheets repaired. Try login again. This setup only fixes tabs/headings; heavy score repair is no longer run during setup/login.';}).catch(e=>loginErr.textContent=e.message);}
-function logout(){showSync('Synchronising logout...');if(AUTO_REFRESH_TIMER) clearInterval(AUTO_REFRESH_TIMER);localStorage.removeItem('ob_user');alert('Logout successful.');location.reload();}
-function start(){document.getElementById('login').classList.add('hide');document.getElementById('app').classList.remove('hide');userPill.textContent=USER.Name+' · '+USER.Role;initDates();applyRoleVisibility();refresh();}
-function refresh(){
-  const seq=++REQUEST_SEQ;
-  ACTIVE_DATA_VIEW='all';
-  postApi('bootstrap',{userId:USER.UserID,max:500}).then(data=>{
-    if(seq!==REQUEST_SEQ) return; // Prevent older responses from overwriting newer data.
-    keepLastGoodState(data,{allowEmpty:false});
-    fillLists();applyRoleVisibility();render();startAutoRefresh();LAST_REFRESH_AT=Date.now();
-  }).catch(e=>{
-    hideSync();
-    if((LAST_GOOD_STATE.tickets||[]).length){STATE=JSON.parse(JSON.stringify(LAST_GOOD_STATE));render();return alert('Temporary loading issue. The last stable dashboard data has been kept on screen. '+(e.message||e));}
-    alert('Bootstrap loading failed: '+(e.message||e)+'\n\nDeploy the matching FAST LAZY BULLETPROOF Apps Script as a NEW VERSION, then refresh. If it still fails, check the Apps Script error shown above.');
+    const queued = cropQueue.then(task, task);
+    cropQueue = queued.catch(() => {});
+    return queued;
+  }
+
+  async function fileToPayload(file) {
+    if (!file) return null;
+    const preparedFile = await cropImageFile(file);
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = ev => resolve({
+        fileName: preparedFile.name,
+        mimeType: preparedFile.type || "application/octet-stream",
+        fileData: String(ev.target.result).split(',')[1]
+      });
+      reader.onerror = () => reject(new Error("Could not read file: " + preparedFile.name));
+      reader.readAsDataURL(preparedFile);
+    });
+  }
+
+  async function filesToPayloads(fileList, maxFiles = 5) {
+    const files = Array.from(fileList || []).slice(0, maxFiles);
+    const payloads = [];
+    for (const file of files) payloads.push(await fileToPayload(file));
+    return payloads;
+  }
+
+  function linkCell(link, label) {
+    return link ? `<div class="regbook-link"><a href="${link}" target="_blank"><i class="fas fa-file-alt"></i> ${label || 'View'}</a></div>` : `<span style="color:#aaa;">—</span>`;
+  }
+
+  function normaliseRows(response, sheetName) {
+    let rows = [];
+    if (Array.isArray(response)) rows = response;
+    else if (response && Array.isArray(response.data)) rows = response.data;
+    else if (response && Array.isArray(response.rows)) rows = response.rows;
+    else if (response && Array.isArray(response.assets)) rows = response.assets;
+    return rows.map(r => ({ ...r, _sheetName: r._sheetName || sheetName }));
+  }
+
+  function showStatus(msg, isError = false) {
+    const statusEl = document.getElementById("status");
+    statusEl.innerHTML = msg || "";
+    statusEl.style.borderLeftColor = isError ? "#ef4444" : "var(--gold)";
+    statusEl.style.background = isError ? "rgba(239,68,68,0.1)" : "rgba(212,175,55,0.16)";
+  }
+
+  function isActiveAsset(asset) {
+    const status = String(getField(asset, "assetStatus") || "Active").trim().toLowerCase();
+    return status !== "sold" && status !== "stolen";
+  }
+
+  function updateDashboard() {
+    const classMap = {
+      'Drilling': ['drilling', 'drilling plant'],
+      'Yellow Plant': ['yellow plant', 'yellow', 'yellowplant'],
+      'Small Plant': ['small plant', 'smallplant', 'small'],
+      'Trucks': ['truck', 'trucks'],
+      'Trailers': ['trailer', 'trailers'],
+      'Executive': ['executive', 'executive cars', 'exec'],
+      'Bowser': ['bowser', 'bowsers'],
+      'Admin': ['admin', 'administration'],
+      'Projects & Tender': ['projects', 'projects & tender', 'projects and tender', 'project & tender', 'project and tender', 'tender']
+    };
+    const counts = {};
+    Object.keys(classMap).forEach(key => counts[key] = 0);
+
+    Object.keys(classMap).forEach(key => {
+      // Do not count Sold or Stolen assets in dashboard class totals.
+      // They must only appear in the Sold/Stolen windows below.
+      const source = (isEquipmentFilter(key) ? equipmentAssets : mainAssets).filter(isActiveAsset);
+      source.forEach(a => {
+        const cls = String(getField(a, "assetClass")).trim().toLowerCase();
+        if (classMap[key].some(kw => cls.includes(kw) || cls === kw)) counts[key]++;
+      });
+    });
+
+    document.getElementById("cntDrilling").textContent = counts['Drilling'];
+    document.getElementById("cntYellow").textContent = counts['Yellow Plant'];
+    document.getElementById("cntSmallPlant").textContent = counts['Small Plant'];
+    document.getElementById("cntTrucks").textContent = counts['Trucks'];
+    document.getElementById("cntTrailers").textContent = counts['Trailers'];
+    document.getElementById("cntExecutive").textContent = counts['Executive'];
+    document.getElementById("cntBowser").textContent = counts['Bowser'];
+    document.getElementById("cntAdmin").textContent = counts['Admin'];
+    document.getElementById("cntProjects").textContent = counts['Projects & Tender'];
+
+    const activeRows = allAssets.filter(isActiveAsset);
+    const stolenRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "stolen");
+    const soldRows = allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === "sold");
+    document.getElementById("totalAssetValue").textContent = money(activeRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
+    document.getElementById("totalDepreciation").textContent = money(activeRows.reduce((sum, a) => sum + toNumber(getField(a, "accumDpn")), 0));
+    document.getElementById("totalInstallmentsPaid").textContent = money(
+      allAssets.reduce((sum, asset) => sum + calculateTotalInstallmentsPaid(asset), 0)
+    );
+    document.getElementById("cntStolen").textContent = stolenRows.length;
+    document.getElementById("valStolen").textContent = money(stolenRows.reduce((sum, a) => sum + calcAssetValue(a), 0));
+    document.getElementById("cntSold").textContent = soldRows.length;
+    document.getElementById("valSold").textContent = money(soldRows.reduce((sum, a) => sum + (toNumber(getField(a, "soldValue")) || calcAssetValue(a)), 0));
+
+    document.querySelectorAll('.stat-card[data-filter]').forEach(card => {
+      const filter = card.dataset.filter;
+      card.onclick = () => applyFilter(filter);
+    });
+    document.querySelectorAll('.stat-card[data-special-filter]').forEach(card => {
+      const status = card.dataset.specialFilter;
+      card.onclick = () => applyStatusFilter(status);
+    });
+  }
+
+  function getTransactionCostCenter(row) {
+    return getField(row, "costCenter") || getField(row, "registeredEntity") || getField(row, "purchasedBy") || getField(row, "allocationDept");
+  }
+
+  function getAlphabetValue(row) {
+    return String(getField(row, "description") || getField(row, "registrationNo") || getField(row, "makeOfVehicle") || getField(row, "model") || "").toLowerCase();
+  }
+
+  function getCurrentBaseRows() {
+    if (!currentFilter) return allAssets;
+    if (currentFilter === "all-active") {
+      return allAssets.filter(a => !["sold","stolen"].includes(String(getField(a, "assetStatus") || "Active").toLowerCase()));
+    }
+    if (["Sold", "Stolen"].includes(currentFilter)) {
+      return allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === currentFilter.toLowerCase());
+    }
+    return isEquipmentFilter(currentFilter) ? equipmentAssets : mainAssets;
+  }
+
+  function applyTransactionControls(rows) {
+    let filtered = (rows || []).slice();
+    const search = transactionControls.search.toLowerCase();
+
+    if (search) {
+      filtered = filtered.filter(row => {
+        const searchable = [
+          getField(row, "registrationNo"), getField(row, "description"), getField(row, "makeOfVehicle"),
+          getField(row, "model"), getField(row, "assetClass"), getTransactionCostCenter(row),
+          getField(row, "driverOperator"), getField(row, "location")
+        ].join(" ").toLowerCase();
+        return searchable.includes(search);
+      });
+    }
+
+    if (transactionControls.assetClass) {
+      filtered = filtered.filter(row => String(getField(row, "assetClass")).trim().toLowerCase() === transactionControls.assetClass.toLowerCase());
+    }
+    if (transactionControls.model) {
+      filtered = filtered.filter(row => String(getField(row, "model")).trim().toLowerCase() === transactionControls.model.toLowerCase());
+    }
+    if (transactionControls.costCenter) {
+      filtered = filtered.filter(row => String(getTransactionCostCenter(row)).trim().toLowerCase() === transactionControls.costCenter.toLowerCase());
+    }
+
+    if (transactionControls.sort === "alphaAsc") filtered.sort((a,b) => getAlphabetValue(a).localeCompare(getAlphabetValue(b)));
+    if (transactionControls.sort === "alphaDesc") filtered.sort((a,b) => getAlphabetValue(b).localeCompare(getAlphabetValue(a)));
+    if (transactionControls.sort === "dateNewest") filtered.sort((a,b) => (parseAssetDate(getField(b, "purchaseDate")) || 0) - (parseAssetDate(getField(a, "purchaseDate")) || 0));
+    if (transactionControls.sort === "dateOldest") filtered.sort((a,b) => (parseAssetDate(getField(a, "purchaseDate")) || 0) - (parseAssetDate(getField(b, "purchaseDate")) || 0));
+
+    return filtered;
+  }
+
+  function refreshTransactionOptions() {
+    const optionMap = [
+      ["transactionClassFilter", row => getField(row, "assetClass"), transactionControls.assetClass],
+      ["transactionModelFilter", row => getField(row, "model"), transactionControls.model],
+      ["transactionCostCenterFilter", row => getTransactionCostCenter(row), transactionControls.costCenter]
+    ];
+    optionMap.forEach(([id, getter, selected]) => {
+      const select = document.getElementById(id);
+      if (!select) return;
+      const first = select.options[0] ? select.options[0].outerHTML : '<option value="">All</option>';
+      const values = [...new Set(allAssets.map(getter).map(v => String(v || "").trim()).filter(Boolean))]
+        .sort((a,b) => a.localeCompare(b));
+      select.innerHTML = first + values.map(v => `<option value="${String(v).replace(/"/g, '&quot;')}">${v}</option>`).join("");
+      select.value = selected || "";
+    });
+  }
+
+  function readTransactionControls() {
+    transactionControls.search = (document.getElementById("transactionSearch")?.value || "").trim();
+    transactionControls.sort = document.getElementById("transactionSort")?.value || "";
+    transactionControls.assetClass = document.getElementById("transactionClassFilter")?.value || "";
+    transactionControls.model = document.getElementById("transactionModelFilter")?.value || "";
+    transactionControls.costCenter = document.getElementById("transactionCostCenterFilter")?.value || "";
+  }
+
+  function renderCurrentTransactionTable() {
+    readTransactionControls();
+    renderTable(getCurrentBaseRows(), currentFilter && !["all-active", "Sold", "Stolen"].includes(currentFilter) ? currentFilter : null);
+  }
+
+  function resetTransactionControls() {
+    ["transactionSearch", "transactionSort", "transactionClassFilter", "transactionModelFilter", "transactionCostCenterFilter"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    transactionControls.search = transactionControls.sort = transactionControls.assetClass = transactionControls.model = transactionControls.costCenter = "";
+    renderTable(getCurrentBaseRows(), currentFilter && !["all-active", "Sold", "Stolen"].includes(currentFilter) ? currentFilter : null);
+  }
+
+  function applyFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('filter-active', c.dataset.filter === filter));
+    document.getElementById('filterIndicator').textContent = `Filter: ${filter}`;
+
+    const source = isEquipmentFilter(filter) ? equipmentAssets : mainAssets;
+    renderTable(source, filter);
+  }
+
+  function applyStatusFilter(status) {
+    currentFilter = status;
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('filter-active', c.dataset.specialFilter === status));
+    document.getElementById('filterIndicator').textContent = status === 'all-active' ? 'Filter: Active Assets' : `Filter: ${status}`;
+    const rows = status === 'all-active'
+      ? allAssets.filter(a => !['sold','stolen'].includes(String(getField(a, "assetStatus") || "Active").toLowerCase()))
+      : allAssets.filter(a => String(getField(a, "assetStatus")).toLowerCase() === status.toLowerCase());
+    renderTable(rows);
+  }
+
+  function clearFilter() {
+    currentFilter = null;
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('filter-active'));
+    document.getElementById('filterIndicator').textContent = '';
+    renderTable(allAssets);
+  }
+
+  function renderTable(assets, filter) {
+    const tbody = document.querySelector("#assetTable tbody");
+    let rows = assets || allAssets;
+    if (filter) {
+      const filterLower = filter.toLowerCase();
+      rows = rows.filter(a => String(getField(a, "assetClass")).trim().toLowerCase().includes(filterLower));
+    }
+    rows = applyTransactionControls(rows);
+    const activeParts = [];
+    if (filter) activeParts.push("Filter: " + filter);
+    if (transactionControls.search) activeParts.push("Search: " + transactionControls.search);
+    if (transactionControls.assetClass) activeParts.push("Class: " + transactionControls.assetClass);
+    if (transactionControls.model) activeParts.push("Model: " + transactionControls.model);
+    if (transactionControls.costCenter) activeParts.push("Cost Center: " + transactionControls.costCenter);
+    if (transactionControls.sort) activeParts.push("Sort applied");
+    if (activeParts.length) document.getElementById('filterIndicator').textContent = activeParts.join(" · ");
+    tbody.innerHTML = "";
+    if (!rows.length) {
+      const colCount = document.querySelector("#assetTable thead tr").children.length;
+      tbody.innerHTML = `<tr><td colspan="${colCount}">No entries found${filter ? ' for filter: '+filter : ''}.</td></tr>`;
+      return;
+    }
+
+    rows.forEach(function(data){
+      const row = document.createElement("tr");
+      const displayFields = FIELD_IDS.filter(id => !["licenced","typeOfLicence","validityOfLicence","imageLinks","assetStatus","statusDate","soldValue","totalInstallmentsPaid"].includes(id));
+      displayFields.forEach(field => {
+        const td = document.createElement("td");
+        td.textContent = CURRENCY_FIELDS.has(field) ? money(getField(data, field)) : (["purchaseDate","lastInstallmentDate"].includes(field) ? displayDate(getField(data, field)) : valueOrBlank(getField(data, field)));
+        row.appendChild(td);
+      });
+
+      const regTd = document.createElement("td");
+      regTd.innerHTML = linkCell(getField(data, "vehicleRegBookLink"), "View Reg Book");
+      row.appendChild(regTd);
+
+      const trackingTd = document.createElement("td");
+      trackingTd.innerHTML = linkCell(getField(data, "trackingCertificateLink"), "View Tracking");
+      row.appendChild(trackingTd);
+
+      const invoiceTd = document.createElement("td");
+      invoiceTd.innerHTML = linkCell(getField(data, "vehicleInvoiceLink"), "View Invoice");
+      row.appendChild(invoiceTd);
+
+      const imagesTd = document.createElement("td");
+      imagesTd.innerHTML = linkListCell(getField(data, "imageLinks"), "Image");
+      row.appendChild(imagesTd);
+
+      ["assetStatus", "statusDate", "soldValue"].forEach(field => {
+        const td = document.createElement("td");
+        td.textContent = field === "soldValue" ? money(getField(data, field)) : (field === "statusDate" ? displayDate(getField(data, field)) : valueOrBlank(getField(data, field) || (field === "assetStatus" ? "Active" : "")));
+        row.appendChild(td);
+      });
+
+      const actionCell = document.createElement("td");
+      actionCell.className = "action-col";
+      const actionDiv = document.createElement("div");
+      actionDiv.className = "row-actions";
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn-sm-edit";
+      editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+      editBtn.title = "Edit row";
+      editBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        FIELD_IDS.forEach(id => setFormValue(id, getField(data, id)));
+        document.getElementById("rowNumber").value = data.rowNumber || "";
+        document.getElementById("vehicleRegBookLink").value = getField(data, "vehicleRegBookLink") || "";
+        document.getElementById("trackingCertificateLink").value = getField(data, "trackingCertificateLink") || "";
+        document.getElementById("vehicleInvoiceLink").value = getField(data, "vehicleInvoiceLink") || "";
+        document.getElementById("assetTotalInstallmentsPaid").value = calculateTotalInstallmentsPaid(data);
+        document.getElementById("regBookLink").value = data.regBookLink || "";
+        document.getElementById("imageLinks").value = getField(data, "imageLinks") || "";
+        document.getElementById("assetStatus").value = getField(data, "assetStatus") || "Active";
+        document.getElementById("statusDate").value = getField(data, "statusDate") || "";
+        document.getElementById("soldValue").value = getField(data, "soldValue") || "";
+        document.getElementById("saveBtn").textContent = "Update Asset";
+        document.getElementById("entrySection").classList.remove("hidden");
+        window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
+      });
+
+      function makeUploadButton(docType, title, fieldName) {
+        const btn = document.createElement("button");
+        btn.className = "btn-sm-upload";
+        btn.innerHTML = '<i class="fas fa-upload"></i>';
+        btn.title = "Upload " + title;
+        btn.addEventListener("click", function(e) {
+          e.stopPropagation();
+          const fileInput = document.createElement("input");
+          fileInput.type = "file";
+          fileInput.accept = "image/*,application/pdf,.doc,.docx";
+          fileInput.onchange = function(ev) {
+            const file = ev.target.files[0];
+            if (!file) return showStatus("No file selected", true);
+            showStatus("Uploading " + file.name + "...");
+            fileToPayload(file).then(filePayload => {
+              return apiPost({
+                action: "uploadDocument",
+                rowNumber: data.rowNumber,
+                docType,
+                sheetField: fieldName,
+                sheetId: SHEET_ID,
+                sheetName: data._sheetName || sheetForAsset(data),
+                folderId: DRIVE_FOLDER_ID,
+                ...filePayload
+              });
+            }).then(res => {
+              if (res.status === "success") {
+                showStatus("✅ " + title + " uploaded and link posted to Google Sheet");
+                data[fieldName] = res.fileLink;
+                loadAssets();
+              } else {
+                showStatus("❌ Upload failed: " + (res.message || "unknown error"), true);
+              }
+            }).catch(err => {
+              console.error(err);
+              showStatus("❌ Upload error: " + err.message, true);
+            });
+          };
+          fileInput.click();
+        });
+        return btn;
+      }
+
+      const uploadRegBtn = makeUploadButton("Vehicle Reg Book", "Vehicle Reg Book", "vehicleRegBookLink");
+      const uploadTrackingBtn = makeUploadButton("Tracking Certificate", "Tracking Certificate", "trackingCertificateLink");
+      const uploadInvoiceBtn = makeUploadButton("Vehicle Invoice", "Vehicle Invoice", "vehicleInvoiceLink");
+
+      function makeStatusButton(status) {
+        const btn = document.createElement("button");
+        btn.className = status === "Sold" ? "btn-sm-sold" : "btn-sm-stolen";
+        btn.innerHTML = status === "Sold" ? '<span style="font-weight:900;">R</span>' : '<i class="fas fa-exclamation-triangle"></i>';
+        btn.title = "Move to " + status + " window";
+        btn.addEventListener("click", function(e) {
+          e.stopPropagation();
+          let soldValue = "";
+          if (status === "Sold") soldValue = prompt("Enter sold value", calcAssetValue(data));
+          if (status === "Sold" && soldValue === null) return;
+          if (!confirm("Move this asset to " + status + " window?")) return;
+          apiPost({
+            action: "moveAssetStatus",
+            rowNumber: data.rowNumber,
+            assetStatus: status,
+            soldValue,
+            sheetId: SHEET_ID,
+            sheetName: data._sheetName || sheetForAsset(data)
+          }).then(res => {
+            if (res.status === "success") { showStatus("✅ " + res.message); loadAssets(); }
+            else showStatus("❌ Status update failed: " + res.message, true);
+          }).catch(err => showStatus("❌ Status update error: " + err.message, true));
+        });
+        return btn;
+      }
+
+      const stolenBtn = makeStatusButton("Stolen");
+      const soldBtn = makeStatusButton("Sold");
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn-sm-delete";
+      delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+      delBtn.title = "Delete row";
+      delBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        if (!confirm("Delete this asset entry?")) return;
+        apiPost({
+          action: "deleteAsset",
+          rowNumber: data.rowNumber,
+          sheetId: SHEET_ID,
+          sheetName: data._sheetName || sheetForAsset(data)
+        }).then(res => {
+          if (res.status === "success") {
+            showStatus("✅ Deleted successfully");
+            loadAssets();
+          } else {
+            showStatus("❌ Delete failed: " + res.message, true);
+          }
+        }).catch(err => showStatus("❌ Delete error: " + err.message, true));
+      });
+
+      actionDiv.appendChild(editBtn);
+      actionDiv.appendChild(uploadRegBtn);
+      actionDiv.appendChild(uploadTrackingBtn);
+      actionDiv.appendChild(uploadInvoiceBtn);
+      actionDiv.appendChild(stolenBtn);
+      actionDiv.appendChild(soldBtn);
+      actionDiv.appendChild(delBtn);
+      actionCell.appendChild(actionDiv);
+      row.appendChild(actionCell);
+      tbody.appendChild(row);
+    });
+  }
+
+  function loadSheetAssets(sheetName) {
+    const url = `${SCRIPT_URL}?action=list&sheetId=${encodeURIComponent(SHEET_ID)}&sheetName=${encodeURIComponent(sheetName)}`;
+    return fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
+      .then(response => {
+        if (response && response.status === "error") throw new Error(response.message || "Sheet load failed");
+        return normaliseRows(response, sheetName);
+      });
+  }
+
+  async function loadAssets() {
+    showStatus("Loading dashboard from Assert Reg and Drilling_Equipment...");
+    try {
+      // Safe month-end check: Apps Script only deducts VAF installments when today is the last day of the month.
+      // On other days it returns skipped and does not alter the sheet.
+      try { await apiPost({ action: "runMonthEndInstallmentsIfDue", sheetId: SHEET_ID }); } catch(e) { console.warn("Month-end VAF check skipped", e); }
+      const results = await Promise.allSettled([
+        loadSheetAssets(MAIN_SHEET_NAME),
+        loadSheetAssets(EQUIPMENT_SHEET_NAME)
+      ]);
+      mainAssets = results[0].status === "fulfilled" ? results[0].value.map(applyDepreciationToData) : [];
+      equipmentAssets = results[1].status === "fulfilled" ? results[1].value.map(applyDepreciationToData) : [];
+      allAssets = [...mainAssets, ...equipmentAssets];
+      refreshTransactionOptions();
+
+      updateDashboard();
+      const initialRows = allAssets.slice(0, 120);
+      if (currentFilter) applyFilter(currentFilter);
+      else {
+        renderTable(initialRows);
+        if (allAssets.length > initialRows.length) {
+          const renderFull = () => renderTable(allAssets);
+          if ("requestIdleCallback" in window) requestIdleCallback(renderFull, { timeout: 1500 });
+          else setTimeout(renderFull, 250);
+        }
+      }
+
+      const failures = results.filter(r => r.status === "rejected").map(r => r.reason.message).join("; ");
+      if (failures) showStatus("⚠️ Loaded with warning: " + failures, true);
+      else showStatus(`✅ Loaded ${mainAssets.length} Assert Reg entries and ${equipmentAssets.length} Drilling_Equipment entries`);
+      return allAssets;
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ Could not load data: " + err.message, true);
+      return [];
+    }
+  }
+
+  document.getElementById("assetForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    const data = {};
+    FIELD_IDS.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
+    const rowNum = document.getElementById("rowNumber").value;
+    if (rowNum) data.rowNumber = rowNum;
+    data.vehicleRegBookLink = document.getElementById("vehicleRegBookLink").value || "";
+    data.trackingCertificateLink = document.getElementById("trackingCertificateLink").value || "";
+    data.vehicleInvoiceLink = document.getElementById("vehicleInvoiceLink").value || "";
+    data.totalInstallmentsPaid = calculateTotalInstallmentsPaid(data);
+    data.regBookLink = document.getElementById("regBookLink").value || "";
+    data.action = "saveAsset";
+    data.sheetId = SHEET_ID;
+    data.sheetName = sheetForAsset(data);
+    data.folderId = DRIVE_FOLDER_ID;
+    applyDepreciationToData(data);
+
+    try {
+      showStatus("Saving asset and documents...");
+      data.vehicleRegBookFile = await fileToPayload(document.getElementById("vehicleRegBookFile").files[0]);
+      data.trackingCertificateFile = await fileToPayload(document.getElementById("trackingCertificateFile").files[0]);
+      data.vehicleInvoiceFile = await fileToPayload(document.getElementById("vehicleInvoiceFile").files[0]);
+      data.imageFiles = await filesToPayloads(document.getElementById("imageFiles").files, 5);
+      const response = await apiPost(data);
+      if (response.status !== "success") throw new Error(response.message || "Save failed");
+      showStatus(rowNum ? "✅ Asset Updated Successfully" : "✅ Asset Saved Successfully");
+      document.getElementById("assetForm").reset();
+      document.getElementById("rowNumber").value = "";
+      document.getElementById("vehicleRegBookLink").value = "";
+      document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
+      document.getElementById("regBookLink").value = "";
+      document.getElementById("saveBtn").textContent = "Save Asset";
+      await loadAssets();
+    } catch (err) {
+      console.error(err);
+      showStatus("❌ Error Saving Asset: " + err.message, true);
+    }
   });
-}
-function loadTicketsView(view, max, opts={}){
-  if(!USER) return;
-  ACTIVE_DATA_VIEW=view||'all';
-  const seq=++REQUEST_SEQ;
-  const useBootstrap = !(STATE.users||[]).length && ACTIVE_DATA_VIEW==='all';
-  const action = useBootstrap ? 'bootstrap' : 'getTicketsByView';
-  const payload = useBootstrap ? {userId:USER.UserID,max:max||500} : {userId:USER.UserID,view:ACTIVE_DATA_VIEW,max:max||500};
-  return postApi(action,payload).then(data=>{
-    if(seq!==REQUEST_SEQ) return; // Ignore stale late responses.
-    keepLastGoodState(data,{allowEmpty:!!opts.allowEmpty});
-    if(useBootstrap || (data&&data.users)) fillLists();
-    applyRoleVisibility();render();LAST_REFRESH_AT=Date.now();startAutoRefresh();
-  }).catch(e=>{
-    hideSync();
-    if((LAST_GOOD_STATE.tickets||[]).length){STATE=JSON.parse(JSON.stringify(LAST_GOOD_STATE));render(); if(!opts.silent) alert('Temporary loading issue. The last stable dashboard data has been kept on screen. '+(e.message||e)); return;}
-    if(!opts.silent) alertErr(e);
+
+  document.getElementById("clearBtn").addEventListener("click", function(){
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
+    document.getElementById("regBookLink").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    showStatus("Form cleared.");
   });
-}
-function alertErr(e){alert(e.message||e);}
-function showTab(id){if((id==='review1'||id==='review2')&&!isReviewAllowed(id)){id='task';}showSync('Synchronising navigation...');document.querySelectorAll('.tab').forEach(b=>{const on=b.dataset.tab===id;b.classList.toggle('on',on);b.classList.toggle('active',on);});document.querySelectorAll('.section').forEach(s=>s.classList.toggle('on',s.id===id));setTimeout(hideSync,250);
-  // Use local cache for navigation so counters do not disappear during tab changes.
-  render();
-  const view = id==='review1'?'review1':id==='review2'?'review2':id==='closed'?'closed':id==='task'?'task':id==='performance'?'all':null;
-  if(view && (Date.now()-LAST_REFRESH_AT>REFRESH_INTERVAL_MS)) loadTicketsView(view, id==='performance'?500:300, {silent:true, background:true});
-}
-function modeChange(){const rec=document.querySelector('[name=mode]:checked').value==='recurring';document.querySelectorAll('.recOnly').forEach(e=>e.classList.toggle('hide',!rec));document.querySelectorAll('.singleOnly').forEach(e=>e.classList.toggle('hide',rec));}
-function activeUsers(){return (STATE.users||[]).filter(u=>String(u.IsActive).toUpperCase()!=='FALSE');}
-function selectedAssignee(){return activeUsers().find(u=>String(u.UserID)===String(ntAssignee.value))||{};}
-function fillLists(){
-  ntAssignee.innerHTML=activeUsers().map(u=>`<option value="${u.UserID}">${esc(u.Name)} — ${esc(u.Role||'User')}</option>`).join('');
-  assigneeChanged();
-}
-function assigneeChanged(){
-  const u=selectedAssignee();
-  if(!u.UserID) return;
-  ntAssigneeEmail.value=u.Email||'';
-  ntAssigneePhone.value=u.Phone||'';
-  ntAssigneeWhatsApp.value=u.WhatsApp||'';
-  ntDept.value=u.Department||'';
-  ntCostCenter.value=u.CostCenter||'';
-  buildNewTaskWhatsAppCopy();
-}
-['ntTitle','ntDesc','ntPriority','ntIssue','ntDue','rtStart','rtFreq','rtDueDays','rtOcc'].forEach(id=>setTimeout(()=>{const el=document.getElementById(id); if(el){el.addEventListener('input',buildNewTaskWhatsAppCopy);el.addEventListener('change',buildNewTaskWhatsAppCopy);}},0));
-function buildNewTaskWhatsAppCopy(ref){
-  const u=selectedAssignee();
-  const mode=document.querySelector('[name=mode]:checked')?.value||'single';
-  const due=mode==='recurring'?`${rtFreq?.value||'Recurring'} from ${rtStart?.value||''}, due after ${rtDueDays?.value||''} day(s), ${rtOcc?.value||''} occurrence(s)`:ntDue?.value;
-  const msg=`ONPOINT-BASE NEW TASK${ref?' - '+ref:''}\n\nAssigned to: ${u.Name||''}\nDepartment: ${u.Department||''}\nCost Center: ${u.CostCenter||''}\nTitle: ${ntTitle?.value||''}\nPriority: ${ntPriority?.value||''}\nIssue Date: ${ntIssue?.value||''}\nDue: ${due||''}\n\nDescription:\n${ntDesc?.value||''}`;
-  if(document.getElementById('ntWhatsAppCopy')) ntWhatsAppCopy.value=msg;
-  return msg;
-}
-function cleanPhone(p){return String(p||'').replace(/[^0-9]/g,'').replace(/^0/,'27');}
-async function copyText(txt){try{await navigator.clipboard.writeText(txt);alert('Task copied to clipboard.');}catch(e){prompt('Copy this message:',txt);}}
-function copyNewTaskWhatsApp(){copyText(buildNewTaskWhatsAppCopy());}
-function openNewTaskWhatsApp(){const u=selectedAssignee();const phone=cleanPhone(u.WhatsApp||u.Phone);if(!phone)return alert('No WhatsApp number found for selected assignee in Users tab.');window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(buildNewTaskWhatsAppCopy()),'_blank');}
-function openTicketWhatsApp(){const t=DETAIL.ticket;const phone=cleanPhone(t.AssignedToWhatsApp||t.AssignedToPhone);if(!phone)return alert('No WhatsApp number found for this assignee.');const msg=t.WhatsAppMessage||ticketWhatsAppText(t);window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');}
-function copyTicketWhatsApp(){copyText(DETAIL.ticket.WhatsAppMessage||ticketWhatsAppText(DETAIL.ticket));}
-function ticketWhatsAppText(t){return `ONPOINT-BASE TASK ${t.TicketID}\n\nAssigned to: ${t.AssignedToName}\nDepartment: ${t.Department||''}\nCost Center: ${t.CostCenter||''}\nTitle: ${t.Title}\nPriority: ${t.Priority}\nIssue Date: ${fmt(t.IssueDate)}\nDue: ${fmt(t.DueDate)}\nStatus: ${t.Status}\nTime lapse: ${t.TimeRemainingText||''}\n\nDescription:\n${t.Description||''}`;}
-function userRoleKey(){return String(USER?.Role||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
-function identityKey(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ').replace(/[^a-z0-9@.]+/g,'');}
-function nameKey(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ').replace(/[^a-z0-9]+/g,'');}
-function emailKey(v){return String(v||'').trim().toLowerCase();}
-function userMatch(a,b){const aa=identityKey(a),bb=identityKey(b);return aa!==''&&bb!==''&&aa===bb;}
-function emailMatch(a,b){const aa=emailKey(a),bb=emailKey(b);return aa!==''&&bb!==''&&aa===bb;}
-function nameMatch(a,b){const aa=nameKey(a),bb=nameKey(b);return aa!==''&&bb!==''&&aa===bb;}
-function isMineAsCreator(t){return userMatch(t.CreatedByUserID,USER.UserID)||emailMatch(t.CreatedByEmail,USER.Email)||nameMatch(t.CreatedByName,USER.Name);}
-function isMineAsAssignee(t){return userMatch(t.AssignedToUserID,USER.UserID)||emailMatch(t.AssignedToEmail,USER.Email)||nameMatch(t.AssignedToName,USER.Name);}
-function isExecutiveUser(){const r=userRoleKey();return r==='admin'||r==='adminmanager'||r==='executive1'||r==='exec1'||r==='executive2'||r==='exec2';}
-function isReviewAllowed(kind){
-  const r=userRoleKey();
-  if(r==='admin'||r==='adminmanager') return true;
-  if(kind==='review1') return r==='executive1'||r==='exec1';
-  if(kind==='review2') return r==='executive2'||r==='exec2';
-  return true;
-}
-function applyRoleVisibility(){
-  const showReview=isExecutiveUser();
-  document.querySelectorAll('.reviewOnly').forEach(el=>el.classList.toggle('hide',!showReview));
-  if(!showReview && (document.getElementById('review1')?.classList.contains('on') || document.getElementById('review2')?.classList.contains('on'))){showTab('task');}
-}
 
-function executiveDashboardTickets(){
-  // Dashboard and Performance must use the server-supplied global list for Executive1/Executive2/Admin.
-  // My Tickets and drawer actions still use STATE.tickets so the approval workflow stays unchanged.
-  if(!isExecutiveUser()) return STATE.tickets || [];
-  const global = STATE.globalTickets || STATE.dashboardTickets || [];
-  return global.length ? global : (STATE.tickets || []);
-}
-function workflowTickets(){return STATE.tickets || [];}
-function myTickets(){
-  const tickets=workflowTickets();
-  if(isExecutiveUser()){
-    return tickets.filter(t=>(isMineAsCreator(t)||isMineAsAssignee(t)||t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2') && t.Status!=='Closed');
-  }
-  return tickets.filter(t=>(isMineAsAssignee(t)||isMineAsCreator(t)) && t.Status!=='Closed');
-}
-function isLate(t){return String(t.TimeRemainingText||'').toLowerCase().includes('late') || String(t.ClosedTiming||'').toLowerCase().includes('late');}
-function isOpenOnTime(t){return t.Status!=='Closed' && !isLate(t) && (t.CurrentBasket==='Assignee'||t.Status==='Open');}
-function filterTickets(kind){
-  const tickets=(kind==='all')?workflowTickets():(isExecutiveUser()?executiveDashboardTickets():workflowTickets());
-  if(kind==='critical') return tickets.filter(t=>String(t.Priority)==='Critical' && t.Status!=='Closed' && (isExecutiveUser() || isMineAsAssignee(t)));
-  if(kind==='openOnTime') return tickets.filter(t=>isOpenOnTime(t) && (isExecutiveUser() || isMineAsAssignee(t)));
-  if(kind==='openLate') return tickets.filter(t=>t.Status!=='Closed' && isLate(t) && (isExecutiveUser() || isMineAsAssignee(t)));
-  if(kind==='review1') return isReviewAllowed('review1') ? tickets.filter(t=>t.CurrentBasket==='Executive1') : [];
-  if(kind==='review2') return isReviewAllowed('review2') ? tickets.filter(t=>t.CurrentBasket==='Executive2') : [];
-  if(kind==='closed') return tickets.filter(t=>t.Status==='Closed' || t.CurrentBasket==='Closed');
-  if(kind==='assigned') return tickets.filter(t=>t.CurrentBasket==='Assignee' && t.Status!=='Closed' && (isExecutiveUser() || isMineAsAssignee(t)));
-  return myTickets();
-}
-function openTicketWindow(kind){
-  if((kind==='review1'||kind==='review2')&&!isReviewAllowed(kind)){kind='all';}
-  CURRENT_FILTER=kind;
-  if(kind==='review1') showTab('review1');
-  else if(kind==='review2') showTab('review2');
-  else if(kind==='closed') showTab('closed');
-  else showTab('task');
-  render();
-  if(Date.now()-LAST_REFRESH_AT>REFRESH_INTERVAL_MS) loadTicketsView(kind==='all'?'task':kind,300,{silent:true,background:true});
-  const el=document.getElementById('taskRows'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-}
-function render(){const s=(searchTask?.value||'').toLowerCase();const tickets=workflowTickets();const dashboardTickets=executiveDashboardTickets();const sum={critical:0,openOnTime:0,e1:0,e2:0,closed:0,late:0};dashboardTickets.forEach(t=>{if(String(t.Priority)==='Critical'&&t.Status!=='Closed')sum.critical++; if(isOpenOnTime(t))sum.openOnTime++; if(t.CurrentBasket==='Executive1')sum.e1++; if(t.CurrentBasket==='Executive2')sum.e2++; if(t.Status==='Closed'||t.CurrentBasket==='Closed')sum.closed++; if(t.Status!=='Closed'&&isLate(t))sum.late++;});// Dashboard counters are calculated from the global executive dashboard cache when available.
-  // This prevents flickering caused by a delayed or partial server summary.
-  if(document.getElementById('stCritical'))stCritical.textContent=sum.critical; if(document.getElementById('stOpenOnTime'))stOpenOnTime.textContent=sum.openOnTime; stE1.textContent=sum.e1;stE2.textContent=sum.e2;stClosed.textContent=sum.closed;stLate.textContent=sum.late; renderDashboard(dashboardTickets,sum); buildPerfOptions(); renderPerformance();
-  const filtered=filterTickets(CURRENT_FILTER).filter(t=>(t.Title+t.TicketID+t.AssignedToName+t.Department+t.CostCenter).toLowerCase().includes(s));
-  taskRows.innerHTML=(`<tr><td colspan="8" class="filterTitle">Showing: ${esc(filterLabel(CURRENT_FILTER))}</td></tr>`)+ (filtered.map(rowTask).join('')||empty(8));
-  review1Rows.innerHTML=isReviewAllowed('review1')?(dashboardTickets.filter(t=>t.CurrentBasket==='Executive1' && t.Status!=='Closed').map(rowReview1).join('')||empty(6)):empty(6);
-  review2Rows.innerHTML=isReviewAllowed('review2')?(dashboardTickets.filter(t=>t.CurrentBasket==='Executive2' && t.Status!=='Closed').map(rowReview2).join('')||empty(6)):empty(6);
-  closedRows.innerHTML=dashboardTickets.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed').map(rowClosed).join('')||empty(8);
-}
-function filterLabel(k){return ({critical:'Critical Tickets',openOnTime:'Open & Ontime Tickets',openLate:'Open and Late Tickets',review1:'Executive1 Review Basket',review2:'Executive2 Review Basket',closed:'Closed Tickets',assigned:'Assigned Tickets',all:isExecutiveUser()?'Tickets I Assigned':'My Assigned Tickets'})[k]||k;}
-function computedFinalNumber(t){const stored=Number(t.FinalScore);return (t.FinalScore===''||t.FinalScore==null||isNaN(stored))?null:stored;}
-function avgComputedFinal(rows){const closed=rows.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed').map(computedFinalNumber).filter(n=>n!==null&&!isNaN(n));return closed.length?Math.round(closed.reduce((a,b)=>a+b,0)/closed.length):0;}
-function renderDashboard(tickets,sum){
-  const byDept={}; const byCC={}; let totalScore=0, scoreCount=0;
-  tickets.forEach(t=>{byDept[t.Department||'Unassigned']=(byDept[t.Department||'Unassigned']||0)+1;byCC[t.CostCenter||'Unassigned']=(byCC[t.CostCenter||'Unassigned']||0)+1;const cf=computedFinalNumber(t);if((t.Status==='Closed'||t.CurrentBasket==='Closed')&&cf!==null){totalScore+=cf;scoreCount++;}});
-  const avg=scoreCount?Math.round(totalScore/scoreCount):0;
-  const split={'Critical Tickets':sum.critical,'Open & Ontime':sum.openOnTime,'Executive1 Review':sum.e1,'Executive2 Review':sum.e2,'Open & Late':sum.late,'Closed':sum.closed};
-  dashBody.innerHTML=`<div class="card"><h3>Workflow Split</h3>${dashBars(split,'workflow')}</div><div class="card clickable" onclick="showDashboardList('score','Average Final Score')"><h3>Performance</h3><div class="stat"><div class="l">Average final score</div><div class="v">${avg}%</div></div><p class="muted">Click to show closed ticket score data.</p></div><div class="card"><h3>By Department</h3>${dashBars(byDept,'Department')}</div><div class="card"><h3>By Cost Center</h3>${dashBars(byCC,'CostCenter')}</div>`;
-}
-function dashBars(obj,type){const max=Math.max(1,...Object.values(obj).map(Number));return Object.keys(obj).map(k=>{let kind= type==='workflow'?({'Critical Tickets':'critical','Open & Ontime':'openOnTime','Executive1 Review':'review1','Executive2 Review':'review2','Open & Late':'openLate','Closed':'closed'}[k]||'all') : type+':'+k; let click=type.startsWith('perfGroup:')?`showPerformanceGroup('${esc(type.split(':')[1])}','${esc(k)}')`:`showDashboardList('${esc(kind)}','${esc(k)}')`; let cls=(k.includes('Critical')||k.includes('Late'))?'bad':(k.includes('Ontime')?'good':'');return `<div class="barrow clickable ${cls}" onclick="${click}"><div class="lbl">${esc(k)}</div><div class="track"><div class="fill" style="width:${Math.round(Number(obj[k])/max*100)}%"></div></div><div class="num">${obj[k]}${type.startsWith('perfGroup:')?'%':''}</div></div>`}).join('')||'<p class="muted">No data.</p>';}
-function showDashboardList(kind,title){const source=executiveDashboardTickets();let rows=[]; if(kind==='score') rows=source.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed'); else if(kind.includes(':')){const [field,val]=kind.split(':'); rows=source.filter(t=>String(t[field]||'Unassigned')===val);} else rows=filterTickets(kind); dashList.innerHTML=miniTicketTable(title,rows);}
-function miniTicketTable(title,rows){return `<div class="panel"><h2>${esc(title)} Data</h2><div class="scroll"><table><thead><tr><th>Ref</th><th>Title</th><th>Assignee</th><th>Department</th><th>Cost Center</th><th>Status</th><th>Priority</th><th>System %</th><th>Exec1 %</th><th>Exec2 %</th><th>Final %</th></tr></thead><tbody>${rows.map(t=>`<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${esc(t.TicketID)}</a></td><td>${esc(t.Title)}</td><td>${esc(t.AssignedToName)}</td><td>${esc(t.Department)}</td><td>${esc(t.CostCenter)}</td><td>${status(t)}</td><td class="priority-${t.Priority}">${esc(t.Priority)}</td><td>${score(t.SystemScore)}</td><td>${score(t.Executive1Score)}</td><td>${score(t.Executive2Score)}</td><td>${finalScore(computedFinalNumber(t))}</td></tr>`).join('')||empty(11)}</tbody></table></div></div>`}
-function buildPerfOptions(){
-  const mode=document.getElementById('perfMode')?.value||'individual';
-  const sel=document.getElementById('perfValue'); if(!sel)return;
-  const users=activeUsers();
-  let vals=[];
-  if(mode==='individual') vals=users.map(u=>u.Name).filter(Boolean);
-  if(mode==='department') vals=users.map(u=>u.Department||'Unassigned').filter(Boolean);
-  if(mode==='costcenter') vals=users.map(u=>u.CostCenter||'Unassigned').filter(Boolean);
-  vals=[...new Set(vals)].sort();
-  const old=sel.value;
-  if(mode==='individual') sel.innerHTML='<option value="__ALL__">All Users</option>'+vals.map(v=>`<option>${esc(v)}</option>`).join('');
-  else if(mode==='department' || mode==='costcenter') sel.innerHTML='<option value="__ALL__">All '+(mode==='department'?'Departments':'Cost Centers')+'</option>'+vals.map(v=>`<option>${esc(v)}</option>`).join('');
-  else sel.innerHTML=vals.map(v=>`<option>${esc(v)}</option>`).join('');
-  if(vals.includes(old) || old==='__ALL__') sel.value=old; else sel.value='__ALL__';
-}
-function avgScore(rows){return avgComputedFinal(rows);}
-function groupPerformanceRows(field, sourceValues){const tickets=executiveDashboardTickets(); const names=[...new Set([...(sourceValues||[]),...tickets.map(t=>t[field]||'Unassigned')].filter(Boolean))].sort();return names.map(name=>{const rows=tickets.filter(t=>String(t[field]||'Unassigned')===String(name));const closed=rows.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed');const late=rows.filter(t=>t.Status!=='Closed'&&isLate(t));return {name,rows,total:rows.length,closed:closed.length,late:late.length,avg:avgScore(rows)};});}
-function avgField(rows, field){const vals=rows.map(t=>Number(t[field])).filter(n=>!isNaN(n));return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):'';}
-function performanceSummaryTable(title, groups, field){return `<div class="panel"><h2>${esc(title)}</h2><div class="scroll"><table><thead><tr><th>Name</th><th>Total Tickets</th><th>Closed</th><th>Open Late</th><th>System %</th><th>Exec1 %</th><th>Exec2 %</th><th>Final %</th><th>Action</th></tr></thead><tbody>${groups.map(g=>`<tr><td>${esc(g.name)}</td><td>${g.total}</td><td>${g.closed}</td><td>${g.late}</td><td>${score(avgField(g.rows,'SystemScore'))}</td><td>${score(avgField(g.rows,'Executive1Score'))}</td><td>${score(avgField(g.rows,'Executive2Score'))}</td><td>${finalScore(avgComputedFinal(g.rows))}</td><td><button class="btn" onclick="showPerformanceGroup('${esc(field)}','${esc(g.name)}')">Open Data</button></td></tr>`).join('')||empty(9)}</tbody></table></div></div>`;}
-function showPerformanceGroup(field,name){const rows=executiveDashboardTickets().filter(t=>String(t[field]||'Unassigned')===String(name));perfList.innerHTML=miniTicketTable('Performance Report - '+name, rows);}
-function individualPerformanceComparison(users,tickets){
-  const names=[...new Set([...(users||[]).map(u=>u.Name),...(tickets||[]).map(t=>t.AssignedToName)].filter(Boolean))];
-  const groups=names.map(name=>{
-    const rows=tickets.filter(t=>String(t.AssignedToName||'')===String(name));
-    return {name,rows,avg:avgComputedFinal(rows)};
-  }).sort((a,b)=>b.avg-a.avg || String(a.name).localeCompare(String(b.name)));
-  if(!groups.length)return '<p class="muted">No user performance data found.</p>';
-  return groups.map(g=>{
-    const pct=Math.max(0,Math.min(100,Number(g.avg)||0));
-    const cls=pct>50?'good':pct<50?'bad':'warn';
-    return `<div class="barrow clickable ${cls}" onclick="showPerformanceGroup('AssignedToName','${esc(g.name)}')"><div class="lbl">${esc(g.name)}</div><div class="track"><div class="fill" style="width:${pct}%"></div></div><div class="num">${Math.round(pct)}%</div></div>`;
-  }).join('');
-}
-function renderPerformance(){const mode=document.getElementById('perfMode')?.value||'individual'; const val=document.getElementById('perfValue')?.value||''; const users=activeUsers(); const tickets=executiveDashboardTickets(); const field=mode==='individual'?'AssignedToName':mode==='department'?'Department':'CostCenter'; if(!document.getElementById('perfBody'))return;
-  if(mode==='department' || mode==='costcenter'){
-    const sourceValues=users.map(u=>mode==='department'?(u.Department||'Unassigned'):(u.CostCenter||'Unassigned'));
-    const groups=groupPerformanceRows(field, sourceValues);
-    const selected=val && val!=='__ALL__'?groups.find(g=>String(g.name)===String(val)):null;
-    const overall=selected?selected.avg:avgComputedFinal(tickets);
-    const chartObj={}; groups.forEach(g=>chartObj[g.name]=g.avg);
-    perfBody.innerHTML=`<div class="card"><h3>${esc(selected?selected.name:(mode==='department'?'All Departments':'All Cost Centers'))}</h3><div class="stat"><div class="l">Average performance</div><div class="v">${overall}%</div></div><p class="muted">Scores are averaged from closed ticket final scores stored in the Scores tab.</p></div><div class="card"><h3>${esc(mode==='department'?'Department Scores':'Cost Center Scores')}</h3>${dashBars(chartObj,'perfGroup:'+field)}</div>`;
-    perfList.innerHTML=performanceSummaryTable(mode==='department'?'All Department Scores':'All Cost Center Scores',groups,field)+(selected?miniTicketTable('Selected Data - '+selected.name, selected.rows):'');
-    return;
-  }
-  const rows=val==='__ALL__'?tickets:tickets.filter(t=>String(t[field]||'Unassigned')===String(val)); const title=val==='__ALL__'?'All Users':(val||'No Selection'); const closed=rows.filter(t=>t.Status==='Closed'||t.CurrentBasket==='Closed'); const late=rows.filter(t=>t.Status!=='Closed'&&isLate(t)); const critical=rows.filter(t=>String(t.Priority)==='Critical'&&t.Status!=='Closed'); const avg=avgScore(rows); const sysAvg=avgField(rows,'SystemScore'); const e1Avg=avgField(rows,'Executive1Score'); const e2Avg=avgField(rows,'Executive2Score'); const comparison=val==='__ALL__'?`<div class="card allUserCompare"><h3>Individual Final % Performance Comparison</h3><p class="muted">Highest final percentage first. Green is above 50%, red is below 50%, and 50% is shown in amber.</p>${individualPerformanceComparison(users,tickets)}</div>`:''; perfBody.innerHTML=`<div class="card"><h3>${esc(title)}</h3><div class="stat"><div class="l">${esc(mode)} report</div><div class="v">${rows.length}</div></div><p class="muted">Total tickets included in the executive performance view.</p></div><div class="card"><h3>Scores</h3><p><b>System:</b> ${score(sysAvg)} &nbsp; <b>Exec1:</b> ${score(e1Avg)} &nbsp; <b>Exec2:</b> ${score(e2Avg)} &nbsp; <b>Final:</b> ${finalScore(avg)}</p></div>${comparison}<div class="card"><h3>Open Exceptions</h3>${dashBars({'Critical':critical.length,'Open Late':late.length,'Closed':closed.length},'perf')}</div>`; perfList.innerHTML=miniTicketTable('Performance Report - '+title, rows);}
-function printPerformance(){document.querySelectorAll('.section').forEach(s=>s.classList.remove('printTarget'));document.getElementById('performance').classList.add('printTarget');window.print();}
-function empty(n){return `<tr><td colspan="${n}" class="muted" style="text-align:center;padding:28px">No tickets found.</td></tr>`}
-function lateText(t){if(Number(t.LateDays||0)>0)return Number(t.LateDays)+' day(s) late';return t.TimeRemainingText||'0 days late';}
-function rowTask(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${esc(t.AssignedToName)}</td><td>${fmt(t.DueDate)}</td><td>${esc(lateText(t))}</td><td>${status(t)}</td><td class="priority-${t.Priority}">${esc(t.Priority)}</td><td><button class="btn good" onclick="openTicket('${t.TicketID}')">Open</button></td></tr>`}
-function rowReview1(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${fmt(t.SubmittedAt)}</td><td>${score(t.SystemScore)}</td><td>${esc(t.AssignedToName)}</td><td><button class="btn primary" onclick="openTicket('${t.TicketID}')">Review</button></td></tr>`}
-function rowReview2(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${score(t.SystemScore)}</td><td>${score(t.Executive1Score)}</td><td>${esc(t.TimeRemainingText)}</td><td><button class="btn primary" onclick="openTicket('${t.TicketID}')">Review</button></td></tr>`}
-function rowClosed(t){return `<tr><td><a class="ticket-link" onclick="openTicket('${t.TicketID}')">${t.TicketID}</a></td><td>${esc(t.Title)}</td><td>${fmt(t.ClosedAt)}</td><td>${esc(t.ClosedTiming)}</td><td>${score(t.SystemScore)}</td><td>${score(t.Executive1Score)}</td><td>${score(t.Executive2Score)}</td><td>${finalScore(computedFinalNumber(t))}</td></tr>`}
-function status(t){const cls=t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'?'s-review':String(t.TimeRemainingText).includes('late')?'s-late':'s-open';return `<span class="status ${cls}">${esc(t.Status)}</span>`}
-function score(v){const n=Number(v);return (v===''||v==null||isNaN(n))?'—':`${Math.round(n)}%`}
-function finalScoreClass(v){const n=Number(v); if(isNaN(n))return ''; if(n<50)return 'score-final-red'; if(n>=90)return 'score-final-black'; if(n>=75)return 'score-final-blue'; return 'score-final-green';}
-function finalScore(v){const n=Number(v);return (v===''||v==null||isNaN(n))?'—':`<span class="${finalScoreClass(n)}">${Math.round(n)}%</span>`}
-function linkListFromUploadAttachment(v){return String(v||'').split(/\s+/).filter(x=>/^https?:\/\//i.test(x)).map((url,i)=>`<div class="fileline"><a target="_blank" href="${esc(url)}">Ticket upload link ${i+1}</a></div>`).join('');}
-function fmt(v){return v?String(v).replace('T',' ').slice(0,16):'—'}
-function esc(v){return String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
-
-function createTicket(){newErr.textContent='';newMsg.textContent='';const mode=document.querySelector('[name=mode]:checked').value;const base={userId:USER.UserID,assignedToUserId:ntAssignee.value,title:ntTitle.value,description:ntDesc.value,priority:ntPriority.value,department:ntDept.value,costCenter:ntCostCenter.value};const action=mode==='recurring'?'createRecurringTicket':'createTicket';const data=mode==='recurring'?{...base,startDate:rtStart.value,frequency:rtFreq.value,dueDays:rtDueDays.value,occurrences:rtOcc.value}:{...base,issueDate:ntIssue.value,dueDate:ntDue.value};postApi(action,data).then((res)=>{const first=(res.ticket||((res.tickets||[])[0])||{}); const msg=buildNewTaskWhatsAppCopy(first.TicketID); newMsg.textContent=' Ticket created. WhatsApp message copied/opened for assignee.'; copyText(msg); const u=selectedAssignee(); const phone=cleanPhone(u.WhatsApp||u.Phone); if(phone) window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank'); ntTitle.value='';ntDesc.value='';refresh();}).catch(e=>newErr.textContent=e.message);}
-
-let DETAIL=null;
-function openTicket(id){postApi('getTicketDetail',{userId:USER.UserID,ticketId:id}).then(d=>{DETAIL=d;drawDrawer();drawer.classList.add('open');scrim.classList.add('open');}).catch(e=>{
-  const cached=(STATE.tickets||[]).find(t=>String(t.TicketID)===String(id));
-  if(cached && (cached.CurrentBasket==='Executive2'||cached.CurrentBasket==='Executive1'||isMineAsCreator(cached)||isMineAsAssignee(cached)||isExecutiveUser())){
-    DETAIL={ticket:cached,attachments:[],comments:[{UserName:'System',Role:'Notice',CreatedAt:new Date().toISOString(),Comment:'Ticket detail could not be loaded from Apps Script, but the cached ticket is available. You can still attempt the authorised workflow action.'}],timeRequests:[]};
-    drawDrawer();drawer.classList.add('open');scrim.classList.add('open');
-    return;
-  }
-  alertErr(e);
-});}
-function closeDrawer(){drawer.classList.remove('open');scrim.classList.remove('open');}
-function drawDrawer(){const t=DETAIL.ticket;dRef.textContent=t.TicketID;dStatus.outerHTML=`<span id="dStatus" class="status ${t.Status==='Closed'?'s-closed':t.CurrentBasket==='Executive1'||t.CurrentBasket==='Executive2'?'s-review':'s-open'}">${esc(t.Status)}</span>`;dBody.innerHTML=`<h2>${esc(t.Title)}</h2><p class="muted">${esc(t.Description||'No description')}</p><div class="kv"><div><small>Created by</small><b>${esc(t.CreatedByName)}</b></div><div><small>Assigned to</small><b>${esc(t.AssignedToName)}</b></div><div><small>Assignee Email</small><b>${esc(t.AssignedToEmail||'')}</b></div><div><small>Assignee WhatsApp</small><b>${esc(t.AssignedToWhatsApp||'')}</b></div><div><small>Department</small><b>${esc(t.Department||'')}</b></div><div><small>Cost Center</small><b>${esc(t.CostCenter||'')}</b></div><div><small>Due Date</small><b>${fmt(t.DueDate)}</b></div><div><small>Submission Date</small><b>${fmt(t.SubmittedAt)}</b></div><div><small>Time lapse</small><b>${esc(t.TimeRemainingText)}</b></div><div><small>System Score</small><b>${score(t.SystemScore)}</b></div><div><small>Final Score</small><b>${finalScore(computedFinalNumber(t))}</b></div><div><small>Executive1</small><b>${score(t.Executive1Score)} ${esc(t.Executive1Name||'')}</b></div><div><small>Executive2</small><b>${score(t.Executive2Score)} ${esc(t.Executive2Name||'')}</b></div></div><div class="copybar"><button class="btn" onclick="copyTicketWhatsApp()">Copy Task to WhatsApp</button><button class="btn good" onclick="openTicketWhatsApp()">Open WhatsApp to Assignee</button></div><h3>Attachments</h3>${(DETAIL.attachments.map(a=>`<div class="fileline"><a target="_blank" href="${a.DriveUrl}">${esc(a.FileName)}</a></div>`).join('') + linkListFromUploadAttachment(t.UploadAttachment)) || '<p class="muted">No attachments.</p>'}<div class="f"><label>Upload Attachment / File</label><input type="file" id="fileUp"><button class="btn" onclick="uploadFile()">Upload File</button></div><h3>Comments</h3><div class="comments">${DETAIL.comments.map(c=>`<div class="comment"><div class="meta">${esc(c.UserName)} · ${esc(c.Role)} · ${fmt(c.CreatedAt)}</div>${esc(c.Comment)}${c.DriveUrl?`<div class="fileline"><a target="_blank" href="${c.DriveUrl}">${esc(c.FileName||'View upload')}</a></div>`:''}</div>`).join('')||'<p class="muted">No comments.</p>'}</div><div class="f"><label>Add Comment</label><textarea id="commentTxt"></textarea><button class="btn" onclick="addComment()">Post Comment</button></div><h3>More Time Requests</h3><div class="comments">${(DETAIL.timeRequests||[]).map(r=>`<div class="comment"><div class="meta">${esc(r.RequestedByName)} · ${fmt(r.CreatedAt)} · ${esc(r.Status)}</div>Requested date: <b>${esc(r.RequestedDueDate)}</b><br>${esc(r.Reason||'')}</div>`).join('')||'<p class="muted">No time extension requests.</p>'}</div>`;drawActions(t);}
-function hasPendingTimeRequest(){return (DETAIL.timeRequests||[]).some(r=>String(r.Status||'').indexOf('Approved')<0 && String(r.Status||'').indexOf('Rejected')<0);}
-function drawActions(t){
-  let html='';
-  const role=userRoleKey();
-  const isAdmin=(role==='admin'||role==='adminmanager');
-  const basket=String(t.CurrentBasket||'').trim();
-  const status=String(t.Status||'').trim();
-  // USER SUBMIT BUTTON FIX ONLY:
-  // Normal assigned users such as Brighton must always see Submit Ticket / Request More Time
-  // while the ticket is still with the assignee. Ticket creators who are not assigned do not get submit rights.
-  const isAssigneeStage = basket==='' || basket==='Assignee' || status==='Open' || status==='Time Extension Approved' || status==='Returned' || status==='Re-opened';
-  const canSubmit=isAssigneeStage && status!=='Closed' && basket!=='Closed' && basket!=='Executive1' && basket!=='Executive2' && (isMineAsAssignee(t)||isAdmin);
-  if(canSubmit) html+=`<button class="btn primary" onclick="submitTicket()">Submit Ticket</button><div class="scorebox"><label>Request more time</label><input id="moreTimeDate" type="date"><input id="moreTimeReason" placeholder="Reason for more time"><button class="btn" onclick="requestMoreTime()">Send Request</button></div>`;
-  if(hasPendingTimeRequest()&&(isMineAsCreator(t)||role==='executive1'||role==='exec1'||isAdmin)) html+=`<button class="btn good" onclick="approveMoreTime()">Approve More Time Request</button>`;
-  if(t.CurrentBasket==='Executive1'&&(role==='executive1'||role==='exec1'||isAdmin)) html+=`<div class="scorebox"><label>Quality of Work (1-5)</label><select id="scoreIn" onchange="updateQualityPercent()"><option value="1">1 - Very Poor (20%)</option><option value="2">2 - Poor (40%)</option><option value="3">3 - Average (60%)</option><option value="4">4 - Good (80%)</option><option value="5" selected>5 - Excellent (100%)</option></select><span id="qualityPercent" class="pill">100%</span><input id="scoreComment" placeholder="Approval / return comment"><button class="btn primary" onclick="approve1()">Approve</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;
-  if((t.CurrentBasket==='Executive2')&&(role==='executive2'||role==='exec2'||isAdmin)) html+=`<div class="scorebox"><span class="pill">System Score: ${score(t.SystemScore)}</span><label>Quality of Work (1-5)</label><select id="scoreIn" onchange="updateQualityPercent()"><option value="1">1 - Very Poor (20%)</option><option value="2">2 - Poor (40%)</option><option value="3">3 - Average (60%)</option><option value="4">4 - Good (80%)</option><option value="5" selected>5 - Excellent (100%)</option></select><span id="qualityPercent" class="pill">100%</span><input id="scoreComment" placeholder="Closing / return comment"><button class="btn primary" onclick="approve2()">Approve & Close</button><input id="returnDue" type="date" title="New due date"><button class="btn bad" onclick="returnTicket()">Return / Re-open</button></div>`;
-  dActions.innerHTML=html||'<span class="muted">No action available for your role on this ticket.</span>';
-  const rd=document.getElementById('returnDue');if(rd){const d=new Date();d.setDate(d.getDate()+1);rd.value=d.toISOString().slice(0,10);}const md=document.getElementById('moreTimeDate');if(md){const d=new Date();d.setDate(d.getDate()+2);md.value=d.toISOString().slice(0,10);}
-}
-function requestMoreTime(){const d=document.getElementById('moreTimeDate')?.value; if(!d)return alert('Select the new requested submission date.');postApi('requestMoreTime',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,requestedDueDate:d,reason:document.getElementById('moreTimeReason')?.value||''}).then(()=>{alert('More time request sent to Executive1 and ticket creator for approval.');refresh();openTicket(DETAIL.ticket.TicketID);}).catch(alertErr)}
-function approveMoreTime(){postApi('approveMoreTime',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:scoreComment?.value||commentTxt?.value||''}).then(()=>{alert('More time approval captured. If both required approvals are complete, the new submission date has been applied.');refresh();openTicket(DETAIL.ticket.TicketID);}).catch(alertErr)}
-function returnTicket(){const due=document.getElementById('returnDue')?.value; if(!due)return alert('Select a new due date before returning this ticket.');postApi('returnTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,newDueDate:due,comment:scoreComment?.value||commentTxt?.value||''}).then(()=>{alert('Ticket returned and re-opened with a new due date.');refresh();openTicket(DETAIL.ticket.TicketID)}).catch(alertErr)}
-function addComment(){postApi('addComment',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt.value}).then(()=>openTicket(DETAIL.ticket.TicketID)).catch(alertErr)}
-
-function readFileAsBase64(file){
-  return new Promise((resolve,reject)=>{
-    const r=new FileReader();
-    r.onload=()=>resolve(String(r.result).split(',')[1]||'');
-    r.onerror=()=>reject(new Error('Could not read the selected attachment.'));
-    r.readAsDataURL(file);
+  document.getElementById("newEntryBtn").addEventListener("click", function(){
+    document.getElementById("entrySection").classList.remove("hidden");
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
+    document.getElementById("regBookLink").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    window.scrollTo({ top: document.getElementById("entrySection").offsetTop - 20, behavior: "smooth" });
   });
-}
-async function uploadFileChunked(file, ticketId, comment){
-  // Attachments now use POST instead of JSONP. This avoids URL-length failures
-  // and is the recommended method for images, PDFs, Word/Excel files and other documents.
-  const maxBytes = 18 * 1024 * 1024;
-  if(file.size > maxBytes){
-    throw new Error('File is too large. Please upload a file smaller than 18MB, or compress/split it.');
-  }
-  const base64 = await readFileAsBase64(file);
-  return postApi('uploadAttachmentPost', {
-    userId: USER.UserID,
-    ticketId: ticketId,
-    fileName: file.name,
-    mimeType: file.type || 'application/octet-stream',
-    base64: base64,
-    comment: comment || ''
+
+  document.getElementById("backToDashboardBtn").addEventListener("click", function(){
+    document.getElementById("entrySection").classList.add("hidden");
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
+    document.getElementById("regBookLink").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    showStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (currentFilter) applyFilter(currentFilter); else renderTable(allAssets);
   });
-}
 
-async function submitTicket(){
-  const f=document.getElementById('fileUp')?.files?.[0];
-  try{
-    if(f) await uploadFileChunked(f, DETAIL.ticket.TicketID, commentTxt?.value||'');
-    await postApi('submitTicket',{userId:USER.UserID,ticketId:DETAIL.ticket.TicketID,comment:commentTxt?.value||''});
-    updateTicketInCache(DETAIL.ticket.TicketID,{CurrentBasket:'Executive1',Status:'Submitted',SubmittedAt:new Date().toISOString()});
-    alert('Ticket submitted successfully. It has moved to Executive1 Review and disappeared from the assignee open basket.');
-    closeDrawer();
-    loadTicketsView('all',500,{silent:true,background:true});
-  }catch(e){alertErr(e);}
-}
-function qualityRatingToPercent(rating){return Math.max(1,Math.min(5,Number(rating||0)))*20;}
-function updateQualityPercent(){const el=document.getElementById('qualityPercent');const rating=document.getElementById('scoreIn');if(el&&rating)el.textContent=qualityRatingToPercent(rating.value)+'%';}
-function approve1(){const ticketId=DETAIL.ticket.TicketID;const rating=scoreIn.value;const percent=qualityRatingToPercent(rating);postApi('executive1Approve',{userId:USER.UserID,ticketId:ticketId,rating:rating,score:percent,comment:scoreComment.value}).then(()=>{updateTicketInCache(ticketId,{CurrentBasket:'Executive2',Executive1Score:percent,Executive1Name:USER.Name,Status:'Submitted'});alert('Executive1 approval successful. Ticket moved to Executive2 and disappeared from Executive1 Review.');closeDrawer();loadTicketsView('all',500,{silent:true,background:true});}).catch(alertErr)}
-function approve2(){const ticketId=DETAIL.ticket.TicketID;const rating=scoreIn.value;const percent=qualityRatingToPercent(rating);postApi('executive2Approve',{userId:USER.UserID,ticketId:ticketId,rating:rating,score:percent,comment:scoreComment.value}).then(()=>{updateTicketInCache(ticketId,{CurrentBasket:'Closed',Status:'Closed',Executive2Score:percent,Executive2Name:USER.Name,ClosedAt:new Date().toISOString(),ClosedTiming:DETAIL.ticket.ClosedTiming||DETAIL.ticket.TimeRemainingText||''});alert('Executive2 approval successful. Ticket is permanently closed and removed from Executive2 Review.');closeDrawer();CURRENT_FILTER='closed';showTab('closed');loadTicketsView('all',500,{silent:true,background:true});}).catch(alertErr)}
-function uploadFile(){
-  const f=fileUp.files[0];
-  if(!f) return alert('Choose a file first.');
-  uploadFileChunked(f, DETAIL.ticket.TicketID, commentTxt?.value||'')
-    .then(()=>{alert('Attachment uploaded successfully. The Drive link has been posted to Tickets.UploadAttachment and Updates.');refresh();openTicket(DETAIL.ticket.TicketID);})
-    .catch(alertErr);
-}
+  document.getElementById("cancelEntryBtn").addEventListener("click", function(){
+    document.getElementById("entrySection").classList.add("hidden");
+    document.getElementById("assetForm").reset();
+    document.getElementById("rowNumber").value = "";
+    document.getElementById("vehicleRegBookLink").value = "";
+    document.getElementById("trackingCertificateLink").value = "";
+      document.getElementById("vehicleInvoiceLink").value = "";
+      document.getElementById("assetTotalInstallmentsPaid").value = "";
+    document.getElementById("regBookLink").value = "";
+    document.getElementById("saveBtn").textContent = "Save Asset";
+    showStatus("");
+    if (currentFilter) applyFilter(currentFilter); else renderTable(allAssets);
+  });
+
+  document.getElementById("transactionSearchBtn").addEventListener("click", renderCurrentTransactionTable);
+  document.getElementById("transactionClearBtn").addEventListener("click", resetTransactionControls);
+  ["transactionSort", "transactionClassFilter", "transactionModelFilter", "transactionCostCenterFilter"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", renderCurrentTransactionTable);
+  });
+  const searchInput = document.getElementById("transactionSearch");
+  if (searchInput) searchInput.addEventListener("keydown", e => { if (e.key === "Enter") renderCurrentTransactionTable(); });
+
+  document.getElementById("refreshDashBtn").addEventListener("click", loadAssets);
+  document.getElementById("clearFilterBtn").addEventListener("click", clearFilter);
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+  document.getElementById("excelBtn").addEventListener("click", function(){
+    let rows = allAssets;
+    if (currentFilter) {
+      rows = (isEquipmentFilter(currentFilter) ? equipmentAssets : mainAssets).filter(a => String(getField(a, "assetClass")).toLowerCase().includes(currentFilter.toLowerCase()));
+    }
+    const displayFields = FIELD_IDS.filter(id => !["licenced","typeOfLicence","validityOfLicence","imageLinks","assetStatus","statusDate","soldValue","totalInstallmentsPaid"].includes(id));
+    const headers = [...displayFields, "vehicleRegBookLink", "trackingCertificateLink", "imageLinks", "assetStatus", "statusDate", "soldValue"];
+    const csvRows = [headers, ...rows.map(row => {
+      const vals = displayFields.map(id => valueOrBlank(getField(row, id)));
+      vals.push(getField(row, "vehicleRegBookLink"));
+      vals.push(getField(row, "trackingCertificateLink"));
+      vals.push(getField(row, "imageLinks"));
+      vals.push(getField(row, "assetStatus"));
+      vals.push(getField(row, "statusDate"));
+      vals.push(getField(row, "soldValue"));
+      return vals;
+    })];
+    const csv = csvRows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "asset-register-report.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  });
 
 
-function toggleChatbot(){const box=document.getElementById('chatbotBox'); if(box) box.classList.toggle('open');}
-function chatQuick(q){const el=document.getElementById('chatbotQ'); if(el) el.value=q; askChatbot();}
-function appendChatMsg(kind, text){const body=document.getElementById('chatbotBody'); if(!body)return; const div=document.createElement('div'); div.className='chatMsg '+kind; div.innerHTML=esc(text).replace(/\n/g,'<br>'); body.appendChild(div); body.scrollTop=body.scrollHeight;}
-function askChatbot(){const input=document.getElementById('chatbotQ'); const q=(input?.value||'').trim(); if(!q)return; appendChatMsg('user',q); input.value=''; appendChatMsg('bot',answerChatbot(q));}
-function ticketLine(t){return `${t.TicketID} · ${t.Title||'Untitled'} · ${t.AssignedToName||'Unassigned'} · ${t.Status||''} · ${t.CurrentBasket||''} · due ${fmt(t.DueDate)}`;}
-function answerChatbot(question){
-  const q=String(question||'').toLowerCase();
-  const tickets=executiveDashboardTickets().length?executiveDashboardTickets():workflowTickets();
-  const mine=myTickets();
-  const count=(fn)=>tickets.filter(fn).length;
-  if(!tickets.length) return 'No ticket data is loaded yet. Login, click Refresh, then ask again.';
-  if(q.includes('workflow')||q.includes('submit')||q.includes('executive1')&&q.includes('executive2')){
-    return 'Workflow: assigned user opens the task drawer and clicks Submit Ticket. The Apps Script saves Status = Submitted and CurrentBasket = Executive1. Executive1 approves and scores, then CurrentBasket becomes Executive2. Executive2 approves and scores, then Status = Closed and CurrentBasket = Closed.';
+
+  function setupOtherDropdowns() {
+    document.querySelectorAll('select').forEach(sel => {
+      if (![...sel.options].some(o => o.value === "Other" || o.textContent === "Other")) {
+        const opt = document.createElement("option");
+        opt.value = "Other";
+        opt.textContent = "Other";
+        sel.appendChild(opt);
+      }
+      sel.addEventListener("change", function() {
+        if (this.value !== "Other") return;
+        const custom = prompt("Enter other value");
+        if (!custom) { this.value = ""; return; }
+        const opt = document.createElement("option");
+        opt.value = custom; opt.textContent = custom; opt.selected = true;
+        this.appendChild(opt);
+      });
+    });
   }
-  if(q.includes('brighton')){
-    const rows=tickets.filter(t=>String(t.AssignedToName+' '+t.CreatedByName+' '+t.AssignedToEmail+' '+t.CreatedByEmail).toLowerCase().includes('brighton'));
-    return rows.length?('Brighton related tickets loaded:\n'+rows.slice(0,8).map(ticketLine).join('\n')):'No Brighton tickets are currently loaded in this dashboard cache.';
-  }
-  if(q.includes('executive1')||q.includes('review 1')||q.includes('exec1')) return 'Executive1 basket has '+count(t=>t.CurrentBasket==='Executive1'&&t.Status!=='Closed')+' loaded ticket(s).';
-  if(q.includes('executive2')||q.includes('review 2')||q.includes('exec2')) return 'Executive2 basket has '+count(t=>t.CurrentBasket==='Executive2'&&t.Status!=='Closed')+' loaded ticket(s).';
-  if(q.includes('critical')) return 'Critical open tickets loaded: '+count(t=>String(t.Priority)==='Critical'&&t.Status!=='Closed')+'.';
-  if(q.includes('late')) return 'Open late tickets loaded: '+count(t=>t.Status!=='Closed'&&isLate(t))+'.';
-  if(q.includes('closed')) return 'Closed tickets loaded: '+count(t=>t.Status==='Closed'||t.CurrentBasket==='Closed')+'.';
-  if(q.includes('my ticket')||q.includes('assigned to me')) return 'Your visible open ticket count is '+mine.length+'.\n'+mine.slice(0,8).map(ticketLine).join('\n');
-  const id=(question.match(/TKT[-_A-Z0-9]+/i)||[])[0];
-  if(id){const t=tickets.find(x=>String(x.TicketID).toLowerCase()===id.toLowerCase()); return t?ticketLine(t):'I cannot find '+id+' in the loaded ticket cache.';}
-  const nameSearch=question.trim().toLowerCase();
-  if(nameSearch.length>2){const rows=tickets.filter(t=>String(t.Title+' '+t.Description+' '+t.AssignedToName+' '+t.CreatedByName+' '+t.Department+' '+t.CostCenter).toLowerCase().includes(nameSearch)); if(rows.length) return 'I found '+rows.length+' matching loaded ticket(s):\n'+rows.slice(0,8).map(ticketLine).join('\n');}
-  return 'I can answer from the currently loaded HTML dashboard data. Try: “Show Brighton tickets”, “How many Executive1 tickets?”, “Critical tickets”, “Open late tickets”, or paste a ticket reference.';
-}
 
-if(USER) start();
+  function setupDepreciationFields() {
+    ["cost", "usefulLife", "residualValue"].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("change", () => {
+        const data = {};
+        FIELD_IDS.forEach(fid => { const f = document.getElementById(fid); if (f) data[fid] = f.value; });
+        const residualWasBlank = !String(data.residualValue || "").trim();
+        applyDepreciationToData(data);
+        ["residualValue", "monthlyDpn", "accumDpn", "nbv", "value"].forEach(fid => {
+          const f = document.getElementById(fid);
+          if (!f || document.activeElement === f) return;
+          // Only auto-fill Monthly dpn if it is currently blank, so user edits are never overwritten.
+          if (fid === "monthlyDpn" && String(f.value || "").trim() !== "") return;
+          if (fid === "residualValue" && !residualWasBlank) return;
+          if (data[fid] !== undefined && data[fid] !== "") f.value = Number(toNumber(data[fid])).toFixed(2);
+        });
+      });
+    });
+  }
+
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setupOtherDropdowns();
+    setupDepreciationFields();
+    loadAssets();
+  });
 </script>
 </body>
 </html>
