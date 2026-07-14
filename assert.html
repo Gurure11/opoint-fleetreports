@@ -6,6 +6,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Distinct Infrastructure · Dashboard</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet"/>
 <style>
     :root {
       --primary-blue: #0b2f6b;
@@ -480,6 +481,75 @@
       .transaction-toolbar { grid-template-columns: 1fr; }
       .transaction-toolbar button { width: 100%; justify-content: center; }
     }
+    /* Image cropping modal */
+    .crop-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(7,31,71,0.84);
+      backdrop-filter: blur(5px);
+    }
+    .crop-modal.hidden { display: none !important; }
+    .crop-dialog {
+      width: min(960px, 100%);
+      max-height: 94vh;
+      overflow: auto;
+      background: white;
+      border-radius: 22px;
+      box-shadow: 0 26px 80px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.7);
+    }
+    .crop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      color: white;
+      background: linear-gradient(135deg, var(--primary-blue), var(--bright-blue));
+      border-radius: 22px 22px 0 0;
+    }
+    .crop-header h3 { margin: 0; font-size: 18px; }
+    .crop-close {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.16);
+      color: white;
+      box-shadow: none;
+    }
+    .crop-stage {
+      height: min(62vh, 560px);
+      background: #eef4fb;
+      padding: 12px;
+    }
+    .crop-stage img {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .crop-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--line);
+    }
+    .crop-controls button { padding: 10px 16px; font-size: 13px; }
+    .crop-controls .crop-primary { margin-left: auto; }
+    .crop-help {
+      width: 100%;
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     @media print {
       body { background:white; }
       .header, .action-row, #entrySection, .toolbar, .connection-panel, .status, .btn-gold, .btn-outline { display:none !important; }
@@ -618,6 +688,24 @@
 </table>
 </div>
 </div>
+<div class="crop-modal hidden" id="imageCropModal" role="dialog" aria-modal="true" aria-labelledby="cropModalTitle">
+  <div class="crop-dialog">
+    <div class="crop-header">
+      <h3 id="cropModalTitle"><i class="fas fa-crop-alt"></i> Crop Image Before Upload</h3>
+      <button class="crop-close" id="cropCloseBtn" type="button" title="Cancel"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="crop-stage"><img alt="Image selected for cropping" id="cropImagePreview"/></div>
+    <div class="crop-controls">
+      <button class="btn-blue" id="cropRotateLeftBtn" type="button"><i class="fas fa-undo"></i> Rotate Left</button>
+      <button class="btn-blue" id="cropRotateRightBtn" type="button"><i class="fas fa-redo"></i> Rotate Right</button>
+      <button class="btn-outline" id="cropResetBtn" type="button"><i class="fas fa-sync"></i> Reset</button>
+      <button class="btn-outline" id="cropOriginalBtn" type="button"><i class="fas fa-image"></i> Use Original</button>
+      <button class="crop-primary" id="cropApplyBtn" type="button"><i class="fas fa-crop-alt"></i> Crop &amp; Continue</button>
+      <p class="crop-help">Drag the image, resize the crop box, zoom with the mouse wheel or touch gestures, then continue.</p>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <script>
   // ======================== CONFIG =========================
   const SHEET_ID = "1eM_UPV9MRaEU9lDoNk-D2FHac9PXTpHzOUBBXvzEAfw";
@@ -860,23 +948,116 @@
     }).then(res => res.json());
   }
 
-  function fileToPayload(file) {
+  let cropperInstance = null;
+  let cropQueue = Promise.resolve();
+
+  function isImageFile(file) {
+    return !!file && String(file.type || "").toLowerCase().startsWith("image/");
+  }
+
+  function cropImageFile(file) {
+    if (!isImageFile(file)) return Promise.resolve(file);
+
+    // Serialise crop dialogs so multi-image selections are cropped one at a time.
+    const task = () => new Promise((resolve, reject) => {
+      const modal = document.getElementById("imageCropModal");
+      const preview = document.getElementById("cropImagePreview");
+      const objectUrl = URL.createObjectURL(file);
+      let finished = false;
+
+      const cleanup = () => {
+        if (cropperInstance) {
+          cropperInstance.destroy();
+          cropperInstance = null;
+        }
+        URL.revokeObjectURL(objectUrl);
+        modal.classList.add("hidden");
+        preview.removeAttribute("src");
+      };
+
+      const complete = (result, error) => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        error ? reject(error) : resolve(result);
+      };
+
+      preview.onload = () => {
+        if (typeof Cropper === "undefined") {
+          complete(file, null); // Graceful fallback if the crop library cannot load.
+          return;
+        }
+        cropperInstance = new Cropper(preview, {
+          viewMode: 1,
+          dragMode: "move",
+          autoCropArea: 0.9,
+          responsive: true,
+          restore: false,
+          background: false,
+          movable: true,
+          zoomable: true,
+          rotatable: true,
+          scalable: true
+        });
+      };
+
+      document.getElementById("cropRotateLeftBtn").onclick = () => cropperInstance && cropperInstance.rotate(-90);
+      document.getElementById("cropRotateRightBtn").onclick = () => cropperInstance && cropperInstance.rotate(90);
+      document.getElementById("cropResetBtn").onclick = () => cropperInstance && cropperInstance.reset();
+      document.getElementById("cropOriginalBtn").onclick = () => complete(file, null);
+      document.getElementById("cropCloseBtn").onclick = () => complete(null, new Error("Image cropping cancelled"));
+      document.getElementById("cropApplyBtn").onclick = () => {
+        if (!cropperInstance) return complete(file, null);
+        const canvas = cropperInstance.getCroppedCanvas({
+          maxWidth: 2400,
+          maxHeight: 2400,
+          imageSmoothingEnabled: true,
+          imageSmoothingQuality: "high",
+          fillColor: "#ffffff"
+        });
+        if (!canvas) return complete(null, new Error("Could not crop image"));
+        const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
+        const quality = outputType === "image/jpeg" ? 0.92 : undefined;
+        canvas.toBlob(blob => {
+          if (!blob) return complete(null, new Error("Could not prepare cropped image"));
+          const baseName = String(file.name || "image").replace(/\.[^.]+$/, "");
+          const extension = outputType === "image/png" ? ".png" : ".jpg";
+          complete(new File([blob], baseName + "_cropped" + extension, {
+            type: outputType,
+            lastModified: Date.now()
+          }), null);
+        }, outputType, quality);
+      };
+
+      modal.classList.remove("hidden");
+      preview.src = objectUrl;
+    });
+
+    const queued = cropQueue.then(task, task);
+    cropQueue = queued.catch(() => {});
+    return queued;
+  }
+
+  async function fileToPayload(file) {
+    if (!file) return null;
+    const preparedFile = await cropImageFile(file);
     return new Promise((resolve, reject) => {
-      if (!file) return resolve(null);
       const reader = new FileReader();
       reader.onload = ev => resolve({
-        fileName: file.name,
-        mimeType: file.type || "application/octet-stream",
+        fileName: preparedFile.name,
+        mimeType: preparedFile.type || "application/octet-stream",
         fileData: String(ev.target.result).split(',')[1]
       });
-      reader.onerror = () => reject(new Error("Could not read file: " + file.name));
-      reader.readAsDataURL(file);
+      reader.onerror = () => reject(new Error("Could not read file: " + preparedFile.name));
+      reader.readAsDataURL(preparedFile);
     });
   }
 
   async function filesToPayloads(fileList, maxFiles = 5) {
     const files = Array.from(fileList || []).slice(0, maxFiles);
-    return Promise.all(files.map(fileToPayload));
+    const payloads = [];
+    for (const file of files) payloads.push(await fileToPayload(file));
+    return payloads;
   }
 
   function linkCell(link, label) {
