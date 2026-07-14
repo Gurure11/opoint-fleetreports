@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Inspection Checklist - Distinct Hire</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Your original CSS - exactly as provided */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #ecf0f1;
+            --border-color: #bdc3c7;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 i {
+            color: var(--secondary-color);
+        }
+
+        .badge {
+            background: var(--success-color);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        /* Connection Status Indicator */
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: var(--light-bg);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #95a5a6;
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: var(--success-color);
+            box-shadow: 0 0 5px var(--success-color);
+        }
+
+        .status-dot.disconnected {
+            background: var(--danger-color);
+        }
+
+        .status-text {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .sheet-name {
+            background: var(--secondary-color);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        /* Policy Reference */
+        .policy-ref {
+            background: #f8f9fa;
+            border-left: 4px solid var(--secondary-color);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .policy-ref p {
+            color: var(--primary-color);
+            font-size: 0.95em;
+        }
+
+        .policy-ref i {
+            color: var(--secondary-color);
+            margin-right: 8px;
+        }
+
+        .btn-download {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.95em;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.3s;
+        }
+
+        .btn-download:hover {
+            background: #34495e;
+        }
+
+        /* View Toggle Buttons */
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+            background: var(--light-bg);
+            color: var(--primary-color);
+        }
+
+        .toggle-btn.active {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .toggle-btn i {
+            font-size: 1.1em;
+        }
+
+        /* History View */
+        .history-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-bg);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .history-header h2 {
+            color: var(--primary-color);
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-box input {
+            padding: 10px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95em;
+            width: 250px;
+        }
+
+        .search-box button {
+            padding: 10px 20px;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .search-box button:hover {
+            background: #2980b9;
+        }
+
+        .inspection-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .inspection-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .inspection-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .inspection-id {
+            font-weight: 600;
+            color: var(--secondary-color);
+            font-size: 1.1em;
+        }
+
+        .inspection-date {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .inspection-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.95em;
+        }
+
+        .stat.ok { color: var(--success-color); }
+        .stat.repair { color: var(--warning-color); }
+        .stat.na { color: #95a5a6; }
+
+        .damage-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .damage-tag {
+            background: var(--danger-color);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--primary-color);
+        }
+
+        .loading i {
+            font-size: 2em;
+            margin-bottom: 10px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn-view {
+            background: var(--secondary-color);
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .btn-view:hover {
+            background: #2980b9;
+        }
+
+        /* Main Form */
+        .inspection-form {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--light-bg);
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .form-header h2 {
+            color: var(--primary-color);
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .date-badge {
+            background: var(--light-bg);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .date-badge i {
+            color: var(--secondary-color);
+            margin-right: 8px;
+        }
+
+        /* Inspector Details */
+        .inspector-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .form-group input, .form-group select {
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        /* Vehicle Type Selector */
+        .vehicle-type {
+            margin-bottom: 30px;
+        }
+
+        .vehicle-type h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .type-buttons {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .type-btn {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .type-btn:hover {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+
+        .type-btn.active {
+            background: var(--secondary-color);
+            color: white;
+            border-color: var(--secondary-color);
+        }
+
+        .type-btn i {
+            font-size: 1.2em;
+        }
+
+        /* Inspection Sections */
+        .inspection-section {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3em;
+        }
+
+        .section-title i {
+            color: var(--secondary-color);
+        }
+
+        .inspection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .inspection-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .item-label {
+            font-weight: 500;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .item-label i {
+            color: var(--secondary-color);
+            width: 20px;
+        }
+
+        .item-status {
+            display: flex;
+            gap: 15px;
+        }
+
+        .status-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .status-option input[type="radio"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .status-ok {
+            color: var(--success-color);
+        }
+
+        .status-repair {
+            color: var(--warning-color);
+        }
+
+        .status-na {
+            color: #95a5a6;
+        }
+
+        /* Comments Section */
+        .comments-section {
+            margin: 30px 0;
+        }
+
+        .comments-section textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .comments-section textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+        }
+
+        /* Damage Marking */
+        .damage-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .damage-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .damage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+
+        .damage-btn {
+            aspect-ratio: 1;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .damage-btn:hover {
+            border-color: var(--danger-color);
+            background: #fee;
+        }
+
+        .damage-btn.selected {
+            background: var(--danger-color);
+            color: white;
+            border-color: var(--danger-color);
+        }
+
+        /* Name Fields Section */
+        .name-fields-section {
+            margin: 30px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .name-field {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid var(--border-color);
+        }
+
+        .name-field label {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .name-field label i {
+            color: var(--secondary-color);
+        }
+
+        .name-field input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .name-field input:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        /* Form Actions */
+        .form-actions {
+            display: flex;
+            gap: 20px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid var(--light-bg);
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--light-bg);
+            color: var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background: #dfe6e9;
+        }
+
+        /* Results Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-content .result-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--light-bg);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .modal-content .result-label {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .modal-content .result-value {
+            color: var(--secondary-color);
+        }
+
+        .modal-close {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .form-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .type-buttons {
+                flex-direction: column;
+            }
+            
+            .inspection-item {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .history-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            .search-box input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Connection Status -->
+        <div class="header">
+            <h1>
+                <i class="fas fa-clipboard-check"></i>
+              Distinct Hire Vehicle Inspection Checklist
+            </h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span class="status-text" id="statusText">Checking connection...</span>
+                    <span class="sheet-name" id="sheetName">inspection</span>
+                </div>
+                <div class="badge">
+                    <i class="fas fa-cloud"></i> Google Drive Sync
+                </div>
+            </div>
+        </div>
+
+        <!-- Policy Reference -->
+        <div class="policy-ref">
+            <p>
+                <i class="fas fa-info-circle"></i>
+                Based on Fleet Management Policy - Annexure B: Vehicle Inspection Sheet
+            </p>
+            <a href="Fleet Policy_v1.pdf" class="btn-download" onclick="downloadPolicy(event)">
+                <i class="fas fa-download"></i> Download Full Policy
+            </a>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+            <button class="toggle-btn active" onclick="showView('form')" id="formToggle">
+                <i class="fas fa-edit"></i> New Inspection
+            </button>
+            <button class="toggle-btn" onclick="showView('history')" id="historyToggle">
+                <i class="fas fa-history"></i> View Reports
+            </button>
+        </div>
+
+        <!-- Inspection Form View -->
+        <div id="formView">
+            <div class="inspection-form" id="inspectionForm">
+                <div class="form-header">
+                    <h2>
+                        <i class="fas fa-car"></i>
+                        Daily Vehicle Inspection
+                    </h2>
+                    <div class="date-badge">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="currentDate"></span>
+                    </div>
+                </div>
+
+                <!-- Inspector Details -->
+                <div class="inspector-details">
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Inspector Name *</label>
+                        <input type="text" id="inspectorName" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-id-card"></i> Employee ID</label>
+                        <input type="text" id="employeeId" placeholder="Enter employee ID">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-truck"></i> Vehicle Registration *</label>
+                        <input type="text" id="vehicleReg" placeholder="e.g., CA 123-456" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-tachometer-alt"></i> Current Mileage *</label>
+                        <input type="number" id="mileage" placeholder="e.g., 45000" required>
+                    </div>
+                </div>
+
+                <!-- Vehicle Type Selection - Updated onclick events -->
+                <div class="vehicle-type">
+                    <h3><i class="fas fa-tag"></i> Vehicle Type</h3>
+                    <div class="type-buttons">
+                        <button type="button" class="type-btn active" onclick="setVehicleType('light', this)">
+                            <i class="fas fa-car"></i> Light Vehicle
+                        </button>
+                        <button type="button" class="type-btn" onclick="setVehicleType('minibus', this)">
+                            <i class="fas fa-bus"></i> Mini Bus
+                        </button>
+                        <button type="button" class="type-btn" onclick="setVehicleType('truck', this)">
+                            <i class="fas fa-truck"></i> Truck / LDV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tires and Wheels Section -->
+                <div class="inspection-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-tire"></i> Tires and Wheels
+                    </h3>
+                    <div class="inspection-grid" id="tiresSection">
+                        <!-- Dynamic content based on vehicle type -->
+                    </div>
+                </div>
+
+                <!-- Engine and Fluids Section -->
+                <div class="inspection-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-oil-can"></i> Engine and Fluids
+                    </h3>
+                    <div class="inspection-grid">
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-oil-can"></i> Engine Oil Level</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="engineOil" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="engineOil" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-snowflake"></i> Coolant Level</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="coolant" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="coolant" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-tint"></i> Brake Fluid Level</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="brakeFluid" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="brakeFluid" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-water"></i> Windshield Washer Fluid</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="washerFluid" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="washerFluid" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-tint"></i> Power Steering Fluid</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="powerSteering" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="powerSteering" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lights and Electrical Section -->
+                <div class="inspection-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-lightbulb"></i> Lights and Electrical
+                    </h3>
+                    <div class="inspection-grid">
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-lightbulb"></i> Headlights (High/Low)</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="headlights" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="headlights" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-lightbulb"></i> Turn Signals</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="signals" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="signals" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-lightbulb"></i> Brake Lights</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="brakeLights" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="brakeLights" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-lightbulb"></i> Reverse Lights</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="reverseLights" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="reverseLights" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-lightbulb"></i> Hazard Lights</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="hazards" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="hazards" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-lightbulb"></i> Interior Lights</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="interiorLights" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="interiorLights" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brakes and Steering Section -->
+                <div class="inspection-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-brake-warning"></i> Brakes and Steering
+                    </h3>
+                    <div class="inspection-grid">
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-brake-warning"></i> Brake Pads</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="brakePads" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="brakePads" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-brake-warning"></i> Parking Brake</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="parkingBrake" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="parkingBrake" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-steering-wheel"></i> Steering Response</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="steering" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="steering" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body and Glass Section -->
+                <div class="inspection-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-car-side"></i> Body and Glass
+                    </h3>
+                    <div class="inspection-grid">
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-windshield"></i> Windshield (Cracks/Chips)</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="windshield" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="windshield" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-windshield"></i> Side Windows</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="sideWindows" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="sideWindows" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-car-side"></i> Rear View Mirrors</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="mirrors" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="mirrors" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-car-side"></i> Side Mirrors</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="sideMirrors" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="sideMirrors" value="REPAIR"> Repair
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Safety Equipment Section -->
+                <div class="inspection-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-shield-alt"></i> Safety Equipment
+                    </h3>
+                    <div class="inspection-grid">
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-fire-extinguisher"></i> Fire Extinguisher</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="fireExtinguisher" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="fireExtinguisher" value="REPAIR"> Repair
+                                </label>
+                                <label class="status-option status-na">
+                                    <input type="radio" name="fireExtinguisher" value="NA"> N/A
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-first-aid"></i> First Aid Kit</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="firstAid" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="firstAid" value="REPAIR"> Repair
+                                </label>
+                                <label class="status-option status-na">
+                                    <input type="radio" name="firstAid" value="NA"> N/A
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-triangle-exclamation"></i> Warning Triangle</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="warningTriangle" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="warningTriangle" value="REPAIR"> Repair
+                                </label>
+                                <label class="status-option status-na">
+                                    <input type="radio" name="warningTriangle" value="NA"> N/A
+                                </label>
+                            </div>
+                        </div>
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-vest"></i> Reflective Vest</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok">
+                                    <input type="radio" name="reflectiveVest" value="OK" checked> OK
+                                </label>
+                                <label class="status-option status-repair">
+                                    <input type="radio" name="reflectiveVest" value="REPAIR"> Repair
+                                </label>
+                                <label class="status-option status-na">
+                                    <input type="radio" name="reflectiveVest" value="NA"> N/A
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Damage Marking Section -->
+                <div class="damage-section">
+                    <h3><i class="fas fa-pen"></i> Mark Damage Location (Click to mark)</h3>
+                    <div class="damage-grid">
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Front</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Front Left</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Front Right</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Left Side</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Right Side</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Rear Left</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Rear Right</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Rear</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Roof</button>
+                        <button type="button" class="damage-btn" onclick="toggleDamage(this)">Underbody</button>
+                    </div>
+                </div>
+
+                <!-- Comments -->
+                <div class="comments-section">
+                    <label for="comments"><i class="fas fa-comment"></i> Additional Comments / Defects</label>
+                    <textarea id="comments" placeholder="Enter any additional notes, defects, or comments..."></textarea>
+                </div>
+
+                <!-- Name Fields -->
+                <div class="name-fields-section">
+                    <div class="name-field">
+                        <label><i class="fas fa-pen"></i> Inspector Name *</label>
+                        <input type="text" id="inspectorNameField" placeholder="Enter inspector full name" required>
+                    </div>
+                    <div class="name-field">
+                        <label><i class="fas fa-check"></i> Supervisor Name (Optional)</label>
+                        <input type="text" id="supervisorNameField" placeholder="Enter supervisor full name">
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="resetForm()">
+                        <i class="fas fa-undo"></i> Reset Form
+                    </button>
+                    <button type="button" class="btn-primary" onclick="submitInspection()" id="submitBtn">
+                        <i class="fas fa-save"></i> Save to Google Drive
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History View -->
+        <div id="historyView" style="display: none;">
+            <div class="history-section">
+                <div class="history-header">
+                    <h2><i class="fas fa-history"></i> Inspection Reports</h2>
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search by vehicle or inspector...">
+                        <button onclick="loadInspections()"><i class="fas fa-search"></i> Search</button>
+                    </div>
+                </div>
+                <div id="inspectionsList">
+                    <div class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <p>Loading reports...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Modal -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <h2><i class="fas fa-clipboard-check"></i> Inspection Saved</h2>
+            <div id="resultContent"></div>
+            <button class="modal-close" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- View Report Modal -->
+    <div class="modal" id="viewModal">
+        <div class="modal-content">
+            <h2><i class="fas fa-file-alt"></i> Report Details</h2>
+            <div id="viewContent"></div>
+            <button class="modal-close" onclick="closeViewModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzQ6nQgDG0eKZkodUXSWXxRR_GgY8MBIKMeg8l9FK51d9sOChFFDk3zHtR3OvOarfSXbg/exec';
+        const SHEET_ID = '1ljS7Pdyg-w2JDgu7XA-c41yUqdiuVrYW3QHnY4uzZXQ';
+        const SHEET_NAME = 'inspection';
+        const DRIVE_FOLDER_ID = '1al8guXtgk-PJWwdNvd2umUXYv4AvwXSM';
+
+        // Set current date
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-ZA', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Check connection on load
+        window.onload = function() {
+            checkConnection();
+            // Initialize with light vehicle
+            const lightButton = document.querySelector('.type-btn.active');
+            if (lightButton) {
+                setVehicleType('light', lightButton);
+            }
+            // Pre-load history data in background
+            setTimeout(() => {
+                if (document.getElementById('historyView').style.display === 'block') {
+                    loadInspections();
+                }
+            }, 1000);
+        };
+
+        // Check connection to Google Sheets
+        function checkConnection() {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            // Try to fetch a simple test
+            fetch(`${SCRIPT_URL}?action=test&sheetId=${SHEET_ID}&sheetName=${SHEET_NAME}`)
+                .then(response => {
+                    if (response.ok) {
+                        statusDot.className = 'status-dot connected';
+                        statusText.textContent = 'Connected';
+                    } else {
+                        statusDot.className = 'status-dot disconnected';
+                        statusText.textContent = 'Disconnected';
+                    }
+                })
+                .catch(() => {
+                    statusDot.className = 'status-dot disconnected';
+                    statusText.textContent = 'Disconnected';
+                });
+        }
+
+        // Updated Vehicle type selection with proper event handling
+        function setVehicleType(type, el) {
+            // Remove active class from all type buttons
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            if (el) {
+                el.classList.add('active');
+            }
+
+            // Update tires section based on vehicle type
+            const tiresSection = document.getElementById('tiresSection');
+            let tiresHtml = '';
+
+            if (type === 'light') {
+                tiresHtml = `
+                    <div class="inspection-item">
+                        <span class="item-label"><i class="fas fa-tire"></i> Front Left Tire</span>
+                        <div class="item-status">
+                            <label class="status-option status-ok"><input type="radio" name="tireFL" value="OK" checked> OK</label>
+                            <label class="status-option status-repair"><input type="radio" name="tireFL" value="REPAIR"> Repair</label>
+                        </div>
+                    </div>
+                    <div class="inspection-item">
+                        <span class="item-label"><i class="fas fa-tire"></i> Front Right Tire</span>
+                        <div class="item-status">
+                            <label class="status-option status-ok"><input type="radio" name="tireFR" value="OK" checked> OK</label>
+                            <label class="status-option status-repair"><input type="radio" name="tireFR" value="REPAIR"> Repair</label>
+                        </div>
+                    </div>
+                    <div class="inspection-item">
+                        <span class="item-label"><i class="fas fa-tire"></i> Rear Left Tire</span>
+                        <div class="item-status">
+                            <label class="status-option status-ok"><input type="radio" name="tireRL" value="OK" checked> OK</label>
+                            <label class="status-option status-repair"><input type="radio" name="tireRL" value="REPAIR"> Repair</label>
+                        </div>
+                    </div>
+                    <div class="inspection-item">
+                        <span class="item-label"><i class="fas fa-tire"></i> Rear Right Tire</span>
+                        <div class="item-status">
+                            <label class="status-option status-ok"><input type="radio" name="tireRR" value="OK" checked> OK</label>
+                            <label class="status-option status-repair"><input type="radio" name="tireRR" value="REPAIR"> Repair</label>
+                        </div>
+                    </div>
+                    <div class="inspection-item">
+                        <span class="item-label"><i class="fas fa-tire"></i> Spare Tire</span>
+                        <div class="item-status">
+                            <label class="status-option status-ok"><input type="radio" name="spareTire" value="OK" checked> OK</label>
+                            <label class="status-option status-repair"><input type="radio" name="spareTire" value="REPAIR"> Repair</label>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'minibus') {
+                for (let i = 1; i <= 6; i++) {
+                    tiresHtml += `
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-tire"></i> Tire ${i}</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok"><input type="radio" name="tire${i}" value="OK" checked> OK</label>
+                                <label class="status-option status-repair"><input type="radio" name="tire${i}" value="REPAIR"> Repair</label>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                for (let i = 1; i <= 6; i++) {
+                    tiresHtml += `
+                        <div class="inspection-item">
+                            <span class="item-label"><i class="fas fa-tire"></i> Tire ${i}</span>
+                            <div class="item-status">
+                                <label class="status-option status-ok"><input type="radio" name="tire${i}" value="OK" checked> OK</label>
+                                <label class="status-option status-repair"><input type="radio" name="tire${i}" value="REPAIR"> Repair</label>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            tiresSection.innerHTML = tiresHtml;
+        }
+
+        // Toggle damage selection
+        function toggleDamage(btn) {
+            btn.classList.toggle('selected');
+        }
+
+        // Reset form
+        function resetForm() {
+            if (confirm('Are you sure you want to reset the form? All entered data will be lost.')) {
+                document.getElementById('inspectorName').value = '';
+                document.getElementById('employeeId').value = '';
+                document.getElementById('vehicleReg').value = '';
+                document.getElementById('mileage').value = '';
+                document.getElementById('comments').value = '';
+                document.getElementById('inspectorNameField').value = '';
+                document.getElementById('supervisorNameField').value = '';
+                
+                // Remove damage selections
+                document.querySelectorAll('.damage-btn.selected').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                
+                // Reset all radio buttons to OK
+                document.querySelectorAll('input[type="radio"][value="OK"]').forEach(radio => {
+                    radio.checked = true;
+                });
+                
+                // Reset vehicle type to light
+                const lightButton = document.querySelector('.type-btn');
+                if (lightButton) {
+                    setVehicleType('light', lightButton);
+                }
+            }
+        }
+
+        // View toggle
+        function showView(view) {
+            const formView = document.getElementById('formView');
+            const historyView = document.getElementById('historyView');
+            const formToggle = document.getElementById('formToggle');
+            const historyToggle = document.getElementById('historyToggle');
+
+            if (view === 'form') {
+                formView.style.display = 'block';
+                historyView.style.display = 'none';
+                formToggle.classList.add('active');
+                historyToggle.classList.remove('active');
+            } else {
+                formView.style.display = 'none';
+                historyView.style.display = 'block';
+                formToggle.classList.remove('active');
+                historyToggle.classList.add('active');
+                loadInspections();
+            }
+        }
+
+        // Load inspections from Google Sheets
+        function loadInspections() {
+            const listDiv = document.getElementById('inspectionsList');
+            listDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading reports...</p></div>';
+
+            fetch(`${SCRIPT_URL}?action=getAll&sheetId=${SHEET_ID}&sheetName=${SHEET_NAME}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayInspections(data);
+                    // Update connection status on successful load
+                    document.getElementById('statusDot').className = 'status-dot connected';
+                    document.getElementById('statusText').textContent = 'Connected';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    listDiv.innerHTML = '<p style="color: red; text-align: center;">Error loading reports. Please try again.</p>';
+                    document.getElementById('statusDot').className = 'status-dot disconnected';
+                    document.getElementById('statusText').textContent = 'Disconnected';
+                });
+        }
+
+        function displayInspections(inspections) {
+            const listDiv = document.getElementById('inspectionsList');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            if (!inspections || inspections.length === 0) {
+                listDiv.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No inspection reports found</p>';
+                return;
+            }
+
+            // Filter by search term
+            let filtered = inspections;
+            if (searchTerm) {
+                filtered = inspections.filter(insp => 
+                    (insp.inspectorName && insp.inspectorName.toLowerCase().includes(searchTerm)) ||
+                    (insp.vehicleReg && insp.vehicleReg.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            if (filtered.length === 0) {
+                listDiv.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No matching reports found</p>';
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(insp => {
+                const date = new Date(insp.timestamp);
+                const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+
+                html += `
+                    <div class="inspection-card" onclick="viewInspection('${insp.id}')">
+                        <div class="inspection-card-header">
+                            <span class="inspection-id">${insp.id || 'N/A'}</span>
+                            <span class="inspection-date">${formattedDate}</span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>${insp.inspectorName || 'Unknown'}</strong> - ${insp.vehicleReg || 'N/A'}
+                        </div>
+                        <div class="inspection-stats">
+                            <span class="stat ok"><i class="fas fa-check-circle"></i> OK: ${insp.itemsOK || 0}</span>
+                            <span class="stat repair"><i class="fas fa-exclamation-triangle"></i> Repair: ${insp.itemsRepair || 0}</span>
+                            <span class="stat na"><i class="fas fa-minus-circle"></i> N/A: ${insp.itemsNA || 0}</span>
+                        </div>
+                        ${insp.damages ? `
+                            <div class="damage-tags">
+                                ${insp.damages.split(',').map(d => `<span class="damage-tag">${d.trim()}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        <button class="btn-view" onclick="event.stopPropagation(); viewInspection('${insp.id}')">
+                            <i class="fas fa-eye"></i> View Details
+                        </button>
+                    </div>
+                `;
+            });
+
+            listDiv.innerHTML = html;
+        }
+
+        // View single inspection
+        function viewInspection(inspectionId) {
+            fetch(`${SCRIPT_URL}?action=getById&id=${inspectionId}&sheetId=${SHEET_ID}&sheetName=${SHEET_NAME}`)
+                .then(response => response.json())
+                .then(inspection => {
+                    if (inspection) {
+                        showInspectionDetails(inspection);
+                    } else {
+                        alert('Report not found');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading report');
+                });
+        }
+
+        function showInspectionDetails(inspection) {
+            const viewContent = document.getElementById('viewContent');
+            
+            let html = `
+                <div class="result-item">
+                    <span class="result-label">Report ID:</span>
+                    <span class="result-value">${inspection.id || 'N/A'}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Date:</span>
+                    <span class="result-value">${new Date(inspection.timestamp).toLocaleString()}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Inspector:</span>
+                    <span class="result-value">${inspection.inspectorName || 'N/A'}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Supervisor:</span>
+                    <span class="result-value">${inspection.supervisorName || 'N/A'}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Employee ID:</span>
+                    <span class="result-value">${inspection.employeeId || 'N/A'}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Vehicle:</span>
+                    <span class="result-value">${inspection.vehicleReg || 'N/A'}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Mileage:</span>
+                    <span class="result-value">${inspection.mileage || 'N/A'} km</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Vehicle Type:</span>
+                    <span class="result-value">${inspection.vehicleType || 'N/A'}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Items OK:</span>
+                    <span class="result-value" style="color: #27ae60;">${inspection.itemsOK || 0}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Needs Repair:</span>
+                    <span class="result-value" style="color: #f39c12;">${inspection.itemsRepair || 0}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Not Applicable:</span>
+                    <span class="result-value" style="color: #95a5a6;">${inspection.itemsNA || 0}</span>
+                </div>
+            `;
+
+            if (inspection.damages) {
+                html += `
+                    <div class="result-item">
+                        <span class="result-label">Damage Locations:</span>
+                        <span class="result-value">${inspection.damages}</span>
+                    </div>
+                `;
+            }
+
+            if (inspection.comments) {
+                html += `
+                    <div class="result-item">
+                        <span class="result-label">Comments:</span>
+                        <span class="result-value">${inspection.comments}</span>
+                    </div>
+                `;
+            }
+
+            viewContent.innerHTML = html;
+            document.getElementById('viewModal').classList.add('active');
+        }
+
+        // Submit inspection to Google Sheets
+        function submitInspection() {
+            // Validate required fields
+            const inspector = document.getElementById('inspectorName').value;
+            const vehicleReg = document.getElementById('vehicleReg').value;
+            const mileage = document.getElementById('mileage').value;
+            const inspectorName = document.getElementById('inspectorNameField').value;
+
+            if (!inspector || !vehicleReg || !mileage || !inspectorName) {
+                alert('Please fill in all required fields: Inspector Name (top), Vehicle Registration, Mileage, and Inspector Name (signature field)');
+                return;
+            }
+
+            // Disable submit button and show loading
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            submitBtn.disabled = true;
+
+            // Collect all inspection data
+            const items = {};
+            document.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+                items[radio.name] = radio.value;
+            });
+
+            const damages = [];
+            document.querySelectorAll('.damage-btn.selected').forEach(btn => {
+                damages.push(btn.innerText);
+            });
+
+            // Count items
+            const repairCount = Object.values(items).filter(v => v === 'REPAIR').length;
+            const naCount = Object.values(items).filter(v => v === 'NA').length;
+            const okCount = Object.keys(items).length - repairCount - naCount;
+
+            // Prepare data for Google Sheets
+            const formData = {
+                action: 'save',
+                sheetId: SHEET_ID,
+                sheetName: SHEET_NAME,
+                driveFolderId: DRIVE_FOLDER_ID,
+                inspectorName: inspector,
+                employeeId: document.getElementById('employeeId').value,
+                vehicleReg: vehicleReg,
+                mileage: mileage,
+                vehicleType: document.querySelector('.type-btn.active').innerText.trim(),
+                items: items,
+                damages: damages.join(', '),
+                comments: document.getElementById('comments').value,
+                inspectorSignature: inspectorName,
+                supervisorSignature: document.getElementById('supervisorNameField').value,
+                itemsOK: okCount,
+                itemsRepair: repairCount,
+                itemsNA: naCount,
+                timestamp: new Date().toISOString()
+            };
+
+            // Send to Google Apps Script
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(() => {
+                // Restore button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                
+                // Show success message
+                showSuccessMessage(formData);
+                resetForm();
+                
+                // Update connection status
+                document.getElementById('statusDot').className = 'status-dot connected';
+                document.getElementById('statusText').textContent = 'Connected';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                alert('Error saving inspection. Please try again.');
+                document.getElementById('statusDot').className = 'status-dot disconnected';
+                document.getElementById('statusText').textContent = 'Disconnected';
+            });
+        }
+
+        function showSuccessMessage(data) {
+            const resultDiv = document.getElementById('resultContent');
+            resultDiv.innerHTML = `
+                <div class="result-item">
+                    <span class="result-label">Inspector:</span>
+                    <span class="result-value">${data.inspectorName}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Vehicle:</span>
+                    <span class="result-value">${data.vehicleReg}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Items OK:</span>
+                    <span class="result-value" style="color: #27ae60;">${data.itemsOK}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Needs Repair:</span>
+                    <span class="result-value" style="color: #f39c12;">${data.itemsRepair}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Not Applicable:</span>
+                    <span class="result-value" style="color: #95a5a6;">${data.itemsNA}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Sheet:</span>
+                    <span class="result-value" style="color: var(--secondary-color);">${SHEET_NAME}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Status:</span>
+                    <span class="result-value" style="color: #27ae60;">✓ Saved to Google Drive</span>
+                </div>
+            `;
+
+            document.getElementById('resultModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('resultModal').classList.remove('active');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('active');
+        }
+
+        // Download policy function
+        function downloadPolicy(event) {
+            event.preventDefault();
+            window.open('Fleet Policy_v1.pdf', '_blank');
+        }
+    </script>
+</body>
+</html>
