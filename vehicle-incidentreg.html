@@ -495,14 +495,15 @@
   </style>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfdZw8YEGJzIGgdhz3WxGa-Qosc3dKelj-m9a2cnZb7JHDTij8/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby5s3WH4Ps87-ZKFZKOZn78KBHgxTof94Qkk8Wy5bivsJC1E4q_dIOmjk2q-fFNFAZD/exec";
 </script>
 
 
 <script>
   async function apiRequest(action, payload) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeoutMs = payload === undefined ? 30000 : 120000;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       let response;
@@ -780,8 +781,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfd
     document.addEventListener('DOMContentLoaded', () => {
       setToday();
       bindEvents();
-      checkConnection();
-      loadRecords();
+      requestAnimationFrame(() => loadRecords({ silent: true }));
       setInterval(checkConnection, 60000);
     });
 
@@ -841,8 +841,11 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfd
       text.textContent = connected ? 'Live connection' : (message || 'Connection failed');
     }
 
-    async function loadRecords() {
-      showLoader('Fetching incident records...');
+    async function loadRecords(options = {}) {
+      if (state.loadingRecords) return;
+      state.loadingRecords = true;
+      const silent = Boolean(options.silent);
+      if (!silent) showLoader('Fetching incident records...');
 
       try {
         const result = await apiGet('list');
@@ -859,7 +862,8 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfd
         setConnection(false, getErrorMessage(error));
         showToast(getErrorMessage(error), 'error');
       } finally {
-        hideLoader();
+        state.loadingRecords = false;
+        if (!silent) hideLoader();
       }
     }
 
@@ -912,8 +916,8 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfd
         setConnection(true, 'Live connection');
         showToast(result.message, 'success');
         resetForm();
-        await loadRecords();
         showJournalView();
+        loadRecords({ silent: true });
       } catch (error) {
         setConnection(false, getErrorMessage(error));
         showToast(getErrorMessage(error), 'error');
@@ -973,7 +977,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfd
           resetForm();
         }
 
-        await loadRecords();
+        await loadRecords({ silent: true });
       } catch (error) {
         setConnection(false, getErrorMessage(error));
         showToast(getErrorMessage(error), 'error');
@@ -1017,7 +1021,13 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfd
       }
 
       empty.hidden = true;
-      body.innerHTML = state.filteredRecords.map(record => `
+      body.innerHTML = '';
+      const rows = state.filteredRecords;
+      let offset = 0;
+      const chunkSize = 75;
+
+      function appendChunk() {
+        const chunk = rows.slice(offset, offset + chunkSize).map(record => `
         <tr>
           <td>${escapeHtml(formatDisplayDate(record.date))}</td>
           <td>${escapeHtml(record.staffName)}</td>
@@ -1041,6 +1051,12 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfd
           </td>
         </tr>
       `).join('');
+        body.insertAdjacentHTML('beforeend', chunk);
+        offset += chunkSize;
+        if (offset < rows.length) requestAnimationFrame(appendChunk);
+      }
+
+      appendChunk();
     }
 
     function updateDashboard(summary) {
@@ -1086,9 +1102,9 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt6LLzfckzSGyarnEfd
       const file = document.getElementById('invoiceFile').files[0];
       if (!file) return Promise.resolve(null);
 
-      const maxBytes = 10 * 1024 * 1024;
+      const maxBytes = 5 * 1024 * 1024;
       if (file.size > maxBytes) {
-        return Promise.reject(new Error('Invoice file must be 10 MB or smaller.'));
+        return Promise.reject(new Error('Invoice file must be 5 MB or smaller.'));
       }
 
       return new Promise((resolve, reject) => {
