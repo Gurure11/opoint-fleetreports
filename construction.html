@@ -681,13 +681,11 @@
         allRecords = Array.isArray(result.data) ? result.data : [];
         populateFilters();
         applyFilters();
-        updateDashboard();
         await checkConnection();
       } catch (error) {
         showToast(error.message, true);
         allRecords = [];
         applyFilters();
-        updateDashboard();
       } finally {
         setLoading(false);
       }
@@ -710,6 +708,7 @@
       });
 
       renderTable();
+      updateDashboard();
     }
 
     function populateFilters() {
@@ -775,18 +774,20 @@
       const today = new Date();
       today.setHours(0,0,0,0);
 
-      const active = allRecords.filter(r => activeStatuses.includes(r.status)).length;
-      const quotes = allRecords.filter(r => String(r.quotationSent).toLowerCase() === 'yes').length;
-      const due = allRecords.filter(r => {
+      const dashboardRecords = filteredRecords;
+
+      const active = dashboardRecords.filter(r => activeStatuses.includes(r.status)).length;
+      const quotes = dashboardRecords.filter(r => String(r.quotationSent).toLowerCase() === 'yes').length;
+      const due = dashboardRecords.filter(r => {
         if (!r.nextFollowUpDate) return false;
         const d = parseDate(r.nextFollowUpDate);
         return d && d <= today && !['Won', 'Lost', 'Completed'].includes(r.status);
       }).length;
-      const pipeline = allRecords
+      const pipeline = dashboardRecords
         .filter(r => !['Lost', 'Completed'].includes(r.status))
         .reduce((sum, r) => sum + parseMoney(r.estimatedProjectValue), 0);
 
-      document.getElementById('totalClients').textContent = allRecords.length;
+      document.getElementById('totalClients').textContent = dashboardRecords.length;
       document.getElementById('activeOpportunities').textContent = active;
       document.getElementById('quotesSent').textContent = quotes;
       document.getElementById('followUpsDue').textContent = due;
@@ -868,8 +869,16 @@
     }
 
     async function deleteRecord(rowNumber, companyName) {
-      const confirmed = confirm(`Delete the record for "${companyName}"? This cannot be undone.`);
-      if (!confirmed) return;
+      const displayName = companyName || 'this client';
+      const confirmed = window.confirm(
+        `Are you sure you want to permanently delete the record for "${displayName}"?
+
+This action cannot be undone.`
+      );
+      if (!confirmed) {
+        showToast('Delete cancelled.');
+        return;
+      }
 
       try {
         setLoading(true);
