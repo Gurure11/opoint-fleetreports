@@ -987,23 +987,33 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzB-MpvIIADiAbWaDX8e
     }
 
     async function deleteRecord(incidentId) {
-      const record = state.records.find(item => item.incidentId === incidentId);
-      const description = record ? `${record.regNo} - ${record.staffName}` : 'this incident';
+      incidentId = String(incidentId || '').trim();
+      if (!incidentId) {
+        showToast('Unable to delete: the incident ID is missing.', 'error');
+        return;
+      }
 
-      const confirmed = confirm(`Are you sure you want to permanently delete ${description}?\n\nThis action cannot be undone.`);
+      const record = state.records.find(item => String(item.incidentId || '').trim() === incidentId);
+      const description = record ? `${record.regNo || 'No Reg'} - ${record.staffName || 'Unknown Staff'}` : 'this incident';
+
+      const confirmed = window.confirm(
+        `Are you sure you want to permanently delete ${description} from Google Sheets?
+
+This action cannot be undone.`
+      );
       if (!confirmed) return;
 
-      showLoader('Deleting incident...');
+      showLoader('Deleting incident from Google Sheets...');
 
       try {
         const result = await apiPost('delete', { incidentId });
 
         if (!result || !result.success) {
-          throw new Error(result && result.message ? result.message : 'Unable to delete incident.');
+          throw new Error(result && result.message ? result.message : 'Unable to delete incident from Google Sheets.');
         }
 
         setConnection(true, 'Live connection');
-        showToast(result.message, 'success');
+        showToast(result.message || 'Incident permanently deleted from Google Sheets.', 'success');
 
         if (state.editingId === incidentId) {
           resetForm();
