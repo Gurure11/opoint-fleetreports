@@ -1468,22 +1468,41 @@
       delBtn.className = "btn-sm-delete";
       delBtn.innerHTML = '<i class="fas fa-trash"></i>';
       delBtn.title = "Delete row";
-      delBtn.addEventListener("click", function(e) {
+      delBtn.addEventListener("click", async function(e) {
         e.stopPropagation();
-        if (!confirm("Delete this asset entry?")) return;
-        apiPost({
-          action: "deleteAsset",
-          rowNumber: data.rowNumber,
-          sheetId: SHEET_ID,
-          sheetName: data._sheetName || sheetForAsset(data)
-        }).then(res => {
+
+        const assetName = String(getField(data, "description") || getField(data, "registrationNo") || getField(data, "code") || "this asset").trim();
+        const confirmed = window.confirm(
+          `Are you sure you want to permanently delete ${assetName}?\n\n` +
+          `This will delete the entire row from Google Sheets and cannot be undone.`
+        );
+        if (!confirmed) return;
+
+        const originalHtml = delBtn.innerHTML;
+        delBtn.disabled = true;
+        delBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        showStatus("Deleting asset permanently from Google Sheets...");
+
+        try {
+          const res = await apiPost({
+            action: "deleteAsset",
+            rowNumber: data.rowNumber,
+            sheetId: SHEET_ID,
+            sheetName: data._sheetName || sheetForAsset(data)
+          });
+
           if (res.status === "success") {
-            showStatus("✅ Deleted successfully");
-            loadAssets();
+            showStatus("✅ Asset permanently deleted from Google Sheets");
+            await loadAssets();
           } else {
-            showStatus("❌ Delete failed: " + res.message, true);
+            throw new Error(res.message || "The server did not delete the row.");
           }
-        }).catch(err => showStatus("❌ Delete error: " + err.message, true));
+        } catch (err) {
+          console.error("Delete error:", err);
+          showStatus("❌ Delete failed: " + err.message, true);
+          delBtn.disabled = false;
+          delBtn.innerHTML = originalHtml;
+        }
       });
 
       actionDiv.appendChild(editBtn);
